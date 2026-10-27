@@ -8,7 +8,7 @@ status: draft
 
 # Statement
 
-For compile-time capacity `ARGHTOS_MAX_TASKS` and configured task count `N <= ARGHTOS_MAX_TASKS`:
+For compile-time capacity `C = ARGHTOS_MAX_TASKS` and configured task count `N <= C`:
 
 1. task identity is finite;
 2. no runtime operation allocates scheduler storage;
@@ -29,7 +29,7 @@ For compile-time capacity `ARGHTOS_MAX_TASKS` and configured task count `N <= AR
 Let:
 
 * `M_cfg(N) = 16N` bytes for C0 task descriptors;
-* `M_ctl(N) = 20N` bytes for C8 task controls;
+* `M_ctl(C) = 20C` bytes for the statically allocated C8 control array;
 * `M_global = 20` bytes for C9 global state;
 * `M_crash` be 0 or 64 bytes;
 * `M_code` be linked ArghtOS/port executable bytes resident in SRAM;
@@ -42,9 +42,9 @@ Every term is finite at link/integration time.
 Therefore:
 
 ```text
-F_arghtos(N) =
+F_arghtos(C,N) =
     M_cfg(N)
-  + M_ctl(N)
+  + M_ctl(C)
   + M_global
   + M_crash
   + M_code
