@@ -34,11 +34,25 @@ _Static_assert(sizeof(arghtos_task_control_t) == 20u,
                "task control resident-footprint contract changed");
 ```
 
-At `ARGHTOS_MAX_TASKS=32`:
+The private array is statically sized by compile-time capacity:
+
+```c
+static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
+```
+
+Therefore C8 resident size is:
+
+```text
+20 * ARGHTOS_MAX_TASKS
+```
+
+At the default capacity 32:
 
 ```text
 32 * 20 B = 640 B
 ```
+
+Unused capacity slots remain resident SRAM; runtime `task_count` does not shrink the array.
 
 # Flag bits
 
