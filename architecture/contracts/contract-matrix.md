@@ -46,7 +46,7 @@ status: draft
 | C0 descriptor table | B0 | 16 B per configured task, read-only SRAM |
 | `arghtos_task_control_t controls[]` | B1 | 20 B per compile-time capacity slot |
 | `arghtos_kernel_state_t kernel` | top level | 20 B |
-| crash record | B5/application storage | 64 B when enabled |
+| crash record | B5/application storage | required 64 B |
 | `arghtos_select_next()` | B2 | bounded class-first selector |
 | `arghtos_kernel_dispatch(psp)` | B2/B4 boundary | serialized execution handoff |
 | `arghtos_timer_interrupt()` | B3 | bounded timed release scan |
@@ -94,8 +94,8 @@ C9 global                  20 B
 --------------------------------
 metadata                   1172 B
 
-optional crash              64 B
-metadata + crash           1236 B
+required crash              64 B
+pre-code resident lower bound 1236 B
 ```
 
 # Complete soft-target quantity
@@ -108,7 +108,7 @@ ArghtOS + port code/const/data/metadata + ArghtOS-only MSP requirement <= 1536 B
 
 All ArghtOS `.text`, `.rodata`, literal pools, `.data`, `.bss`, `.noinit`, required scheduler metadata, and MSP count.
 
-At 32 tasks, metadata leaves only 364 B before optional crash capture, or 300 B with crash capture, for code/constants/MSP/other bytes.
+At 32 tasks, the required crash record makes the pre-code resident lower bound 1236 B, leaving only 300 B for code/constants, ArghtOS-only MSP, and other resident bytes.
 
 Therefore the soft target is currently **open and high risk**, not satisfied by architecture arithmetic.
 
