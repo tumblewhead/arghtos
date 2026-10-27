@@ -64,6 +64,8 @@ task.max_run_ticks = max(task.max_run_ticks, elapsed)
 
 `max_run_ticks` is an observed maximum contiguous scheduler run. It is not a proof of job WCET.
 
+The profiling contract requires each uninterrupted RUNNING residency to be shorter than one full 2^32-tick clock cycle. Periodic tasks satisfy a much tighter bound through P6; async workers are expected to yield, wait, sleep, or be preempted before a full clock cycle elapses.
+
 # Periodic overrun count
 
 When a periodic release is missed while the prior job remains active, `overrun_count` is increased by the number of missed releases, saturating at `UINT8_MAX`.
