@@ -20,7 +20,7 @@ typedef struct {
     uint32_t total_cpu_ticks;
     uint32_t max_run_ticks;
 
-    uint8_t  overrun_count;
+    uint8_t  missed_release_count;
     uint8_t  age_credit;
     uint8_t  state;
     uint8_t  flags;
@@ -66,9 +66,9 @@ task.max_run_ticks = max(task.max_run_ticks, elapsed)
 
 The profiling contract requires each uninterrupted RUNNING residency to be shorter than one full 2^32-tick clock cycle. Periodic tasks satisfy a much tighter bound through P6; async workers are expected to yield, wait, sleep, or be preempted before a full clock cycle elapses.
 
-# Periodic overrun count
+# Periodic missed-release count
 
-When a periodic release is missed while the prior job remains active, `overrun_count` is increased by the number of missed releases, saturating at `UINT8_MAX`.
+When a periodic release is missed while the prior job remains active, `missed_release_count` is increased by the number of missed releases, saturating at `UINT8_MAX`.
 
 The count may therefore advance by more than one in one delayed timer service.
 
