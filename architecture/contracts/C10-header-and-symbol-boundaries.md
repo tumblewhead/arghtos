@@ -73,6 +73,9 @@ The public header must not expose:
 The platform header contains the functions a Cortex-M23 port must implement or bind:
 
 ```c
+arghtos_result_t arghtos_port_init(void);
+bool arghtos_port_stack_valid(void *stack_base, uint32_t stack_size);
+
 arghtos_time_t arghtos_port_time_now(void);
 void arghtos_port_timer_arm(arghtos_time_t absolute_deadline);
 void arghtos_port_timer_disarm(void);
