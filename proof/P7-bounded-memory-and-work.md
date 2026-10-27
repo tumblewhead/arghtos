@@ -1,96 +1,124 @@
 ---
 type: Proof
-title: "P7 - Bounded memory and scheduler work"
-description: "Scheduler memory, critical sections, dispatch work, and fault capture are finite and bounded by compile-time configuration."
-tags: [scheduler, cortex-m23, proof, bounded-work, memory, critical-section]
-generated:
-  by: openai/gpt-5.6-sol
-  at: 2026-10-27T20:08:00Z
+title: "P7 - Bounded resident footprint and scheduler work"
+description: "All ArghtOS-resident SRAM and all scheduler execution paths are statically bounded by the build and configured task count."
+tags: [scheduler, cortex-m23, proof, bounded-work, memory, critical-section, footprint]
 status: draft
 ---
 
 # Statement
 
-For a fixed `SCHED_MAX_TASKS=N`, every scheduler operation terminates after a bounded amount of scheduler-owned work, scheduler-owned SRAM is compile-time bounded, and every interrupt-disabled critical section has a finite architecture-defined upper bound.
+For fixed build configuration and `N <= ARGHTOS_MAX_TASKS`:
 
-# Memory bound
+1. the complete ArghtOS SRAM-resident footprint is finite and link-time bounded;
+2. every scheduler operation terminates after bounded work;
+3. every interrupt-masked critical section has a finite bound; and
+4. no delayed periodic-release path performs work proportional to the number of missed periods.
 
-[P0](P0-static-configuration-validity.md) establishes:
+# Resident-footprint bound
 
-`M(N) = M_fixed + N * M_task + M_sets(N)`.
+P0 defines the complete resident footprint, including ArghtOS/port code and read-only data.
 
-No runtime operation increases `N` or allocates scheduler storage.
+The concrete metadata lower bound is:
 
-Therefore scheduler-owned SRAM is bounded for the lifetime of the program.
+```text
+M_metadata(N) = 36*N + 20
+```
+
+because:
+
+* C0 descriptor = 16 B/task;
+* C8 control = 20 B/task;
+* C9 global = 20 B.
+
+At 32 tasks:
+
+```text
+M_metadata(32) = 1172 B
+```
+
+Optional crash capture adds 64 B.
+
+All linked ArghtOS `.text`, `.rodata`, literals, `.data`, `.bss`, `.noinit`, required scheduler metadata, and MSP accounting remain part of the complete footprint.
+
+No runtime operation changes any of those storage cardinalities.
+
+# Soft-target consequence
+
+The 1.5 KiB target is not implied by boundedness.
+
+The proof establishes that the footprint is finite; it does not establish that it is <=1536 B.
+
+That quantitative claim requires implementation/linker evidence.
 
 # Work bound
 
-The concrete v1 core mutable state is bounded by:
+No scheduler loop may depend on an unbounded history or runtime-produced collection.
+
+Permitted bounded scans include:
+
+* at most `N` descriptor/control entries in timer release processing;
+* at most `2N` inspections in the reference selector;
+* at most `N` entries in initialization validation;
+* fixed register counts in context save/restore.
+
+# Delayed periodic release
+
+P4/C3 compute:
 
 ```text
-12 bytes global state + 28 * ARGHTOS_MAX_TASKS bytes task control
+releases_due = 1 + late/period
 ```
 
-which is 908 bytes at the default 32-task capacity. The optional crash record is 64 bytes. MSP and port-specific mutable state remain explicit integration terms under C9.
+and advance the next release with arithmetic.
 
-The scheduler SHALL contain no loop whose iteration count depends on an unbounded runtime-produced collection.
+The scheduler does not loop once per missed period.
 
-Permitted loops must have a compile-time upper bound such as:
-
-* at most `N` task slots;
-* at most a fixed number of priority bitmap words;
-* at most the statically configured number of periodic releases made due by one timestamp; or
-* a fixed architectural register count during context save/restore.
-
-Thus each scheduler path is finite.
-
-An `O(N)` path is acceptable when explicitly identified and bounded by `SCHED_MAX_TASKS`; the proof does not require all scheduler operations to be `O(1)`.
+Therefore release-handler work remains O(N) even after a long bounded delay.
 
 # Critical-section bound
 
-Every section that masks or otherwise prevents normal interrupt preemption SHALL:
+Every interrupt-masked scheduler critical section SHALL:
 
-1. contain no task/application callback;
-2. contain no wait for hardware;
+1. contain no application callback;
+2. contain no hardware wait;
 3. contain no unbounded retry;
-4. have a statically identifiable maximum iteration count; and
-5. be separately measurable on the target.
+4. contain only fixed work or an explicitly N-bounded scan;
+5. be measurable on target.
 
-The worst such duration becomes an input to latency analysis and [P6](P6-rms-schedulability.md).
+The maximum duration becomes a P6 timing input.
 
-# Fault-record bound
+# Fault path bound
 
-Crash/fault capture SHALL use a fixed-size scheduler-owned record or application-provided fixed storage.
+Crash capture:
 
-Fault capture SHALL NOT allocate memory and SHALL NOT depend on the crashed task continuing to execute correctly.
+* uses a fixed 64-byte record when enabled;
+* performs no allocation;
+* performs no formatted transport output;
+* uses the C9 recursion guard;
+* terminates in the platform fatal hook.
 
-A minimal record may include:
-
-* magic/version;
-* scheduler fault reason;
-* active task ID;
-* timestamp;
-* PSP and MSP;
-* stacked PC/LR/xPSR when architecturally available; and
-* selected scheduler state useful for post-reset diagnosis.
-
-Export through UART, flash, or another transport is outside the scheduler core.
-
-# Architecture test
+# Architecture/build tests
 
 The project SHALL provide:
 
-* a map-file or equivalent SRAM report separating kernel state, MSP reservation, and application task stacks;
-* a default-configuration check for `SCHED_MAX_TASKS=32`;
-* static or review-generated identification of every loop in scheduler code and its bound;
-* static or runtime instrumentation of every critical section;
-* measured context-switch and scheduler-path timing on the target MCU; and
-* fault-injection tests proving fixed-size crash capture.
-
-The default scheduler-owned SRAM SHOULD remain at or below the 1.5 KiB soft target, excluding application-owned task stacks.
+* linker-map attribution of all ArghtOS/port resident sections;
+* an ArghtOS-footprint subtotal including code/constants/data/metadata/MSP;
+* a total-system SRAM report including excluded application task stacks/code and driver state;
+* configured task count and crash-record setting;
+* loop-bound review or static checks;
+* target timing of critical sections and dispatch paths;
+* fault-injection tests;
+* confirmation that no dynamic allocator is referenced.
 
 # Dependencies
 
-Depends on [P0](P0-static-configuration-validity.md).
+Depends on [P0](P0-static-configuration-validity.md) and [P4](P4-time-release-correctness.md).
 
-Its timing bounds are inputs to [P6](P6-rms-schedulability.md).
+Its execution-time bounds are inputs to P6.
+
+# Status
+
+The boundedness proof is architecturally consistent.
+
+The <=1.5 KiB quantitative target remains open until code exists and a linker/MSP report is available.
