@@ -1,51 +1,144 @@
 ---
 type: Contract
 title: "C2 - Interrupt wake contract"
-description: "Defines how thin hardware interrupt handlers activate predeclared asynchronous work without preserving event multiplicity."
+description: "Concrete interrupt-safe deferred-work handoff for predeclared asynchronous tasks."
 tags: [architecture, contract, interrupt, async, wake]
 status: draft
 ---
 
-# Goal
+# Key goals
 
-Keep hardware interrupt service short while reliably transferring deferred work to statically configured tasks.
+* Keep device handlers short.
+* Allow hardware events to activate statically configured async workers.
+* Never allocate, queue task instances, or preserve event multiplicity inside the scheduler.
+* Make interrupt-triggered scheduling converge on the same dispatch path as task-triggered scheduling.
 
-# Contract
+# Public interrupt-safe API
 
-A device interrupt handler may acknowledge or snapshot only the minimum hardware state, preserve driver-owned event data when needed, wake a predeclared task, request rescheduling if eligibility changes, and return. It does not execute deferred application work.
+```c
+arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id);
+```
 
-Wake is idempotent. Repeated wakes while a task is already READY or RUNNING do not create queued task instances.
+This function is valid only from a maskable HANDLER context that participates in the scheduler's critical-section model.
+
+It is invalid from TASK context, NMI, or fatal-fault handling.
+
+# Precondition
+
+`task_id` names a configured asynchronous task.
+
+The device handler has already done whatever minimum hardware acknowledgment or data preservation is required to prevent loss at the peripheral boundary.
+
+# State semantics
+
+The target-state effects are identical to task-context `arghtos_wake()`:
+
+| Target state | Effect |
+|---|---|
+| DORMANT | READY |
+| WAITING | READY |
+| READY | no state change |
+| RUNNING | set `wake_pending=true` |
+| SLEEPING | set `wake_pending=true`; remain SLEEPING |
+| FAULTED | error, no state change |
+
+No event count is incremented.
+
+Repeated calls while the same scheduling indication is already represented collapse together.
+
+# Dispatch request
+
+If the operation changes task eligibility or sets a pending-wake condition that can alter the next dispatch decision, the kernel calls:
+
+```c
+void arghtos_port_request_dispatch(void);
+```
+
+The port implementation makes the scheduler dispatch exception pending.
+
+The device handler itself never performs a direct task switch.
 
 ```mermaid
 sequenceDiagram
   participant HW as Peripheral
-  participant IH as Thin interrupt handler
+  participant H as Device handler
   participant D as Driver state
-  participant K as Scheduler
-  participant P as PendSV
-  HW->>IH: interrupt
-  IH->>HW: acknowledge / snapshot
-  IH->>D: preserve event data if needed
-  IH->>K: wake(task)
-  K->>P: pend if scheduling may change
+  participant K as ArghtOS wake
+  participant P as Dispatch exception
+
+  HW->>H: interrupt
+  H->>HW: acknowledge/snapshot minimum state
+  H->>D: persist multiplicity/data if required
+  H->>K: arghtos_wake_from_interrupt(id)
+  K->>K: atomic state/latch update
+  K->>P: request dispatch if needed
+  H-->>HW: return
 ```
 
-# Event multiplicity
+# Return values
 
-If multiple events matter individually, the driver owns their persistence through a FIFO, DMA buffer, counter, bitmap, or other static mechanism. The scheduler preserves only that the worker may have work.
+* `ARGHTOS_OK`: valid target; wake indication accepted or already represented.
+* `ARGHTOS_ERR_BAD_TASK_ID`: ID out of range.
+* `ARGHTOS_ERR_BAD_TASK_CLASS`: target is periodic.
+* `ARGHTOS_ERR_BAD_STATE`: target is FAULTED.
+* `ARGHTOS_ERR_BAD_CONTEXT`: caller is not a supported maskable handler.
+
+The function must not fail due to memory or queue exhaustion.
+
+# Event-data ownership
+
+ArghtOS owns only the one-bit proposition:
+
+```text
+"this worker is runnable, or a wake must survive until its next wait"
+```
+
+The driver/application owns all actual event information, including:
+
+* hardware FIFO contents;
+* DMA descriptors or producer indices;
+* packet/message queues;
+* event counters;
+* edge multiplicity;
+* sampled register values that disappear when acknowledged.
+
+# Handler execution bound
+
+`arghtos_wake_from_interrupt()` must execute in bounded time independent of event history.
+
+It may perform:
+
+* task-ID/class validation;
+* one short scheduler critical section;
+* one runtime-state update;
+* one dispatch-pending write.
+
+It must not:
+
+* scan arbitrary driver data;
+* call application code;
+* wait for hardware;
+* print/log through a transport;
+* allocate memory.
+
+# Atomicity
+
+The state/latch update is linearizable with C1 `arghtos_wait()`.
+
+The concrete critical-section primitive is specified by C4.
 
 # Dependencies
 
-[P3](../../proof/P3-wake-wait-race-freedom.md), [P5](../../proof/P5-priority-domain-isolation.md), [P7](../../proof/P7-bounded-memory-and-work.md).
+[C1](C1-task-api-lifecycle.md), [C4](C4-context-switch-port.md), [C7](C7-common-types-abi.md), [P3](../../proof/P3-wake-wait-race-freedom.md), [P5](../../proof/P5-priority-domain-isolation.md), [P7](../../proof/P7-bounded-memory-and-work.md).
 
 # Dangerous aspects
 
-* Clearing hardware before preserving required data.
-* Assuming the scheduler counts interrupts.
-* Excessive handler work.
-* Racing with `wait()`.
-* Creating a second context-switch path outside PendSV.
+* Clearing a peripheral before preserving required event data.
+* Calling the task-context wake API from a handler.
+* Calling this API from NMI/fatal-fault context.
+* Treating a wake as one-for-one with a hardware event.
+* Directly switching tasks in a device handler.
 
 # Boundary specification
 
-The interrupt handler owns peripheral acknowledgment. The driver owns event data. The scheduler owns task eligibility and dispatch.
+The device/driver owns hardware acknowledgment and event persistence. C2 owns only worker eligibility and the request to reconsider scheduling.
