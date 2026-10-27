@@ -44,7 +44,7 @@ status: draft
 | Object/symbol | Owner | Resident size / purpose |
 |---|---|---|
 | C0 descriptor table | B0 | 16 B per configured task, read-only SRAM |
-| `arghtos_task_control_t controls[]` | B1 | 20 B per configured task |
+| `arghtos_task_control_t controls[]` | B1 | 20 B per compile-time capacity slot |
 | `arghtos_kernel_state_t kernel` | top level | 20 B |
 | crash record | B5/application storage | 64 B when enabled |
 | `arghtos_select_next()` | B2 | bounded class-first selector |
@@ -67,6 +67,7 @@ status: draft
 | SLEEPING -> READY | C3 |
 | periodic RUNNING -> DORMANT on return | C1/C4 |
 | async return -> fatal | C1/C5 |
+| RUNNING -> FAULTED on task-attributed fatal | C5 |
 
 # Proof traceability
 
