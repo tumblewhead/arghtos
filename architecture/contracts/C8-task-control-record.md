@@ -22,7 +22,7 @@ typedef struct {
     uint32_t           total_cpu_ticks; /* 4 B: modulo-2^32 */
     uint32_t           max_run_ticks;   /* 4 B: observed maximum contiguous run */
 
-    uint8_t            overrun_count;   /* saturating periodic release misses */
+    uint8_t            missed_release_count;   /* saturating periodic release misses */
     uint8_t            age_credit;      /* async dispatch-opportunity aging */
     uint8_t            state;           /* arghtos_task_state_t */
     uint8_t            flags;
@@ -71,7 +71,7 @@ The wake bit is the one-bit handshake required by P3. It is not an event counter
 | `next_time` | periodic next release, or async sleep deadline |
 | `total_cpu_ticks` | cumulative CPU execution time, modulo 2^32 |
 | `max_run_ticks` | largest observed contiguous RUNNING interval |
-| `overrun_count` | saturating periodic missed-release count |
+| `missed_release_count` | saturating periodic missed-release count |
 | `age_credit` | saturating async starvation-prevention credit |
 | `state` | abstract C7 task state |
 | `flags` | wake handshake and reserved bits |
@@ -123,7 +123,7 @@ Credit above the number needed to reach the priority ceiling remains useful as a
 
 # Counter behavior
 
-`overrun_count` saturates at `UINT8_MAX`.
+`missed_release_count` saturates at `UINT8_MAX`.
 
 `total_cpu_ticks` intentionally wraps modulo 2^32. It is a compact cumulative diagnostic, not a lifetime billing quantity.
 
