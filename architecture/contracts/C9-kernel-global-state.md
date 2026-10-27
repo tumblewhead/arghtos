@@ -95,7 +95,7 @@ global         20 B
 metadata     1172 B
 ```
 
-Optional crash record:
+Required crash record:
 
 ```text
 1172 + 64 = 1236 B
@@ -132,13 +132,13 @@ F_arghtos <= 1536 bytes     SHOULD
 
 This is a soft target, not presently a proven property.
 
-With the current contracts, metadata alone consumes 1172 B, leaving only:
+With the required crash record, the pre-code resident lower bound is 1236 B, leaving only:
 
 ```text
-1536 - 1172 = 364 B
+1536 - 1236 = 300 B
 ```
 
-for ArghtOS code, constants, MSP reservation, and other port/runtime bytes, or 300 B if the optional crash record is included.
+for ArghtOS/port code, constants/literals, the ArghtOS-only MSP requirement, and any other resident bytes.
 
 Therefore **the current contract set does not establish feasibility of the 1.5 KiB soft target**. The target remains an explicit architecture risk to measure and optimize.
 
@@ -189,8 +189,8 @@ Once code exists, every size-reporting build must retain:
 * section-size summary;
 * symbol/section attribution sufficient to identify ArghtOS and port bytes;
 * configured task count;
-* whether crash capture is enabled;
-* MSP reservation.
+* confirmation that the required crash record is present;
+* ArghtOS-only MSP requirement and physical system MSP reservation.
 
 # Dependencies
 
