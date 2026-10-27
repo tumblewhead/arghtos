@@ -78,9 +78,9 @@ status: draft
 | C3 | P4, P6, P7 |
 | C4 | P2, P7 |
 | C5 | P6, P7 |
-| C6 | P1, P5, P6, P7 |
+| C6 | P1, P5, P6, P7, P8 |
 | C7 | P0, P4, P7 |
-| C8 | P0, P1, P7 |
+| C8 | P0, P1, P7, P8 |
 | C9 | P0, P7 |
 | C10 | boundary enforcement |
 
