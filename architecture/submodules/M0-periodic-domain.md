@@ -11,7 +11,7 @@ status: draft
 * Release synchronous periodic jobs from the scheduler start epoch with zero phase.
 * Preserve fixed RMS ordering.
 * Permit at most one active instance per periodic task.
-* Record overrun and deadline evidence.
+* Record missed-release and deadline evidence.
 * Provide the quantities required by P6.
 
 # Integrated code blocks and contracts
@@ -41,7 +41,7 @@ flowchart LR
 * Multiple instances of one job.
 * Measured execution time substituted for WCET.
 * Async policy influencing periodic priority.
-* Overrun behavior diverging from the proof model.
+* Missed-release behavior diverging from the proof model.
 
 # Boundary specification
 
