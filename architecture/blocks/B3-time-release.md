@@ -12,14 +12,14 @@ status: draft
 * Maintain each timed task's next release.
 * Determine and arm the earliest future scheduler event.
 * Release all tasks due at an observed timestamp.
-* Detect periodic overrun instead of creating another task instance.
+* Detect missed periodic releases instead of creating additional task instances.
 
 ```mermaid
 flowchart TD
   TMR["timer interrupt"] --> NOW["read now"]
   NOW --> SCAN["bounded scan timed tasks"]
   SCAN --> DUE{"task due?"}
-  DUE -- yes --> REL["READY or overrun record"]
+  DUE -- yes --> REL["READY or missed-release record"]
   DUE -- no --> NEXT["track earliest future release"]
   REL --> NEXT
   NEXT --> ARM["arm one-shot timer"]
