@@ -53,13 +53,14 @@ That quantitative claim requires implementation/linker evidence.
 
 # Work bound
 
-No scheduler loop may depend on an unbounded history or runtime-produced collection.
+No scheduler loop may depend on an unbounded history or runtime-produced collection. Startup-only validation may be O(N^2) when the bound is explicitly `N <= ARGHTOS_MAX_TASKS`; runtime scheduling/release paths remain O(N).
 
 Permitted bounded scans include:
 
 * at most `N` descriptor/control entries in timer release processing;
 * at most `2N` inspections in the reference selector;
-* at most `N` entries in initialization validation;
+* at most `N` entries for per-task initialization checks;
+* at most `N*(N-1)/2` pair comparisons for one-time stack-overlap validation;
 * fixed register counts in context save/restore.
 
 # Delayed periodic release
