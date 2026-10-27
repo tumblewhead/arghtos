@@ -125,13 +125,15 @@ Task-context ownership-changing calls use SVC.
 The v1 service numbers are:
 
 ```c
-typedef enum {
-    ARGHTOS_SVC_YIELD       = 0,
-    ARGHTOS_SVC_WAIT        = 1,
-    ARGHTOS_SVC_SLEEP_UNTIL = 2,
-    ARGHTOS_SVC_WAKE        = 3,
-    ARGHTOS_SVC_TASK_RETURN = 4
-} arghtos_svc_id_t;
+typedef uint8_t arghtos_svc_id_t;
+
+enum {
+    ARGHTOS_SVC_YIELD       = 0u,
+    ARGHTOS_SVC_WAIT        = 1u,
+    ARGHTOS_SVC_SLEEP_UNTIL = 2u,
+    ARGHTOS_SVC_WAKE        = 3u,
+    ARGHTOS_SVC_TASK_RETURN = 4u
+};
 ```
 
 For services with one scalar argument, the argument is passed in R0 according to the Cortex-M C ABI. The result code is returned in R0 when the calling task later resumes.
@@ -200,7 +202,14 @@ No task entry argument exists in v1.
 * invokes `arghtos_kernel_dispatch(0)`;
 * never returns during normal operation.
 
+# Privilege model
+
+All v1 tasks run privileged in Thread mode.
+
+ArghtOS v1 does not depend on an MPU, MMU, or TrustZone security state separation. Unprivileged task execution is outside the v1 contract.
+
 # PSP/MSP ownership
+
 
 | Situation | Stack |
 |---|---|
