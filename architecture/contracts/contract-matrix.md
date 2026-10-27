@@ -102,7 +102,7 @@ metadata + crash           1236 B
 The 1536-byte target applies to complete ArghtOS resident footprint:
 
 ```text
-ArghtOS + port code/const/data/metadata + MSP <= 1536 B   SHOULD
+ArghtOS + port code/const/data/metadata + ArghtOS-only MSP requirement <= 1536 B   SHOULD
 ```
 
 All ArghtOS `.text`, `.rodata`, literal pools, `.data`, `.bss`, `.noinit`, required scheduler metadata, and MSP count.
