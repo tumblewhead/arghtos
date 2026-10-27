@@ -104,6 +104,37 @@ It is not named or treated as WCET.
 
 P6 may consume an independently justified WCET value, but C5 never promotes measured runtime into proof evidence by itself.
 
+# Exception frame ABI
+
+The basic Cortex-M hardware-stacked frame is represented as:
+
+```c
+typedef struct {
+    uint32_t r0;
+    uint32_t r1;
+    uint32_t r2;
+    uint32_t r3;
+    uint32_t r12;
+    uint32_t lr;
+    uint32_t pc;
+    uint32_t xpsr;
+} arghtos_exception_frame_t;
+
+_Static_assert(sizeof(arghtos_exception_frame_t) == 32u,
+               "exception frame ABI changed");
+```
+
+Crash-record flag bits are:
+
+```c
+#define ARGHTOS_CRASH_F_FRAME_VALID (1u << 0)
+#define ARGHTOS_CRASH_F_TASK_VALID  (1u << 1)
+#define ARGHTOS_CRASH_F_PSP_VALID   (1u << 2)
+#define ARGHTOS_CRASH_F_RESERVED    (0xF8u)
+```
+
+Reserved bits remain zero in v1.
+
 # Fatal reason codes
 
 Stored reason codes are fixed-width values:
@@ -188,10 +219,11 @@ Internal kernel code uses:
 ```c
 _Noreturn void arghtos_fatal(
     arghtos_fault_reason_t reason,
-    const void *exception_frame);
+    const arghtos_exception_frame_t *exception_frame,
+    uint32_t exc_return);
 ```
 
-`exception_frame` may be NULL for a kernel-detected invariant fault.
+`exception_frame` may be NULL for a kernel-detected invariant fault. `exc_return` is zero when no architectural exception-return value is available.
 
 The fatal path:
 
