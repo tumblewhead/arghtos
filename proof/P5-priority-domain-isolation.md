@@ -1,59 +1,80 @@
 ---
 type: Proof
 title: "P5 - Priority-domain isolation"
-description: "Asynchronous task aging can prevent starvation without crossing into the protected RMS periodic priority domain."
+description: "Class-first selection prevents asynchronous aging from outranking any READY periodic task."
 tags: [scheduler, cortex-m23, proof, rms, priority, aging]
-generated:
-  by: openai/gpt-5.6-sol
-  at: 2026-10-27T20:08:00Z
 status: draft
 ---
 
 # Statement
 
-Aging of asynchronous tasks cannot change the dispatch order among protected periodic RMS tasks and cannot make an asynchronous task outrank a READY periodic task.
+No asynchronous task can be selected while any periodic task is READY, regardless of async base priority or age credit.
 
-# Priority domains
+Therefore async aging cannot change periodic RMS ordering or invalidate the periodic schedulability model.
 
-The scheduler defines two disjoint software-priority domains:
+# Concrete selector structure
 
-1. **Periodic protected domain**: compile-time periodic tasks ordered by fixed RMS priority. Shorter period means higher priority; a compile-time deterministic tie-breaker resolves equal periods.
-2. **Asynchronous domain**: event-driven tasks with base priority plus bounded aging.
+C6 performs selection in this order:
 
-Let `P_floor` be the least urgent priority value in the protected periodic domain under the implementation's chosen ordering convention.
+```text
+if any periodic READY task exists:
+    return best periodic by RMS
+else:
+    age/compare READY async tasks
+    return best async
+```
 
-For every asynchronous task `a` and every representable age `x`:
-
-`effective_priority(a, x)` SHALL remain strictly outside the protected periodic domain.
+Async numeric priority is never compared with a periodic priority.
 
 # Proof
 
-RMS priority for every periodic task is immutable after configuration.
+Assume at least one periodic task is READY.
 
-Aging modifies only the asynchronous effective priority and is clamped at the asynchronous-domain ceiling.
+The selector's periodic scan finds at least one periodic candidate.
 
-Because that ceiling does not cross `P_floor`, no aging function can construct an asynchronous effective priority that outranks a READY periodic task.
+By contract, the selector returns the best periodic candidate before entering the asynchronous selection stage.
 
-Therefore:
+Therefore no async task is considered as a competing winner in that dispatch decision.
 
-* asynchronous aging cannot reorder periodic tasks;
-* asynchronous aging cannot invalidate the periodic fixed-priority ordering; and
-* asynchronous tasks execute only when no protected periodic task with higher scheduling entitlement is READY.
+Async age credit can affect only the ordering among async tasks in decisions for which the periodic READY set is empty.
+
+Periodic ordering itself depends only on immutable period and deterministic task-ID tie break.
+
+Thus:
+
+1. async aging cannot reorder periodic tasks;
+2. async aging cannot cause async execution ahead of READY periodic work;
+3. the periodic higher-priority interference set in P6 contains only periodic jobs plus explicit kernel/interrupt overhead.
 
 # Starvation scope
 
-This proof does not promise that asynchronous work receives CPU time in an overloaded periodic system. Aging prevents starvation only among capacity available to the asynchronous domain.
+P5 makes no claim that async work receives processor time when periodic demand consumes all available capacity.
+
+C6's starvation-avoidance property is conditional on continuing async dispatch opportunities.
 
 # Architecture test
 
-For all representable asynchronous base priorities and age values, exhaustive or property-based tests SHALL assert:
+Exhaustively or property-test:
 
-`async_effective_priority < periodic_domain`
+* every combination of periodic READY/non-READY state;
+* every representable async base priority;
+* every representable async age credit.
 
-using the concrete implementation's comparison convention.
+Invariant:
 
-Tests SHALL also assert that changing asynchronous age never changes the relative ordering of two periodic tasks.
+```text
+periodic_ready_count > 0
+    => selected_task.class == PERIODIC
+```
+
+Also assert that changing any async priority/age value cannot change the relative ordering of two periodic candidates.
 
 # Dependencies
 
-[P6](P6-rms-schedulability.md) relies on this proof to exclude asynchronous execution from periodic higher-priority interference.
+[P6](P6-rms-schedulability.md) relies on this structural isolation property.
+
+# Status
+
+The architectural proof is discharged by the class-first selector contract.
+
+Implementation discharge requires tests showing the concrete selector preserves that control flow.
