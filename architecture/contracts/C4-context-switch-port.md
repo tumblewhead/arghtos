@@ -34,8 +34,8 @@ void arghtos_port_idle_wait(void);
 uintptr_t arghtos_port_build_initial_psp(
     void *stack_base,
     uint32_t stack_size,
-    arghtos_task_fn_t entry,
-    void (*return_trampoline)(void));
+    void (*thread_start)(void),
+    void (*return_guard)(void));
 ```
 
 The port also owns the vector-table implementations for SVC and PendSV.
@@ -212,12 +212,16 @@ A complete dormant saved context therefore occupies 16 32-bit words, 64 bytes, b
 2. verifies at least 64 bytes are available for the initial saved frame;
 3. creates a frame equivalent to a preempted task;
 4. sets R4-R12 and R0-R3 to zero;
-5. sets stacked LR to `return_trampoline`;
-6. sets stacked PC to `entry`;
+5. sets stacked LR to `return_guard`;
+6. sets stacked PC to `thread_start`;
 7. sets stacked xPSR with the Thumb state bit set;
 8. returns the saved PSP pointing at R4.
 
 No task entry argument exists in v1.
+
+C1 requires `thread_start` to be the kernel task-start trampoline, not the application task entry. The trampoline invokes the immutable C0 application entry according to task class.
+
+The `return_guard` is a fatal kernel guard that must never return.
 
 # First start
 
