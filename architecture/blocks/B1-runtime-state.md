@@ -9,24 +9,23 @@ status: draft
 # Key goals
 
 * Represent the P1 state machine compactly.
-* Store only mutable data that cannot remain in flash.
+* Store only mutable data required at runtime; all of it is resident SRAM.
 * Keep enough information for context continuation, timed release, async aging, and mandatory profiling.
-* Make total RAM a transparent function of `SCHED_MAX_TASKS`.
+* Make resident state a transparent function of `ARGHTOS_MAX_TASKS`.
 
-# Candidate per-task state
+# Concrete per-task state
 
-The exact layout is deferred to module design, but candidate fields are:
+B1 implements the 20-byte C8 record:
 
 * saved PSP;
-* state / flags;
-* next release or wake deadline;
-* async ready-since timestamp or equivalent age basis;
-* execution start timestamp;
-* cumulative CPU time;
-* maximum observed execution duration;
-* compact activation, preemption, and overrun counters as budget permits.
+* next timed release/sleep deadline;
+* cumulative CPU ticks;
+* observed maximum contiguous run;
+* saturating periodic overrun count;
+* async age credit;
+* state and flags.
 
-Fields that are mutually exclusive by task class are candidates for unions, provided the contract remains obvious and auditable.
+The current RUNNING interval start is stored once in C9, not per task.
 
 ```mermaid
 flowchart TB
