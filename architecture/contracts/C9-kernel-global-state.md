@@ -68,17 +68,24 @@ No module may keep another persistent copy of:
 
 # Pre-code resident metadata lower bound
 
-For `N` configured tasks:
+Let:
+
+* `C = ARGHTOS_MAX_TASKS` be compile-time control capacity;
+* `N = task_count` be configured tasks, with `N <= C`.
+
+Then:
 
 ```text
 C0 task descriptors = 16*N
-C8 task controls    = 20*N
-C9 kernel global   = 20
+C8 task controls    = 20*C
+C9 kernel global    = 20
 --------------------------------
-metadata(N)        = 36*N + 20
+metadata(C,N)       = 20*C + 16*N + 20
 ```
 
-At `N=32`:
+Unused C8 capacity remains resident.
+
+For the fully populated default build `C=N=32`:
 
 ```text
 descriptors   512 B
