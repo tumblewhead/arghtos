@@ -76,7 +76,7 @@ For periodic tasks, `async_priority` must be zero.
 ```c
 typedef struct {
     const arghtos_task_config_t *tasks;
-    struct arghtos_crash_record *crash_record; /* may be NULL */
+    struct arghtos_crash_record *crash_record; /* required v1 crash record */
     uint8_t                      task_count;
     uint8_t                      reserved[3];
 } arghtos_config_t;
@@ -87,7 +87,7 @@ _Static_assert(sizeof(arghtos_config_t) == 12u,
 
 The `arghtos_config_t` object itself is needed only for the duration of `arghtos_init()`. The task descriptor table and task stacks remain valid for the scheduler lifetime.
 
-C9 copies the persistent task-table pointer, crash-record pointer, and task count into kernel-global state. This avoids retaining a second configuration object.
+C9 copies the persistent task-table pointer, required crash-record pointer, and task count into kernel-global state. This avoids retaining a second configuration object.
 
 # Configuration API
 
@@ -121,6 +121,7 @@ Thus every synchronous periodic task has release 0 at the common scheduler start
 For every descriptor:
 
 * `entry != NULL`;
+* the top-level `crash_record` pointer is non-NULL and points to one writable 64-byte C5 record;
 * `stack_base != NULL`;
 * `stack_size >= 68` and satisfies the stricter C4 port check; the 68-byte minimum covers worst-case scheduler context overhead including one hardware alignment word;
 * stack regions are pairwise non-overlapping;
@@ -169,6 +170,8 @@ At 32 configured tasks:
 Application task stacks are excluded from the ArghtOS overhead target by explicit requirement, but remain part of total device SRAM consumption.
 
 Application task bodies are likewise not ArghtOS overhead; ArghtOS kernel/port code is.
+
+The required 64-byte crash record is ArghtOS overhead.
 
 # Dependencies
 
