@@ -87,7 +87,7 @@ F_arghtos(32) <= 1536 B
 
 is a **soft target and is not yet proven**.
 
-The present contracts leave 364 B before crash capture, leaving 300 B after the required crash record, for code/constants/MSP/other resident bytes. Actual feasibility cannot be established until implementation and linker-map evidence exist.
+The present contracts leave 300 B after the required crash record for code/constants, the ArghtOS-only MSP requirement, and other resident bytes. Actual feasibility cannot be established until implementation and linker-map evidence exist.
 
 # Architecture test
 
@@ -97,7 +97,7 @@ A build claiming a footprint result SHALL provide a linker/map-derived report th
 2. includes ArghtOS/port `.text`;
 3. includes ArghtOS/port `.rodata`, literal pools, and jump tables;
 4. includes `.data`, `.bss`, `.noinit`, and C0 descriptors;
-5. includes the configured crash record when enabled;
+5. includes the required 64-byte crash record;
 6. reports the MSP reservation used by the integration;
 7. excludes application task stacks only from the ArghtOS-overhead subtotal, while reporting them in the S0 system total;
 8. proves no dynamic allocator reference exists in ArghtOS.
