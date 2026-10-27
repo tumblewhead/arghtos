@@ -199,7 +199,7 @@ Measured worst-case selector cost is an input to P6.
 
 # Dependencies
 
-[C0](C0-static-task-configuration.md), [C8](C8-task-control-record.md), [C9](C9-kernel-global-state.md), [P1](../../proof/P1-task-state-invariants.md), [P5](../../proof/P5-priority-domain-isolation.md), [P6](../../proof/P6-rms-schedulability.md), [P7](../../proof/P7-bounded-memory-and-work.md).
+[C0](C0-static-task-configuration.md), [C8](C8-task-control-record.md), [C9](C9-kernel-global-state.md), [P1](../../proof/P1-task-state-invariants.md), [P5](../../proof/P5-priority-domain-isolation.md), [P6](../../proof/P6-rms-schedulability.md), [P7](../../proof/P7-bounded-memory-and-work.md), [P8](../../proof/P8-async-starvation-avoidance.md).
 
 # Dangerous aspects
 
