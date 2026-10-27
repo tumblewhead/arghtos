@@ -36,7 +36,7 @@ status: draft
 | `arghtos_port_request_dispatch()` | port | kernel | pend PendSV |
 | `arghtos_port_start()` | port | startup | first handoff |
 | `arghtos_port_idle_wait()` | port | dispatch path | idle with no READY task |
-| `arghtos_port_build_initial_psp(...)` | port | init | synthesize saved frame |
+| `arghtos_port_build_initial_psp(...)` | port | init | synthesize 64 B initial frame; configured stack reserves 68 B worst-case context overhead |
 | `arghtos_port_fault_terminal()` | platform | fatal path | reset/halt, no return |
 
 # Kernel-private objects
@@ -88,7 +88,7 @@ status: draft
 
 ```text
 C0 descriptors   32 * 16 = 512 B
-C8 controls      32 * 20 = 640 B
+C8 controls      capacity 32 * 20 = 640 B
 C9 global                  20 B
 --------------------------------
 metadata                   1172 B
