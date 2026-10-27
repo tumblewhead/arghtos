@@ -39,7 +39,7 @@ At 32 tasks:
 M_metadata(32) = 1172 B
 ```
 
-Optional crash capture adds 64 B.
+The required crash record adds 64 B, making the 32-task pre-code resident lower bound 1236 B.
 
 All linked ArghtOS `.text`, `.rodata`, literals, `.data`, `.bss`, `.noinit`, required scheduler metadata, and MSP accounting remain part of the complete footprint.
 
@@ -95,7 +95,7 @@ The maximum duration becomes a P6 timing input.
 
 Crash capture:
 
-* uses a fixed 64-byte record when enabled;
+* uses the required fixed 64-byte record;
 * performs no allocation;
 * performs no formatted transport output;
 * uses the C9 recursion guard;
@@ -108,7 +108,7 @@ The project SHALL provide:
 * linker-map attribution of all ArghtOS/port resident sections;
 * an ArghtOS-footprint subtotal including code/constants/data/metadata and ArghtOS-only MSP requirement;
 * a total-system SRAM report including the physical system MSP reservation, application task stacks/code, and driver state;
-* configured task count and crash-record setting;
+* configured task count and confirmation of the required crash record;
 * loop-bound review or static checks;
 * target timing of critical sections and dispatch paths;
 * fault-injection tests;
