@@ -31,7 +31,7 @@ It protects synchronous compile-time RMS tasks and schedules asynchronous event 
 * C8 runtime control: 20 B/task.
 * C9 global state: 20 B.
 * 32-task metadata lower bound: 1172 B.
-* optional crash record: 64 B.
+* required crash record: 64 B.
 * periodic tasks: synchronous, phase 0, `D=T`.
 * periodic priority: RMS, shorter period first, task-ID tie break.
 * async priority: base priority plus dispatch-opportunity age credit.
@@ -46,12 +46,12 @@ It protects synchronous compile-time RMS tasks and schedules asynchronous event 
 
 ```text
 1536 B soft target
--1172 B metadata
--------------------
- 364 B remaining
+-1236 B metadata + required crash record
+------------------------------------------
+ 300 B remaining
 ```
 
-That remaining 364 B must still contain ArghtOS/port code, read-only constants/literals, MSP reservation, and any additional resident bytes.
+That remaining 300 B must still contain ArghtOS/port code, read-only constants/literals, MSP reservation, and any additional resident bytes.
 
 Therefore the architecture does **not** presently establish that the 1.5 KiB target is feasible.
 
@@ -128,7 +128,7 @@ stateDiagram-v2
 | task PSP stacks | application | excluded from ArghtOS subtotal |
 | application task bodies | application | excluded from ArghtOS subtotal |
 | hardware event queues/DMA | driver/application | excluded from ArghtOS subtotal |
-| crash record | configured storage | yes when enabled |
+| crash record | configured storage | yes, required |
 
 # Architectural rules
 
