@@ -88,12 +88,12 @@ No loop over `releases_due` is permitted.
 If the task was DORMANT:
 
 * release one job;
-* add `releases_due - 1` to its saturating overrun counter.
+* add `releases_due - 1` to its saturating missed-release counter.
 
 If it was already active:
 
 * release no additional instance;
-* add `releases_due` to the saturating overrun counter.
+* add `releases_due` to the saturating missed-release counter.
 
 # Sleep release
 
