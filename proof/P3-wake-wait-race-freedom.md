@@ -1,85 +1,107 @@
 ---
 type: Proof
 title: "P3 - Wake/wait race freedom"
-description: "Idempotent asynchronous wakeup does not lose a wake at the transition from servicing an event to waiting."
+description: "The one-bit pending-wake handshake prevents a wake from being lost at the RUNNING-to-WAITING boundary without preserving event multiplicity."
 tags: [scheduler, cortex-m23, proof, interrupt, async, wait, race]
-generated:
-  by: openai/gpt-5.6-sol
-  at: 2026-10-27T20:08:00Z
 status: draft
 ---
 
 # Statement
 
-For an asynchronous task, a wake request is idempotent and the scheduler does not promise event multiplicity. Nevertheless, an event that makes work observable during the task's transition into `WAITING` must not leave the task asleep while work remains pending.
+For an asynchronous task, repeated wake requests may collapse into one scheduling indication, but a wake that occurs while the task is RUNNING or while it is committing to WAITING cannot leave the task blocked with that scheduling indication forgotten.
 
-# Semantics
+# Concrete wake semantics
 
-`wake(task)` means "this task has work or may have work."
+A wake targets only an async task.
 
-* If the task is `WAITING`, wake changes it to `READY`.
-* If the task is already `READY` or `RUNNING`, another wake does not create another job instance.
-* The scheduler does not count, queue, or preserve repeated wake requests.
-* A driver or application that requires event multiplicity owns its own counter, FIFO, ring buffer, DMA state, or other persistent event representation.
+* DORMANT -> READY.
+* WAITING -> READY.
+* READY -> READY, no additional queued work.
+* RUNNING -> RUNNING and set `wake_pending=1`.
+* SLEEPING -> SLEEPING and set `wake_pending=1`.
+* FAULTED: error, no state change.
 
-# Hazard
+The scheduler never counts repeated wake requests.
 
-The naive sequence
+# Concrete wait semantics
+
+Inside one serialized scheduler transaction:
 
 ```text
-task checks device: no work
-interrupt occurs and calls wake(task)
-wake observes task RUNNING and does nothing
-task calls wait()
-task is now WAITING although work exists
+if wake_pending == 1:
+    wake_pending = 0
+    remain RUNNING
+else:
+    RUNNING -> WAITING
 ```
 
-loses the scheduling indication.
+# Race proof
 
-# Proof obligation
+Consider a wake `W` that occurs after the worker's final application-level drain check and before `arghtos_wait()` has completed its scheduler transition.
 
-The implementation SHALL make the transition from "I have drained observable work" to `WAITING` atomic with respect to `wake_from_isr()`, or SHALL provide an equivalent handshake that remembers a wake arriving in that interval.
+There are only two linearized orderings.
 
-One sufficient abstract protocol is:
+## Wake linearizes before wait
 
-1. enter a bounded scheduler critical section;
-2. publish the task as intending to wait;
-3. re-evaluate a scheduler-visible wake latch or driver-visible work predicate;
-4. if a wake raced, remain or become `READY`;
-5. otherwise commit `RUNNING -> WAITING`;
-6. leave the critical section.
+The target is still RUNNING.
 
-Another implementation is acceptable only if it proves the same property.
+C1/C2 set `wake_pending=1`.
 
-# Proof
+When wait executes, it observes the latch, consumes it, and does not enter WAITING.
 
-Let `W` mean that at least one wake occurs after the task's final successful drain check and before the wait transition is committed.
+Therefore the wake is not lost.
 
-The wait protocol linearizes either before or after that wake:
+## Wait linearizes before wake
 
-* If wait linearizes first, the later wake observes `WAITING` and performs `WAITING -> READY`.
-* If wake linearizes first, the wait protocol observes the wake handshake/latch or re-check and does not leave the task blocked.
+Wait commits RUNNING -> WAITING.
 
-Thus there is no execution ordering in which `W` occurs and the final state remains `WAITING` solely because the task crossed the wait boundary.
+The later wake observes WAITING and performs WAITING -> READY.
 
-Repeated wakes may collapse into one scheduling indication, which is intentional.
+Therefore the wake is not lost.
+
+No third interleaving exists because the latch test/consume and WAITING commit are serialized with the wake state/latch update by the C4 critical-section contract.
+
+# Repetition semantics
+
+If any number of wakes occur while `wake_pending=1`, they collapse into that one bit.
+
+This is intentional and does not violate the proof because ArghtOS promises only preservation of the proposition:
+
+```text
+"the worker may have work"
+```
+
+Event multiplicity remains driver/application state.
+
+# Sleep note
+
+A wake while SLEEPING does not end the sleep early. It sets `wake_pending`, which is later consumed when the worker reaches wait after the timed sleep completes.
+
+This is consistent with the v1 distinction:
+
+* wait blocks on event;
+* sleep blocks on time.
 
 # Architecture test
 
-A deterministic host test SHALL exercise at least these interleavings:
+A deterministic host model SHALL exercise:
 
-1. wake before wait begins;
-2. wake inside the wait critical section/handshake;
-3. wake immediately after wait commits;
-4. multiple wakes while READY;
-5. multiple wakes while RUNNING;
-6. wake plus preemption; and
-7. wake from ISR immediately before exception return.
+1. wake immediately before wait transaction;
+2. wake during the serialized wait transaction;
+3. wake immediately after WAITING commit;
+4. repeated wakes while RUNNING;
+5. repeated wakes while READY;
+6. wake while SLEEPING;
+7. interrupt wake immediately before exception return.
 
-For cases 1 through 3, the task SHALL eventually be READY or RUNNING when application-visible work remains.
+For cases 1 through 3, after the interleaving the task must either remain RUNNING or become READY; it must not remain WAITING solely because of the race.
 
 # Dependencies
 
-Depends on the state model in [P1](P1-task-state-invariants.md).
+Depends on [P1](P1-task-state-invariants.md) and the C1/C2/C4 concrete handshake contracts.
 
-The concrete architecture must define the atomic primitive or handshake before this proof can be marked stable.
+# Status
+
+The abstract race argument is discharged by the one-bit handshake design.
+
+Implementation discharge still requires host interleaving tests and target validation of the C4 serialization primitive.
