@@ -8,10 +8,10 @@ status: draft
 
 # Key goals
 
-* Keep immutable configuration in flash where possible.
+* Keep immutable configuration compact; read-only does not imply non-SRAM.
 * Validate task IDs, stack ranges, task class, timing parameters, and priority-domain membership.
 * Expose a compact indexed descriptor table.
-* Make `SCHED_MAX_TASKS` compile-time adjustable, default 32.
+* Make `ARGHTOS_MAX_TASKS` compile-time adjustable, default 32.
 
 # Provides
 
@@ -36,7 +36,7 @@ flowchart LR
 
 * Writable descriptors.
 * Duplicate IDs.
-* Hidden RAM copies of immutable data.
+* Duplicate copies of already-resident immutable data.
 * Inconsistent configuration macros across translation units.
 * Invalid stack alignment or overlapping stack regions.
 
