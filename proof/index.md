@@ -8,3 +8,4 @@
 * [P5 - Priority-domain isolation](P5-priority-domain-isolation.md) - Proves asynchronous aging cannot enter the protected RMS priority domain.
 * [P6 - RMS schedulability](P6-rms-schedulability.md) - Defines the response-time proof required for all compile-time periodic tasks.
 * [P7 - Bounded memory and scheduler work](P7-bounded-memory-and-work.md) - Proves bounded SRAM use, bounded critical sections, and finite scheduler work.
+* [P8 - Async starvation avoidance](P8-async-starvation-avoidance.md) - Proves eventual service for continuously READY async tasks when async dispatch opportunities continue.
