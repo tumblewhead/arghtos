@@ -50,7 +50,7 @@ F_arghtos(N) =
   + M_code
   + M_const
   + M_other
-  + M_MSP
+  + M_MSP_arghtos
 ```
 
 is finite.
