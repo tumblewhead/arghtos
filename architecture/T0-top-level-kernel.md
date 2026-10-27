@@ -39,7 +39,28 @@ flowchart TB
   end
 ```
 
+# Start path
+
+```mermaid
+sequenceDiagram
+  participant A as Application startup
+  participant K as ArghtOS
+  participant T as Timer port
+  participant B4 as Execution boundary
+  A->>K: arghtos_init(config)
+  K->>K: validate + build dormant frames
+  K->>T: leave timer disarmed
+  A->>K: arghtos_start()
+  K->>K: capture common start epoch
+  K->>K: all periodic DORMANT -> READY
+  K->>K: next_time = start + period
+  K->>T: arm earliest next release
+  K->>B4: port_start()
+  B4-->>K: first PendSV dispatch
+```
+
 # Periodic release path
+
 
 ```mermaid
 sequenceDiagram
@@ -91,7 +112,7 @@ sequenceDiagram
 
 # Dependencies
 
-All contracts C0-C6 and proofs P0-P7.
+All contracts C0-C10 and proofs P0-P8.
 
 # Dangerous aspects
 
