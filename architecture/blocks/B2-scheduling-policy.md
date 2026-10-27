@@ -11,7 +11,7 @@ status: draft
 * Implement [C6](../contracts/C6-scheduling-policy.md) exactly.
 * Remain independent of Cortex exception mechanics.
 * Keep behavior deterministic and host-testable.
-* Bound work by `SCHED_MAX_TASKS`.
+* Bound work by `ARGHTOS_MAX_TASKS`.
 
 # Internal subfunctions
 
@@ -37,7 +37,7 @@ flowchart LR
 
 # Requires
 
-B0 immutable descriptors, B1 runtime state, and current time if aging is computed lazily from elapsed ready time.
+B0 immutable descriptors and B1 runtime state. Async aging uses dispatch opportunities, not elapsed time.
 
 # Dependencies
 
