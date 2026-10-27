@@ -21,6 +21,26 @@ ArghtOS is a statically allocated, preemptive scheduler for Cortex-M23. It prote
 * Keep platform-specific Cortex-M23 mechanics outside the policy core.
 * Make all scheduler work bounded by compile-time configuration.
 
+# Concrete v1 contract baseline
+
+The detailed contract set is indexed in [contracts/](contracts/). The current concrete baseline fixes:
+
+* `ARGHTOS_MAX_TASKS=32` default, compile-time adjustable up to 254;
+* 8-bit task IDs with 0xFF invalid;
+* 32-bit modulo scheduler time;
+* 28-byte mutable task-control record;
+* 12-byte global kernel state;
+* 908 bytes mandatory mutable kernel state at 32 tasks;
+* optional 64-byte crash record;
+* periodic bounded-job trampoline semantics;
+* async persistent-worker semantics;
+* one-bit pending-wake handshake, not an event counter;
+* SVC task gateway and PendSV-only task handoff;
+* privileged Thread/PSP tasks and Handler/MSP kernel execution;
+* public, port, and private header boundaries.
+
+The remaining memory qualification term is MSP plus any explicitly listed port-specific mutable state.
+
 # Architectural rules
 
 1. Periodic tasks are bounded jobs. One release creates at most one active job.
