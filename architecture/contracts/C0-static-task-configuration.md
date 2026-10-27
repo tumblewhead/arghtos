@@ -108,6 +108,16 @@ For an asynchronous task:
 
 # Initialization postconditions
 
+Initialization sequence before `ARGHTOS_OK`:
+
+1. validate the top-level pointer/count;
+2. call `arghtos_port_init()`;
+3. validate every descriptor including `arghtos_port_stack_valid()`;
+4. perform pairwise stack-overlap checks;
+5. initialize C8/C9 runtime state;
+6. build every initial PSP frame through C4;
+7. leave the platform scheduler timer disarmed until start.
+
 On `ARGHTOS_OK`:
 
 * the configuration is accepted as immutable;
