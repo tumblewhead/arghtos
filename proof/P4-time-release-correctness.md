@@ -85,7 +85,7 @@ If the task is already READY or RUNNING:
 * no new instance is created;
 * all `releases_due` are counted as missed/overrun releases.
 
-The saturating C8 overrun count is updated arithmetically.
+The saturating C8 missed-release count is updated arithmetically.
 
 # Sleep release
 
