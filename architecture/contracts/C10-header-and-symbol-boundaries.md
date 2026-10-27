@@ -125,7 +125,8 @@ uintptr_t arghtos_kernel_dispatch(uintptr_t outgoing_saved_psp);
 
 _Noreturn void arghtos_fatal(
     arghtos_fault_reason_t reason,
-    const void *exception_frame);
+    const arghtos_exception_frame_t *exception_frame,
+    uint32_t exc_return);
 ```
 
 # Visibility rule
