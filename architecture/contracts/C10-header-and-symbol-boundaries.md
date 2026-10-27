@@ -182,6 +182,12 @@ ARGHTOS_
 
 No generic names such as `task_t`, `yield`, `init`, or `timer_arm` are exported.
 
+# Resident-code rule
+
+Public headers should prefer declarations over nontrivial `static inline` implementations.
+
+Any machine code or literal data emitted into application translation units because of an ArghtOS header still counts as ArghtOS-induced resident footprint in the size report. Inlining is permitted only when measured to reduce total linked SRAM footprint.
+
 # Dangerous aspects
 
 * Exposing C8/C9 in the public header and freezing implementation layout accidentally.
