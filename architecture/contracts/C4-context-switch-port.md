@@ -4,6 +4,13 @@ title: "C4 - Cortex-M23 execution and context port"
 description: "Concrete MSP/PSP, SVC, PendSV, critical-section, initial-frame, and dispatch boundary."
 tags: [architecture, contract, cortex-m23, context, psp, msp, pendsv, svc]
 status: draft
+sources:
+  - id: arm-cortex-m23-dgu
+    title: "Arm Cortex-M23 Devices Generic User Guide"
+    resource: https://documentation-service.arm.com/static/5eff4394cafe527e86f5b3c4
+  - id: armv8m-arm
+    title: "Armv8-M Architecture Reference Manual"
+    resource: https://documentation-service.arm.com/static/5f8eff92f86e16515cdbe5e0
 ---
 
 # Key goals
