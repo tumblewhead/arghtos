@@ -124,10 +124,10 @@ State effects:
 
 | Target state | Effect |
 |---|---|
-| DORMANT | READY |
-| WAITING | READY |
+| DORMANT | READY; `age_credit=0` |
+| WAITING | READY; `age_credit=0` |
 | READY | no state change |
-| RUNNING | set `wake_pending=true` |
+| RUNNING | set `wake_pending=true`; state unchanged |
 | SLEEPING | set `wake_pending=true`; remain SLEEPING |
 | FAULTED | error, no state change |
 
@@ -171,7 +171,7 @@ _Noreturn void arghtos_task_start_trampoline(void)
 {
     arghtos_task_id_t id = current_task();
 
-    if (task[id].task_class == ARGHTOS_TASK_PERIODIC) {
+    if (task[id].period != 0u) {
         for (;;) {
             task[id].entry();       /* exactly one bounded job */
             svc(ARGHTOS_SVC_TASK_RETURN);
