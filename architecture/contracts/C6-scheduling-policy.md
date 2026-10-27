@@ -1,7 +1,7 @@
 ---
 type: Contract
 title: "C6 - Scheduling and dispatch policy"
-description: "Concrete protected RMS selector, async aging rule, deterministic ties, and kernel dispatch transaction."
+description: "Concrete protected RMS selector, opportunity-based async aging, deterministic ties, and kernel dispatch transaction."
 tags: [architecture, contract, scheduling, rms, aging, priority, dispatch]
 status: draft
 ---
@@ -10,26 +10,23 @@ status: draft
 
 * Preserve fixed rate-monotonic ordering for periodic tasks.
 * Give asynchronous tasks residual CPU capacity only.
-* Use bounded aging to prevent indefinite async priority starvation when async dispatch opportunities exist.
-* Make all tie behavior deterministic.
+* Prevent starvation among async tasks when async dispatch opportunities continue.
+* Avoid time-wrap dependence in the aging mechanism.
 * Keep selection bounded by `ARGHTOS_MAX_TASKS`.
-* Keep policy independent of Cortex-M context mechanics.
 
 # Internal selector API
 
 ```c
-arghtos_task_id_t arghtos_select_next(arghtos_time_t now);
+arghtos_task_id_t arghtos_select_next(void);
 ```
 
 Call context: KERNEL only, with scheduler state serialized.
 
 The function returns `ARGHTOS_TASK_ID_INVALID` when no task is READY.
 
-It does not mutate task lifecycle state.
-
 # Top-level class rule
 
-Selection is lexicographic by class:
+Selection is lexicographic by task class:
 
 ```text
 if any periodic task is READY:
@@ -53,79 +50,82 @@ or:
     period_a == period_b and task_id_a < task_id_b
 ```
 
-Period is immutable C0 configuration.
-
-Deadline does not alter v1 priority assignment. It is consumed by P6 response-time acceptance.
+V1 has synchronous releases and `D=T`.
 
 # Async base priority
 
-Base priority is C0 `async_priority`.
-
-Larger numeric values are more urgent.
+Larger numeric values are more urgent:
 
 ```text
 0 <= base < ARGHTOS_ASYNC_PRIORITY_LEVELS
 ```
 
-# Async aging
+# Opportunity-based async aging
 
-Aging applies only while an async task is READY.
+Aging occurs only when:
 
-For READY async task `t`:
+1. no periodic task is READY; and
+2. at least one async task is READY.
+
+That event is an **async dispatch opportunity**.
+
+Before comparing READY async candidates, each receives:
 
 ```c
-uint32_t age_ticks = now - t.state_time;
-uint32_t age_steps = age_ticks / ARGHTOS_AGING_QUANTUM_TICKS;
-uint32_t ceiling = ARGHTOS_ASYNC_PRIORITY_LEVELS - 1u;
-
-effective = min((uint32_t)base + age_steps, ceiling);
+if (age_credit != UINT8_MAX) {
+    age_credit++;
+}
 ```
 
-The result is clamped before conversion back to `arghtos_priority_t`.
+Effective priority is:
 
-Aging never changes C0 base priority.
+```c
+uint16_t raised = (uint16_t)base + (uint16_t)age_credit;
+uint8_t ceiling = ARGHTOS_ASYNC_PRIORITY_LEVELS - 1u;
+effective = (raised > ceiling) ? ceiling : (uint8_t)raised;
+```
+
+The selected task resets `age_credit=0` when it becomes RUNNING.
 
 # Async tie order
 
-Among READY async tasks, compare in this order:
+Among READY async tasks, compare:
 
-1. larger `effective` priority wins;
-2. if equal, larger elapsed READY age `now - state_time` wins;
-3. if still equal, smaller task ID wins.
+1. larger effective priority;
+2. larger `age_credit`;
+3. smaller task ID.
 
-This gives deterministic FIFO-like preference among equal/saturated priorities without maintaining a queue.
-
-# state_time update rule
-
-For an async task, `state_time = now` whenever it newly enters READY from:
-
-* DORMANT by wake;
-* WAITING by wake;
-* SLEEPING by timer release;
-* RUNNING by yield;
-* RUNNING by preemption.
-
-A READY task that receives another idempotent wake does not reset `state_time`.
-
-Therefore repeated wake calls cannot erase accrued aging.
+The second comparison preserves waiting order after several tasks have saturated at the priority ceiling.
 
 # Starvation statement
 
-C6 guarantees no absolute CPU-time bound for asynchronous tasks because the periodic domain may consume all processor capacity.
+C6 does not promise async CPU time while periodic work consumes all available processor capacity.
 
 Conditional guarantee:
 
-> If asynchronous dispatch opportunities continue to occur, a continuously READY async task eventually reaches the async priority ceiling and receives oldest-ready tie preference over async tasks that became READY later.
+> If async dispatch opportunities continue to occur, every continuously READY async task is eventually selected.
 
-This guarantee does not cross the periodic-domain boundary.
+Reason: a nonselected READY async task's credit increases monotonically to saturation, while a selected task resets to zero. Thus a task cannot remain permanently below repeatedly selected peers.
+
+# Wake and READY credit rules
+
+* DORMANT/WAITING/SLEEPING -> READY: credit becomes zero.
+* RUNNING -> READY by yield/preemption: credit becomes zero.
+* wake of an already READY task does not reset credit.
+* credit is ignored outside READY async state.
 
 # Bounded selector
 
-The reference implementation performs at most one bounded scan over `task_count <= ARGHTOS_MAX_TASKS`.
+The reference selector uses bounded scans only.
 
-A two-pass implementation is also permitted if its measured bound is included in P6/P7.
+A permitted implementation is:
 
-No dynamic ready queue is required by the contract.
+1. one scan to find the best READY periodic task;
+2. if none exists, one scan over READY async tasks that increments credit and selects the best candidate.
+
+Thus selection work is at most `2 * task_count` task inspections.
+
+No dynamic ready queue exists.
 
 # Concrete kernel dispatch transaction
 
@@ -135,24 +135,22 @@ C4 calls:
 uintptr_t arghtos_kernel_dispatch(uintptr_t outgoing_saved_psp);
 ```
 
-The kernel performs this serialized transaction:
+Serialized behavior:
 
 ```text
 now = port_time_now()
 
 if outgoing_saved_psp != 0 and current_task != INVALID:
     current.saved_psp = outgoing_saved_psp
-    account elapsed runtime
+    elapsed = now - kernel.run_start
+    account total/max runtime
 
     if current.state == RUNNING:
-        # dispatch was requested by preemption/reconsideration,
-        # not by an earlier block/sleep/yield transition
         current.state = READY
         if current is async:
-            current.state_time = now
-        saturating_increment(current.preempt_count)
+            current.age_credit = 0
 
-next = arghtos_select_next(now)
+next = arghtos_select_next()
 
 if next == INVALID:
     current_task = INVALID
@@ -160,61 +158,57 @@ if next == INVALID:
 
 assert next.state == READY
 next.state = RUNNING
-next.state_time = now
-saturating_increment(next.dispatch_count)
+if next is async:
+    next.age_credit = 0
+kernel.run_start = now
 current_task = next
 return next.saved_psp
 ```
 
-Lifecycle APIs such as wait/yield/sleep may update the outgoing task state before PendSV. In those cases the `state == RUNNING` test prevents the dispatch path from incorrectly classifying the transition as a preemption.
+Lifecycle APIs may change the outgoing task state before PendSV. In those cases the `state == RUNNING` test prevents a voluntary block/yield from being reclassified as a preemption.
 
 # Preemption behavior
 
-A scheduling-relevant event requests dispatch when it may change the winner.
+A scheduling-relevant event requests dispatch when it may change the winner:
 
-Examples:
-
-* a periodic release;
-* an async wake;
-* current task yield/wait/sleep/return;
+* periodic release;
+* async wake;
+* yield/wait/sleep/return;
 * scheduler start.
 
-PendSV re-evaluates the full policy. If the outgoing task remains the winner, restoring the same saved PSP is legal.
+PendSV re-evaluates policy.
+
+Restoring the same task is legal if it remains the winner.
 
 # Periodic overrun interaction
 
-C6 never queues another periodic instance.
+No additional periodic job instance is queued.
 
-When B3 detects a release while the prior job state is not inactive/DORMANT, it increments the overrun counter and leaves the existing job as the only active instance.
-
-The configured fault/diagnostic policy may report this, but selection continues using the existing task state.
+C3 records missed releases and advances the release epoch arithmetically.
 
 # Complexity contract
 
 For `N = task_count`:
 
 ```text
-selection work = O(N)
-0 <= N <= ARGHTOS_MAX_TASKS
+selector inspections <= 2*N
+N <= ARGHTOS_MAX_TASKS
 ```
 
-There is no operation proportional to historical wake count, number of past releases, or elapsed runtime.
-
-Measured worst-case selector cost at `ARGHTOS_MAX_TASKS` is an input to P6.
+Measured worst-case selector cost is an input to P6.
 
 # Dependencies
 
-[C0](C0-static-task-configuration.md), [C7](C7-common-types-abi.md), [C8](C8-task-control-record.md), [P1](../../proof/P1-task-state-invariants.md), [P5](../../proof/P5-priority-domain-isolation.md), [P6](../../proof/P6-rms-schedulability.md), [P7](../../proof/P7-bounded-memory-and-work.md).
+[C0](C0-static-task-configuration.md), [C8](C8-task-control-record.md), [C9](C9-kernel-global-state.md), [P1](../../proof/P1-task-state-invariants.md), [P5](../../proof/P5-priority-domain-isolation.md), [P6](../../proof/P6-rms-schedulability.md), [P7](../../proof/P7-bounded-memory-and-work.md).
 
 # Dangerous aspects
 
-* Resetting `state_time` on an idempotent wake.
-* Aging WAITING tasks instead of READY tasks.
-* Comparing async numbers directly with periodic priority.
-* Incrementing preemption count for a voluntary wait/yield/sleep.
-* Using deadline-monotonic ordering while claiming RMS.
-* Adding hidden queue/history work to selection.
+* Aging periodic tasks.
+* Resetting async credit on an idempotent READY wake.
+* Comparing async numeric priority with periodic priority.
+* Aging on timer ticks instead of dispatch opportunities.
+* Hidden unbounded queue/history work.
 
 # Boundary specification
 
-C6 owns only winner selection and the serialized dispatch transaction. C3 owns when tasks become due, C1/C2 own lifecycle requests, C4 owns processor switching, and C5 owns diagnostic interpretation.
+C6 owns winner selection and the serialized dispatch transaction. C3 owns timed release, C1/C2 own lifecycle requests, C4 owns processor switching, and C5 owns diagnostic presentation.
