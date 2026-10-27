@@ -1,7 +1,7 @@
 ---
 type: Contract
 title: "C0 - Static task configuration"
-description: "Concrete immutable task descriptor and top-level static configuration."
+description: "Concrete 16-byte immutable task descriptor and static scheduler configuration."
 tags: [architecture, contract, task, static-memory]
 status: draft
 ---
@@ -12,7 +12,7 @@ status: draft
 * Keep task descriptors immutable after initialization.
 * Keep all task storage statically allocated.
 * Make task ID equal to descriptor-table index.
-* Keep immutable configuration eligible for placement in flash.
+* Minimize resident configuration footprint because all sections, including read-only data, reside in SRAM on the target.
 
 # Public task entry type
 
@@ -22,50 +22,72 @@ typedef void (*arghtos_task_fn_t)(void);
 
 Periodic entries execute exactly one bounded job and return.
 
-Asynchronous entries are persistent workers and must not return during normal operation. Returning from an asynchronous entry is a task fault.
+Asynchronous entries are persistent workers and must not return during normal operation.
 
-# Concrete task descriptor
+# Concrete 16-byte task descriptor
 
 ```c
 typedef struct {
-    arghtos_task_fn_t entry;      /* immutable entry point */
-    void             *stack_base; /* lowest address of static task stack */
-    uint32_t          stack_size; /* bytes */
-
-    arghtos_time_t    period;     /* periodic only, else 0 */
-    arghtos_time_t    deadline;   /* periodic only, else 0 */
-    arghtos_time_t    phase;      /* periodic only, else 0 */
-
-    uint32_t          budget;     /* diagnostic runtime budget; 0 disables */
-    uint16_t          flags;      /* reserved, must be 0 in v1 */
-    uint8_t           task_class; /* arghtos_task_class_t */
-    uint8_t           async_priority; /* async only */
+    arghtos_task_fn_t entry;       /* 4 B: immutable entry point */
+    void             *stack_base;  /* 4 B: lowest address of task stack */
+    arghtos_time_t    period;      /* 4 B: 0 => async, nonzero => periodic */
+    uint16_t          stack_size;  /* 2 B: bytes, maximum 65535 */
+    uint8_t           async_priority;
+    uint8_t           flags;       /* reserved, zero in v1 */
 } arghtos_task_config_t;
+
+_Static_assert(sizeof(arghtos_task_config_t) == 16u,
+               "task descriptor resident-footprint contract changed");
 ```
 
-On a 32-bit Cortex-M ABI this descriptor is expected to occupy 32 bytes. That expectation is a build-time check, not a portability assumption.
+Task class is derived rather than stored:
 
-Task ID is the zero-based array index:
-
-```c
-task_id == &tasks[task_id] - tasks
+```text
+period == 0  => asynchronous
+period != 0  => periodic
 ```
 
-The descriptor therefore does not store a redundant task ID.
+Task ID is the zero-based descriptor-table index. No redundant task ID is stored.
 
-# Kernel configuration
+# V1 periodic timing contract
+
+V1 periodic tasks are synchronous rate-monotonic tasks:
+
+* first release occurs at scheduler start;
+* phase is zero;
+* relative deadline equals period: `D_i = T_i`;
+* shorter period means higher RMS priority.
+
+Arbitrary phase offsets and `D != T` are not part of v1. Adding them requires revisiting P6 and the resident-footprint budget.
+
+# V1 asynchronous priority
+
+For asynchronous tasks:
+
+```text
+period == 0
+async_priority < ARGHTOS_ASYNC_PRIORITY_LEVELS
+```
+
+For periodic tasks, `async_priority` must be zero.
+
+# Kernel configuration passed to init
 
 ```c
 typedef struct {
     const arghtos_task_config_t *tasks;
-    uint8_t                      task_count;
-    uint8_t                      reserved0;
-    uint16_t                     reserved1;
     struct arghtos_crash_record *crash_record; /* may be NULL */
+    uint8_t                      task_count;
+    uint8_t                      reserved[3];
 } arghtos_config_t;
+
+_Static_assert(sizeof(arghtos_config_t) == 12u,
+               "init configuration ABI changed");
 ```
 
-The caller must keep the configuration object and descriptor array valid for the lifetime of the scheduler.
+The `arghtos_config_t` object itself is needed only for the duration of `arghtos_init()`. The task descriptor table and task stacks remain valid for the scheduler lifetime.
+
+C9 copies the persistent task-table pointer, crash-record pointer, and task count into kernel-global state. This avoids retaining a second configuration object.
 
 # Configuration API
 
@@ -74,7 +96,7 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config);
 void arghtos_start(void);
 ```
 
-`arghtos_init()` is called once in privileged Thread mode before task scheduling begins.
+`arghtos_init()` is called once before scheduling begins.
 
 `arghtos_start()` is called once after successful initialization and does not return during normal operation.
 
@@ -82,88 +104,68 @@ void arghtos_start(void);
 
 For every descriptor:
 
-* `entry != NULL`.
-* `stack_base != NULL`.
-* `stack_size` is at least the architecture minimum required for the initial context frame and required alignment.
-* stack regions are pairwise non-overlapping.
-* `flags == 0` in v1.
-* `budget < ARGHTOS_TIME_HALF_RANGE` when nonzero.
+* `entry != NULL`;
+* `stack_base != NULL`;
+* `stack_size >= 64` and satisfies the stricter C4 port check;
+* stack regions are pairwise non-overlapping;
+* `flags == 0`.
 
-For a periodic task:
+For a periodic descriptor:
 
-* `task_class == ARGHTOS_TASK_PERIODIC`;
 * `period > 0`;
 * `period < ARGHTOS_TIME_HALF_RANGE`;
-* `deadline > 0 && deadline <= period`;
-* `phase < ARGHTOS_TIME_HALF_RANGE`;
 * `async_priority == 0`.
 
-For an asynchronous task:
+For an async descriptor:
 
-* `task_class == ARGHTOS_TASK_ASYNC`;
 * `period == 0`;
-* `deadline == 0`;
-* `phase == 0`;
 * `async_priority < ARGHTOS_ASYNC_PRIORITY_LEVELS`.
 
-# Initialization postconditions
+# Initialization sequence
 
-Initialization sequence before `ARGHTOS_OK`:
+Before returning `ARGHTOS_OK`:
 
 1. validate the top-level pointer/count;
 2. call `arghtos_port_init()`;
-3. validate every descriptor including `arghtos_port_stack_valid()`;
+3. validate each descriptor including `arghtos_port_stack_valid()`;
 4. perform pairwise stack-overlap checks;
-5. initialize C8/C9 runtime state;
-6. build every initial PSP frame through C4;
-7. leave the platform scheduler timer disarmed until start.
+5. copy persistent configuration pointers/count into C9;
+6. initialize C8 runtime state;
+7. build every initial PSP frame through C4;
+8. leave the scheduler timer disarmed until start.
 
-On `ARGHTOS_OK`:
+On success:
 
-* the configuration is accepted as immutable;
-* every runtime task slot corresponds to exactly one descriptor;
-* all async tasks begin `DORMANT`;
-* periodic tasks begin inactive and receive their first release at scheduler start plus `phase`;
-* initial task frames are valid according to C4;
-* no task has executed yet.
+* all async tasks begin DORMANT;
+* all periodic tasks begin DORMANT and become due at scheduler start;
+* no task has executed.
 
-On error, no task is started and `arghtos_start()` is invalid until a successful re-initialization.
+# Resident-memory accounting
 
-# Ownership
+The descriptor table is read-only by contract but is physically SRAM-resident and counts against the ArghtOS resident-footprint budget.
 
-```mermaid
-flowchart LR
-  APP["Application static storage"] --> DESC["const descriptor table"]
-  APP --> STACK["task stack storage"]
-  DESC --> K["ArghtOS"]
-  STACK --> K
-  K --> STATE["private runtime state"]
+At 32 configured tasks:
+
+```text
+32 * 16 B = 512 B
 ```
 
-The application owns the bytes backing task stacks. ArghtOS owns PSP placement and stack use while a task executes.
+Application task stacks are excluded from the ArghtOS overhead target by explicit requirement, but remain part of total device SRAM consumption.
 
-# Atomicity
-
-Configuration is immutable once scheduling starts. No runtime API modifies C0 data.
-
-# Failure behavior
-
-Bad configuration returns `ARGHTOS_ERR_BAD_CONFIG` or `ARGHTOS_ERR_BAD_ARGUMENT` from `arghtos_init()`.
-
-Configuration corruption detected after scheduler start is a kernel invariant fault and enters C5 fatal handling.
+Application task bodies are likewise not ArghtOS overhead; ArghtOS kernel/port code is.
 
 # Dependencies
 
-[C7 common types](C7-common-types-abi.md), [P0](../../proof/P0-static-configuration-validity.md), [P2](../../proof/P2-context-stack-integrity.md), [P6](../../proof/P6-rms-schedulability.md).
+[C7](C7-common-types-abi.md), [C9](C9-kernel-global-state.md), [P0](../../proof/P0-static-configuration-validity.md), [P2](../../proof/P2-context-stack-integrity.md), [P6](../../proof/P6-rms-schedulability.md).
 
 # Dangerous aspects
 
+* Treating read-only data as free because it is `const`.
 * Overlapping stacks.
-* Stack sizes that cannot hold a first-run context.
-* Mutable descriptor memory changed after initialization.
-* Timing parameters at or beyond the half-range.
+* Stack sizes too small for a saved frame plus task execution.
+* Reintroducing phase/deadline/budget fields without accounting their per-task SRAM cost.
 * Treating task activation as allocation.
 
 # Boundary specification
 
-C0 defines immutable application-supplied resources. ArghtOS validates and consumes them, but never creates, frees, resizes, or relocates them.
+C0 defines immutable application-supplied scheduler metadata. It is read-only after initialization but is resident SRAM and is included in the scheduler-footprint accounting.
