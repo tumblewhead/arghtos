@@ -24,6 +24,8 @@ status: draft
 
 | Symbol | Implemented by | Called by | Requirement |
 |---|---|---|---|
+| `arghtos_port_init()` | platform | `arghtos_init` | configure/validate scheduler port before frame creation |
+| `arghtos_port_stack_valid(base,size)` | Cortex port | `arghtos_init` | bounded port-specific stack check |
 | `arghtos_port_time_now()` | platform | kernel | bounded 32-bit monotonic read |
 | `arghtos_port_timer_arm(t)` | platform | kernel | absolute one-shot deadline |
 | `arghtos_port_timer_disarm()` | platform | kernel | cancel scheduler timer target |
