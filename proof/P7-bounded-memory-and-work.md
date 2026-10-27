@@ -19,16 +19,18 @@ For fixed build configuration and `N <= ARGHTOS_MAX_TASKS`:
 
 P0 defines the complete resident footprint, including ArghtOS/port code and read-only data.
 
+Let `C=ARGHTOS_MAX_TASKS` and `N=task_count <= C`.
+
 The concrete metadata lower bound is:
 
 ```text
-M_metadata(N) = 36*N + 20
+M_metadata(C,N) = 20*C + 16*N + 20
 ```
 
 because:
 
-* C0 descriptor = 16 B/task;
-* C8 control = 20 B/task;
+* C0 descriptor = 16 B/configured task;
+* C8 control array = 20 B/capacity slot;
 * C9 global = 20 B.
 
 At 32 tasks:
