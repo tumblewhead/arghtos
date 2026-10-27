@@ -176,9 +176,12 @@ The fatal path:
 
 1. sets the C9 fault-active guard;
 2. prevents normal scheduler mutation;
-3. captures the best available task/time/MSP/PSP/frame state;
-4. commits the crash record if configured;
-5. calls the terminal port hook.
+3. if the fault is attributable to the current task and a valid current task exists, sets that task state to FAULTED;
+4. captures the best available task/time/MSP/PSP/frame state;
+5. commits the crash record if configured;
+6. calls the terminal port hook.
+
+Kernel-global faults that are not attributable to one task do not invent a FAULTED task.
 
 # Terminal hook
 
