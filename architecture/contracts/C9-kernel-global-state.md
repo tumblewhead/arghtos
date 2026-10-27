@@ -107,7 +107,7 @@ F_arghtos =
   + ArghtOS .bss
   + ArghtOS .noinit
   + required C0 descriptor table
-  + reserved MSP attributable to ArghtOS/system handler operation
+  + ArghtOS-only MSP requirement
   + any other ArghtOS-required resident section
 ```
 
@@ -157,14 +157,18 @@ Those excluded bytes still count in the MCU's **total system SRAM** and must be 
 
 # MSP qualification
 
-MSP is physically shared by ArghtOS exceptions and application/device handlers.
+There is one physical MSP, shared by ArghtOS exception paths and application/device handlers.
 
-The system report must provide both:
+Two different quantities are reported:
 
-1. ArghtOS-only resident footprint; and
-2. total system SRAM including the full MSP reservation required for allowed nested handlers.
+* `M_MSP_arghtos`: the worst MSP depth required by ArghtOS-owned execution paths under the defined exception-priority model, excluding application/device-handler bodies.
+* `M_MSP_system`: the actual linker/startup MSP reservation required for all permitted nested ArghtOS and application/device handlers.
 
-No analysis may assume MSP is free merely because startup code already created it.
+The 1.5 KiB ArghtOS-overhead subtotal uses `M_MSP_arghtos`.
+
+The S0 total-system SRAM report uses the physical `M_MSP_system` reservation exactly once.
+
+No report may treat MSP as free merely because startup code already reserved it.
 
 # Fault recursion
 
