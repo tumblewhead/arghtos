@@ -5,6 +5,7 @@ This directory defines the architecture that must satisfy the proof obligations 
 ## Views
 
 * [A0 - Architecture overview](A0-architecture-overview.md) - Architectural rules, scheduling domains, ownership, and major flows.
+* [A1 - Pre-module consistency audit](A1-consistency-audit.md) - Cross-check of proofs, contracts, footprint accounting, and remaining evidence before module design.
 * [Contracts](contracts/) - Interfaces and behavioral boundaries between code blocks.
 * [Code blocks](blocks/) - Independently understandable implementation units and the contracts each block provides or consumes.
 * [Integrated submodules](submodules/) - Compositions of code blocks that implement larger scheduler behaviors.
