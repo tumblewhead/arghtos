@@ -100,6 +100,22 @@ void arghtos_start(void);
 
 `arghtos_start()` is called once after successful initialization and does not return during normal operation.
 
+# Concrete scheduler start transaction
+
+Before C4 performs the first task handoff, `arghtos_start()` performs one bounded scan:
+
+1. read `start_time = arghtos_port_time_now()`;
+2. store C9 `start_time`;
+3. for every periodic descriptor (`period != 0`):
+   * DORMANT -> READY;
+   * set `next_time = start_time + period`;
+4. leave async tasks DORMANT;
+5. arm the platform timer for the earliest periodic `next_time`, or disarm if no periodic task exists;
+6. set the C9 started flag;
+7. call `arghtos_port_start()`.
+
+Thus every synchronous periodic task has release 0 at the common scheduler start epoch and is eligible for the first dispatch.
+
 # Descriptor validity rules
 
 For every descriptor:
