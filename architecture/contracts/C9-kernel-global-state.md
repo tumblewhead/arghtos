@@ -1,36 +1,39 @@
 ---
 type: Contract
-title: "C9 - Kernel global state and SRAM accounting"
-description: "Concrete 12-byte global kernel state and default scheduler SRAM budget equation."
-tags: [architecture, contract, memory, kernel-state, sram]
+title: "C9 - Kernel global state and resident-footprint accounting"
+description: "Concrete 20-byte global state plus complete SRAM-resident scheduler footprint accounting."
+tags: [architecture, contract, memory, kernel-state, sram, footprint]
 status: draft
 ---
 
 # Key goals
 
 * Keep mutable global kernel state explicit.
-* Prevent untracked singleton state from appearing across modules.
-* Produce a concrete default SRAM accounting equation.
-* Leave MSP sizing visible rather than hiding it in the linker script.
+* Avoid retaining redundant top-level configuration.
+* Count every ArghtOS-resident byte, including code and read-only data.
+* Make the 1.5 KiB target a linker-verifiable footprint requirement rather than a mutable-state estimate.
 
 # Concrete global state
 
 ```c
 typedef struct {
-    const arghtos_config_t *config;
-    arghtos_time_t          start_time;
+    const arghtos_task_config_t *tasks;
+    arghtos_crash_record_t      *crash_record;
 
-    arghtos_task_id_t       current_task;
-    uint8_t                 task_count;
-    uint8_t                 flags;
-    uint8_t                 reserved;
+    arghtos_time_t               start_time;
+    arghtos_time_t               run_start;
+
+    arghtos_task_id_t            current_task;
+    uint8_t                      task_count;
+    uint8_t                      flags;
+    uint8_t                      reserved;
 } arghtos_kernel_state_t;
 
-_Static_assert(sizeof(arghtos_kernel_state_t) == 12u,
-               "global kernel state SRAM contract changed");
+_Static_assert(sizeof(arghtos_kernel_state_t) == 20u,
+               "kernel-global resident-footprint contract changed");
 ```
 
-# Global flag bits
+# Global flags
 
 ```c
 #define ARGHTOS_KF_INITIALIZED  (1u << 0)
@@ -39,90 +42,144 @@ _Static_assert(sizeof(arghtos_kernel_state_t) == 12u,
 #define ARGHTOS_KF_RESERVED     (0xF8u)
 ```
 
-Reserved bits remain zero in v1.
+# Initialization ownership
 
-# Field semantics
+C0's `arghtos_config_t` is only an initialization argument.
 
-* `config`: immutable C0 configuration pointer.
-* `start_time`: scheduler epoch captured exactly once at start.
-* `current_task`: RUNNING task ID or `ARGHTOS_TASK_ID_INVALID`.
-* `task_count`: cached validated count from C0.
-* `flags`: lifecycle/fault recursion state.
-* `reserved`: zero.
+C9 copies:
+
+* task-table pointer;
+* crash-record pointer;
+* task count.
+
+The top-level config object need not remain allocated after `arghtos_init()` returns.
 
 # Single-source rule
 
-No code block may create another mutable global copy of:
+No module may keep another persistent copy of:
 
 * current task ID;
 * task count;
 * scheduler start epoch;
-* initialized/started state;
-* fatal recursion state.
+* current run-start timestamp;
+* task-table pointer;
+* crash-record pointer;
+* initialized/started/fault-active state.
 
-Derived local variables are allowed; persistent duplicate authorities are not.
+# Pre-code resident metadata lower bound
 
-# Default mandatory SRAM
-
-At `ARGHTOS_MAX_TASKS=32`:
-
-```text
-C8 task-control array   32 * 28 = 896 B
-C9 global state                    12 B
----------------------------------------
-mandatory kernel state            908 B
-```
-
-If the application supplies the C5 crash record in SRAM:
+For `N` configured tasks:
 
 ```text
-mandatory kernel state            908 B
-crash record                       64 B
----------------------------------------
-state + crash                      972 B
+C0 task descriptors = 16*N
+C8 task controls    = 20*N
+C9 kernel global   = 20
+--------------------------------
+metadata(N)        = 36*N + 20
 ```
 
-Immutable C0 descriptors should reside in flash and do not count toward mutable SRAM.
-
-Application task stacks are excluded by requirement.
-
-# MSP accounting
-
-MSP is not hidden from the memory budget.
-
-The integration report must state:
+At `N=32`:
 
 ```text
-total_scheduler_sram =
-    908
-  + crash_record_bytes
-  + reserved_MSP_bytes
-  + any port-specific mutable bytes
+descriptors   512 B
+controls      640 B
+global         20 B
+-------------------
+metadata     1172 B
 ```
 
-The soft target is:
+Optional crash record:
 
 ```text
-total_scheduler_sram <= 1536 bytes
+1172 + 64 = 1236 B
 ```
 
-for the default 32-task configuration.
+# Complete ArghtOS resident footprint
 
-Because application/device interrupt handlers also execute on MSP, final MSP sizing cannot be proven from scheduler code alone. Target qualification must measure or statically bound worst-case nested MSP use.
+The soft-target quantity is not "mutable SRAM." It is the complete incremental ArghtOS footprint resident in SRAM:
 
-# Port-specific mutable storage
+```text
+F_arghtos =
+    ArghtOS/port .text
+  + ArghtOS/port .rodata
+  + ArghtOS/port literal pools / jump tables
+  + ArghtOS .data
+  + ArghtOS .bss
+  + ArghtOS .noinit
+  + required C0 descriptor table
+  + reserved MSP attributable to ArghtOS/system handler operation
+  + any other ArghtOS-required resident section
+```
 
-Any Cortex-M23 port-specific mutable object not already represented by C8/C9 must be individually listed in the memory report.
+The linker map is the authority. Section names do not create exemptions.
 
-A port may not silently add per-task arrays.
+Where the descriptor/control/global objects already appear in `.rodata/.data/.bss`, they are counted once through the linker-map total, not added twice.
+
+# Soft target
+
+For a fully populated default 32-task build:
+
+```text
+F_arghtos <= 1536 bytes     SHOULD
+```
+
+This is a soft target, not presently a proven property.
+
+With the current contracts, metadata alone consumes 1172 B, leaving only:
+
+```text
+1536 - 1172 = 364 B
+```
+
+for ArghtOS code, constants, MSP reservation, and other port/runtime bytes, or 300 B if the optional crash record is included.
+
+Therefore **the current contract set does not establish feasibility of the 1.5 KiB soft target**. The target remains an explicit architecture risk to measure and optimize.
+
+# Scope of the ArghtOS overhead target
+
+Included:
+
+* ArghtOS kernel code;
+* Cortex-M23 scheduler-port code;
+* ArghtOS constants/literals;
+* task descriptor table required by ArghtOS;
+* task control/global/crash data;
+* scheduler/handler MSP reservation;
+* any resident adapter code required solely for ArghtOS.
+
+Excluded from the ArghtOS overhead target by prior requirement:
+
+* application task stacks, including their saved frames;
+* application task bodies;
+* driver/application event FIFOs, DMA buffers, or application state.
+
+Those excluded bytes still count in the MCU's **total system SRAM** and must be reported in the S0 integration budget.
+
+# MSP qualification
+
+MSP is physically shared by ArghtOS exceptions and application/device handlers.
+
+The system report must provide both:
+
+1. ArghtOS-only resident footprint; and
+2. total system SRAM including the full MSP reservation required for allowed nested handlers.
+
+No analysis may assume MSP is free merely because startup code already created it.
 
 # Fault recursion
 
-C5 sets `ARGHTOS_KF_FAULT_ACTIVE` before crash capture.
+If fatal handling begins while `ARGHTOS_KF_FAULT_ACTIVE` is already set, normal capture is bypassed and the terminal hook is invoked immediately.
 
-If fatal handling is entered while this bit is already set, the implementation bypasses normal capture and immediately invokes `arghtos_port_fault_terminal()`.
+# Build acceptance evidence
 
-This prevents recursive fault capture from consuming unbounded MSP.
+Once code exists, every size-reporting build must retain:
+
+* linker map;
+* section-size summary;
+* symbol/section attribution sufficient to identify ArghtOS and port bytes;
+* configured task count;
+* whether crash capture is enabled;
+* MSP reservation.
 
 # Dependencies
 
@@ -130,12 +187,12 @@ This prevents recursive fault capture from consuming unbounded MSP.
 
 # Dangerous aspects
 
-* Hidden mutable globals in individual modules.
-* Counting task stacks but forgetting MSP, or vice versa.
-* Port-specific arrays that scale with task count.
-* Recursive fault capture.
-* Assuming application interrupt stack demand is a scheduler constant.
+* Reporting only `.bss + .data`.
+* Treating `.text`, `.rodata`, or `const` objects as free.
+* Double-counting objects already included in section totals.
+* Excluding required scheduler metadata because the application declared it.
+* Hiding MSP in startup/linker configuration.
 
 # Boundary specification
 
-C9 owns scheduler-global mutable truth and accounting. Linker/startup code owns the physical MSP reservation; system integration must report both together.
+C9 defines what "scheduler SRAM footprint" means. P0/P7 prove boundedness; the linker map later determines the actual value.
