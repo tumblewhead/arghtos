@@ -21,7 +21,7 @@ B1 implements the 20-byte C8 record:
 * next timed release/sleep deadline;
 * cumulative CPU ticks;
 * observed maximum contiguous run;
-* saturating periodic overrun count;
+* saturating periodic missed-release count;
 * async age credit;
 * state and flags.
 
