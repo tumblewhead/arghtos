@@ -8,6 +8,13 @@ generated:
   at: 2026-10-27T20:08:00Z
 status: draft
 sources:
+  - id: arm-cortex-m23-dgu
+    title: "Arm Cortex-M23 Devices Generic User Guide"
+    resource: https://documentation-service.arm.com/static/5eff4394cafe527e86f5b3c4
+  - id: armv8m-arm
+    title: "Armv8-M Architecture Reference Manual"
+    resource: https://documentation-service.arm.com/static/5f8eff92f86e16515cdbe5e0
+sources:
   - id: arm-cortex-m23
     title: "Arm Cortex-M23 processor documentation"
     resource: https://developer.arm.com/Processors/Cortex-M23
