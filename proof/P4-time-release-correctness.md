@@ -1,71 +1,128 @@
 ---
 type: Proof
 title: "P4 - Time and release correctness"
-description: "Tickless absolute-time scheduling preserves due-event ordering and remains correct across bounded counter wraparound."
+description: "Tickless absolute-time scheduling preserves due ordering across wraparound and advances delayed periodic releases with bounded arithmetic."
 tags: [scheduler, cortex-m23, proof, tickless, timer, wraparound]
-generated:
-  by: openai/gpt-5.6-sol
-  at: 2026-10-27T20:08:00Z
 status: draft
 ---
 
 # Statement
 
-Using a fixed-width unsigned monotonic scheduler clock, absolute release times can be compared correctly across counter wraparound provided every legal interval is strictly less than half the counter range.
+Using a 32-bit unsigned monotonic scheduler clock:
+
+1. absolute due-time comparison is correct across wraparound for legal horizons shorter than half-range;
+2. synchronous periodic releases remain locked to their ideal epoch rather than drifting with handler latency;
+3. a delayed timer handler advances missed periodic releases in bounded arithmetic, not a loop proportional to elapsed time; and
+4. at most one active instance of any periodic task exists.
 
 # Definitions
 
-For a `w`-bit unsigned clock, define:
+```text
+HALF_RANGE = 2^31
+due(now, t) := (int32_t)(now - t) >= 0
+```
 
-`HALF_RANGE = 2^(w-1)`.
+Every configured period and relative sleep interval is:
 
-Define `due(now, deadline)` by interpreting `now - deadline` as a signed `w`-bit difference:
+```text
+0 < interval < HALF_RANGE
+```
 
-`due(now, deadline) := signed(now - deadline) >= 0`.
+A timer event must be serviced before its lateness reaches HALF_RANGE. This is an explicit system integration assumption.
 
-The configuration contract SHALL require every sleep, period, relative deadline, and timer-programming horizon to satisfy:
+# Wraparound proof
 
-`0 <= interval < HALF_RANGE`.
+Unsigned subtraction is modulo 2^32.
 
-# Proof
+For two relevant timestamps separated by less than HALF_RANGE, exactly one direction around the modular ring represents the valid temporal ordering.
 
-Unsigned subtraction is modulo `2^w`.
+Therefore interpreting `now - deadline` as signed distinguishes before from due/late correctly within the legal horizon.
 
-When two relevant timestamps differ by less than `HALF_RANGE`, exactly one direction around the modular ring is the valid temporal direction. Interpreting the modular difference as a signed `w`-bit value therefore distinguishes "before" from "at or after" unambiguously within the allowed horizon.
+# Synchronous periodic release epoch
 
-Consequently the due predicate remains valid when the counter wraps between the release timestamp and the current timestamp.
+For periodic task `i`:
 
-A sleeping task becomes READY if and only if its release time is due according to this predicate.
+```text
+release_i(k) = scheduler_start_time + k*T_i
+```
 
-# Periodic release rule
+with `D_i=T_i`.
 
-A periodic task represents one bounded job per release.
+The next ideal release is stored as `next_time`.
 
-The scheduler SHALL NOT create two simultaneous job instances for one periodic task.
+It is advanced from the prior ideal release epoch, never from handler-arrival time. Timer latency therefore does not create cumulative phase drift.
 
-If the next release becomes due while the previous job is still active, the scheduler SHALL record the configured overrun/deadline-miss condition rather than allocate or queue another job instance.
+# Bounded delayed-release arithmetic
+
+Suppose `next_time` is due at observed `now`.
+
+Define:
+
+```text
+late = now - next_time
+releases_due = 1 + floor(late / period)
+```
+
+Because service lateness is less than HALF_RANGE and period is nonzero, this calculation is finite and uses constant-time arithmetic.
+
+The next ideal release becomes:
+
+```text
+next_time = next_time + releases_due * period    modulo 2^32
+```
+
+No loop over `releases_due` is required.
+
+# One active periodic instance
+
+If the periodic task is DORMANT when releases are processed:
+
+* one release makes it READY;
+* `releases_due - 1` later releases are counted as missed/overrun releases.
+
+If the task is already READY or RUNNING:
+
+* no new instance is created;
+* all `releases_due` are counted as missed/overrun releases.
+
+The saturating C8 overrun count is updated arithmetically.
+
+# Sleep release
+
+A SLEEPING async task becomes READY iff its absolute sleep deadline is due.
+
+There is only one sleep deadline per task, so no catch-up multiplicity exists.
 
 # Tickless property
 
-The scheduler stores absolute next-event times and asks the platform timer to interrupt at the earliest required release, subject to the platform timer's maximum programmable horizon.
+The kernel programs the platform for the earliest future timed scheduler event.
 
-A timer interrupt may release one or more tasks whose due predicates are true. The scheduler need not execute periodic polling ticks between releases.
+Intermediate hardware wakeups needed to bridge a narrower physical timer are a C3 port implementation detail and do not create task releases.
 
 # Architecture test
 
 Tests SHALL cover:
 
-* equality at the release time;
-* one tick before and after release;
-* wraparound on both sides of zero;
-* the largest legal interval;
-* rejection of intervals at or above `HALF_RANGE`;
-* several tasks becoming due at one timestamp;
-* timer reprogramming when a newly scheduled wake is earlier; and
-* a periodic overrun at the next release.
+* equality, one tick before, and one tick after a deadline;
+* wraparound near zero;
+* largest legal interval;
+* rejection of intervals at/above HALF_RANGE;
+* several tasks due together;
+* timer reprogramming to an earlier deadline;
+* one, several, and many missed periods using arithmetic advancement;
+* periodic task already active at release;
+* no release loop whose count depends on `releases_due`.
 
 # Dependencies
 
-The `SLEEPING -> READY` transition is consumed by [P1](P1-task-state-invariants.md).
+P1 consumes the SLEEPING->READY and periodic release transitions.
 
-Timing overhead introduced by release processing is bounded by [P7](P7-bounded-memory-and-work.md) and included in [P6](P6-rms-schedulability.md).
+P6 consumes release jitter bounds.
+
+P7 consumes the constant-time catch-up property.
+
+# Status
+
+The arithmetic proof is architectural.
+
+Implementation discharge requires unit/property tests of the exact 32-bit arithmetic and target confirmation that timer service cannot be delayed by HALF_RANGE ticks.
