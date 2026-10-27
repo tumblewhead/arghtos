@@ -1,146 +1,143 @@
 ---
 type: Contract
 title: "C8 - Task control record"
-description: "Concrete 28-byte private per-task command/control object shared by runtime state, policy, execution, time, and diagnostics blocks."
+description: "Concrete 20-byte private per-task control object for continuation, timing, aging, state, and runtime profiling."
 tags: [architecture, contract, task-control, memory, profiling]
 status: draft
 ---
 
 # Key goals
 
-* Give each task one compact mutable scheduler-owned command/control object.
-* Carry continuation, lifecycle state, wake handshake, timing/aging state, and required profiling.
-* Keep per-task SRAM predictable and small.
-* Avoid duplicating immutable C0 configuration.
+* Keep mutable scheduler state compact because it is always SRAM-resident.
+* Preserve the continuation and timed-release information required by the scheduler.
+* Preserve the required profiling quantities: cumulative CPU time and observed maximum contiguous run.
+* Implement starvation-avoidance aging without depending on wall-clock wraparound.
 
-# Concrete runtime record
+# Concrete 20-byte runtime record
 
 ```c
 typedef struct {
-    uintptr_t          saved_psp;       /* continuation */
-    arghtos_time_t     next_time;       /* periodic release or sleep deadline */
-    arghtos_time_t     state_time;      /* READY age epoch OR RUNNING start time */
+    uintptr_t          saved_psp;       /* 4 B */
+    arghtos_time_t     next_time;       /* 4 B: periodic release or sleep deadline */
+    uint32_t           total_cpu_ticks; /* 4 B: modulo-2^32 */
+    uint32_t           max_run_ticks;   /* 4 B: observed maximum contiguous run */
 
-    uint32_t           total_cpu_ticks; /* modulo-2^32 accumulated CPU time */
-    uint32_t           max_run_ticks;   /* largest observed contiguous run */
-
-    uint16_t           dispatch_count;  /* saturating */
-    uint16_t           preempt_count;   /* saturating */
-    uint16_t           overrun_count;   /* saturating periodic release misses */
-
+    uint8_t            overrun_count;   /* saturating periodic release misses */
+    uint8_t            age_credit;      /* async dispatch-opportunity aging */
     uint8_t            state;           /* arghtos_task_state_t */
     uint8_t            flags;
 } arghtos_task_control_t;
+
+_Static_assert(sizeof(uintptr_t) == 4u,
+               "Cortex-M23 requires 32-bit uintptr_t");
+_Static_assert(sizeof(arghtos_task_control_t) == 20u,
+               "task control resident-footprint contract changed");
 ```
 
-On the required 32-bit Cortex-M23 ABI:
-
-```c
-_Static_assert(sizeof(uintptr_t) == 4u, "Cortex-M23 requires 32-bit uintptr_t");
-_Static_assert(sizeof(arghtos_task_control_t) == 28u,
-               "task control record SRAM contract changed");
-```
-
-At the default `ARGHTOS_MAX_TASKS=32`:
+At `ARGHTOS_MAX_TASKS=32`:
 
 ```text
-32 * 28 = 896 bytes
+32 * 20 B = 640 B
 ```
-
-This is mandatory scheduler SRAM.
-
-# Why state_time is shared
-
-READY-aging time and RUNNING-start time are never simultaneously needed.
-
-`state_time` therefore has state-dependent meaning:
-
-| State/class | state_time meaning |
-|---|---|
-| READY async | timestamp at which current READY residency began |
-| RUNNING any | timestamp at which current contiguous run began |
-| all other cases | unspecified / ignored |
-
-The transition READY -> RUNNING consumes the aging timestamp and replaces it with the run-start timestamp.
-
-The transition RUNNING -> READY for an async task consumes the run-start timestamp during accounting and replaces it with the new READY epoch.
-
-This saves four bytes per task without losing information required by the contracts.
 
 # Flag bits
 
 ```c
-#define ARGHTOS_TCF_WAKE_PENDING     (1u << 0)
-#define ARGHTOS_TCF_BUDGET_EXCEEDED  (1u << 1)
-#define ARGHTOS_TCF_RESERVED_MASK    (0xFCu)
+#define ARGHTOS_TCF_WAKE_PENDING (1u << 0)
+#define ARGHTOS_TCF_RESERVED     (0xFEu)
 ```
 
-Reserved bits remain zero in v1.
+The wake bit is the one-bit handshake required by P3. It is not an event counter.
 
-# Field ownership
+# Field meaning
 
-| Field | Primary writer | Readers |
-|---|---|---|
-| saved_psp | B4 execution path | B4 |
-| next_time | B3 time/release, C1 sleep | B3 |
-| state_time | B1/B5 transition accounting | B2/B5 |
-| total_cpu_ticks | B5 | C5 snapshot |
-| max_run_ticks | B5 | C5 snapshot |
-| dispatch_count | B5 | C5 snapshot |
-| preempt_count | B5 | C5 snapshot |
-| overrun_count | B3/B5 | C5 snapshot |
-| state | B1 lifecycle core | scheduler blocks |
-| flags | B1/B5 | B1/B5/C5 |
+| Field | Meaning |
+|---|---|
+| `saved_psp` | task continuation |
+| `next_time` | periodic next release, or async sleep deadline |
+| `total_cpu_ticks` | cumulative CPU execution time, modulo 2^32 |
+| `max_run_ticks` | largest observed contiguous RUNNING interval |
+| `overrun_count` | saturating periodic missed-release count |
+| `age_credit` | saturating async starvation-prevention credit |
+| `state` | abstract C7 task state |
+| `flags` | wake handshake and reserved bits |
 
-# next_time meaning
+# Runtime start time is global
 
-* periodic task: next absolute release epoch;
-* SLEEPING async task: sleep deadline;
-* otherwise: ignored.
+Only one task can be RUNNING.
+
+Therefore the timestamp at which the current task began its present RUNNING interval is stored once in C9 as `run_start`, not once per task.
+
+On deschedule:
+
+```text
+elapsed = now - kernel.run_start
+control.total_cpu_ticks += elapsed
+control.max_run_ticks = max(control.max_run_ticks, elapsed)
+```
+
+This removes four bytes per task without losing any observable profiling quantity.
+
+# Age-credit semantics
+
+`age_credit` is meaningful only for READY asynchronous tasks.
+
+It measures missed **asynchronous dispatch opportunities**, not elapsed clock time.
+
+Rules:
+
+* DORMANT/WAITING/SLEEPING -> READY: `age_credit = 0`.
+* RUNNING -> READY by yield or preemption: `age_credit = 0`.
+* An idempotent wake of an already READY task does not reset credit.
+* Whenever no periodic task is READY and the selector is choosing among READY async tasks, each READY async candidate receives one saturating age increment before comparison.
+* The selected async task resets `age_credit = 0` when it becomes RUNNING.
+* Credit saturates at `UINT8_MAX`.
+
+This is independent of the 32-bit scheduler clock and remains valid across arbitrary clock wraparound.
+
+# Effective async priority
+
+C6 derives effective urgency from:
+
+```text
+base_priority + min(age_credit, async_priority_ceiling)
+```
+
+clamped at the async priority ceiling.
+
+Credit above the number needed to reach the priority ceiling remains useful as a tie-breaker among saturated tasks.
 
 # Counter behavior
 
-All 16-bit counters saturate at `UINT16_MAX`; they never wrap.
+`overrun_count` saturates at `UINT8_MAX`.
 
-`total_cpu_ticks` intentionally wraps modulo 2^32.
+`total_cpu_ticks` intentionally wraps modulo 2^32. It is a compact cumulative diagnostic, not a lifetime billing quantity.
 
-`max_run_ticks` is meaningful only because each contiguous run is required to be less than the scheduler half-range.
+`max_run_ticks` is valid because one contiguous RUNNING interval must be shorter than `ARGHTOS_TIME_HALF_RANGE`.
 
 # Continuation semantics
 
-`saved_psp` is the only scheduler continuation pointer.
+`saved_psp` is the sole scheduler continuation pointer.
 
-Application state-machine continuations are application data and do not belong in the scheduler object.
-
-# Priority semantics
-
-Base async priority remains immutable in C0.
-
-Effective priority is derived from C0 base priority and the READY-age represented by C8 `state_time`. It is not stored.
+Application continuations/state machines are application data.
 
 # Atomicity
 
-Any update involving both `state` and the state-dependent meaning of `state_time` is one atomic scheduler transaction.
+Updates that change a task's state and its related wake/age fields are one serialized scheduler transaction.
 
-Examples:
-
-* entering async READY and writing the READY epoch;
-* entering RUNNING and replacing state_time with run-start time;
-* consuming `wake_pending` while deciding whether WAITING is committed;
-* saving PSP while relinquishing current CPU ownership.
+Saving `saved_psp` and relinquishing CPU ownership is one serialized dispatch transaction.
 
 # Dependencies
 
-[C0](C0-static-task-configuration.md), [C1](C1-task-api-lifecycle.md), [C7](C7-common-types-abi.md), [P0](../../proof/P0-static-configuration-validity.md), [P1](../../proof/P1-task-state-invariants.md), [P7](../../proof/P7-bounded-memory-and-work.md).
+[C0](C0-static-task-configuration.md), [C1](C1-task-api-lifecycle.md), [C6](C6-scheduling-policy.md), [C7](C7-common-types-abi.md), [C9](C9-kernel-global-state.md), [P0](../../proof/P0-static-configuration-validity.md), [P1](../../proof/P1-task-state-invariants.md), [P7](../../proof/P7-bounded-memory-and-work.md).
 
 # Dangerous aspects
 
-* Reading `state_time` using the wrong state interpretation.
-* Adding per-task fields without rechecking the SRAM target.
-* Duplicating immutable descriptor data.
-* More than one code path believing it owns `saved_psp`.
-* Allowing saturating counters to wrap.
+* Treating age credit as elapsed time.
+* Resetting age credit on an idempotent READY wake.
+* Adding per-task profiling counters without rechecking the resident-footprint budget.
+* More than one code path owning `saved_psp`.
 
 # Boundary specification
 
-C8 is private scheduler SRAM. Application code receives C5 snapshots, never a pointer to this record.
+C8 is private ArghtOS SRAM and always counts against the resident-footprint budget.
