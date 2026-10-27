@@ -114,11 +114,24 @@ sequenceDiagram
   R->>A: runtime / clocks / board init
   A->>K: sched_init(static config)
   K->>K: validate descriptors + initialize runtime state
-  K->>T: arm earliest timed release if any
+  K->>T: leave scheduler timer disarmed
   A->>K: sched_start()
+  K->>K: capture epoch + release all periodic tasks
+  K->>T: arm earliest next periodic release
   K->>E: request first dispatch
   E-->>X: Thread mode on PSP
 ```
+
+# SRAM integration accounting
+
+The system report SHALL present two numbers:
+
+1. **ArghtOS resident footprint**, using C9: kernel/port code, read-only constants/literals, C0 descriptors, C8/C9 state, optional crash record, and MSP accounting.
+2. **Total MCU SRAM**, which additionally includes application task code/data, task PSP stacks, driver buffers/state, DMA/event storage, and all other resident software.
+
+No section is excluded merely because it is named `.text`, `.rodata`, or is declared `const`.
+
+Application task bodies/stacks are excluded only from the ArghtOS-overhead subtotal, not from the total MCU SRAM report.
 
 # Dependencies
 
