@@ -74,7 +74,7 @@ Aging applies only while an async task is READY.
 For READY async task `t`:
 
 ```c
-uint32_t age_ticks = now - t.ready_since;
+uint32_t age_ticks = now - t.state_time;
 uint32_t age_steps = age_ticks / ARGHTOS_AGING_QUANTUM_TICKS;
 uint32_t ceiling = ARGHTOS_ASYNC_PRIORITY_LEVELS - 1u;
 
@@ -90,14 +90,14 @@ Aging never changes C0 base priority.
 Among READY async tasks, compare in this order:
 
 1. larger `effective` priority wins;
-2. if equal, larger elapsed READY age `now - ready_since` wins;
+2. if equal, larger elapsed READY age `now - state_time` wins;
 3. if still equal, smaller task ID wins.
 
 This gives deterministic FIFO-like preference among equal/saturated priorities without maintaining a queue.
 
-# ready_since update rule
+# state_time update rule
 
-For an async task, `ready_since = now` whenever it newly enters READY from:
+For an async task, `state_time = now` whenever it newly enters READY from:
 
 * DORMANT by wake;
 * WAITING by wake;
@@ -105,7 +105,7 @@ For an async task, `ready_since = now` whenever it newly enters READY from:
 * RUNNING by yield;
 * RUNNING by preemption.
 
-A READY task that receives another idempotent wake does not reset `ready_since`.
+A READY task that receives another idempotent wake does not reset `state_time`.
 
 Therefore repeated wake calls cannot erase accrued aging.
 
@@ -149,7 +149,7 @@ if outgoing_saved_psp != 0 and current_task != INVALID:
         # not by an earlier block/sleep/yield transition
         current.state = READY
         if current is async:
-            current.ready_since = now
+            current.state_time = now
         saturating_increment(current.preempt_count)
 
 next = arghtos_select_next(now)
@@ -160,7 +160,7 @@ if next == INVALID:
 
 assert next.state == READY
 next.state = RUNNING
-next.run_start = now
+next.state_time = now
 saturating_increment(next.dispatch_count)
 current_task = next
 return next.saved_psp
@@ -208,7 +208,7 @@ Measured worst-case selector cost at `ARGHTOS_MAX_TASKS` is an input to P6.
 
 # Dangerous aspects
 
-* Resetting `ready_since` on an idempotent wake.
+* Resetting `state_time` on an idempotent wake.
 * Aging WAITING tasks instead of READY tasks.
 * Comparing async numbers directly with periodic priority.
 * Incrementing preemption count for a voluntary wait/yield/sleep.
