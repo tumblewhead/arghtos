@@ -120,7 +120,7 @@ enum {
 };
 ```
 
-# Concrete 64-byte crash record
+# Required 64-byte crash record
 
 ```c
 #define ARGHTOS_CRASH_MAGIC        0x41524748u
@@ -193,7 +193,7 @@ It must not return, allocate, call normal scheduler APIs, or depend on the faile
 
 # Resident-memory accounting
 
-If enabled, the 64-byte crash record counts against the resident SRAM budget.
+The required 64-byte crash record counts against the resident SRAM budget.
 
 Code implementing diagnostics, fault capture, constants, and literal data also counts because ArghtOS code is SRAM-resident.
 
