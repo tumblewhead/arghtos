@@ -158,13 +158,39 @@ The following are linearizable scheduler operations:
 
 The implementation may use a short global interrupt-masked critical section. No application callback or timer wait may occur inside it.
 
-# Task return trampoline
+# Task start and return trampolines
 
-The initial context frame uses a kernel-controlled return trampoline as the task LR.
+A task never begins directly at the application entry pointer.
 
-If a periodic entry returns, the trampoline records completion and makes the task inactive until its next release.
+The initial context begins at a kernel task-start trampoline that reads the immutable C0 entry for the current task.
 
-If an asynchronous entry returns, the trampoline records a fatal task-contract fault.
+Conceptually:
+
+```c
+_Noreturn void arghtos_task_start_trampoline(void)
+{
+    arghtos_task_id_t id = current_task();
+
+    if (task[id].task_class == ARGHTOS_TASK_PERIODIC) {
+        for (;;) {
+            task[id].entry();       /* exactly one bounded job */
+            svc(ARGHTOS_SVC_TASK_RETURN);
+            /* resumes here only at a later periodic release */
+        }
+    }
+
+    task[id].entry();               /* persistent async worker */
+    arghtos_fatal(ARGHTOS_FAULT_ASYNC_RETURNED, NULL, 0u);
+}
+```
+
+For a periodic task, `ARGHTOS_SVC_TASK_RETURN` atomically marks the task DORMANT/inactive and requests dispatch. The saved PSP remains inside the trampoline. At the next periodic release, dispatch resumes the SVC return, the loop iterates, and the application entry is called again with a fresh unwound C job frame.
+
+This avoids rebuilding a task context every period and prevents stack growth across releases.
+
+For an async task, application entry return is fatal.
+
+The initial frame LR points to a separate fatal return guard so an impossible return from the kernel trampoline is diagnosed.
 
 # Dependencies
 
