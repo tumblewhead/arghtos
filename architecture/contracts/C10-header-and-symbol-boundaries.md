@@ -35,6 +35,7 @@ The public application header contains only:
 * C0 task/configuration types;
 * C1 task lifecycle API;
 * C5 public profiling snapshot/API;
+* C5 crash-record type and validity constants, because C0 permits application-provided crash storage;
 * public constants required to configure tasks.
 
 Required public function set:
