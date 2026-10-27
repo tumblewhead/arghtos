@@ -93,8 +93,8 @@ void arghtos_port_idle_wait(void);
 uintptr_t arghtos_port_build_initial_psp(
     void *stack_base,
     uint32_t stack_size,
-    arghtos_task_fn_t entry,
-    void (*return_trampoline)(void));
+    void (*thread_start)(void),
+    void (*return_guard)(void));
 
 _Noreturn void arghtos_port_fault_terminal(void);
 ```
@@ -119,6 +119,13 @@ This header may contain:
 * fatal entry;
 * saturating-counter helpers;
 * private globals.
+
+Representative required internal symbols include the task trampoline pair:
+
+```c
+_Noreturn void arghtos_task_start_trampoline(void);
+_Noreturn void arghtos_task_return_guard(void);
+```
 
 Representative required internal symbols:
 
