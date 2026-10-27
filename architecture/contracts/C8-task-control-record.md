@@ -127,7 +127,7 @@ Credit above the number needed to reach the priority ceiling remains useful as a
 
 `total_cpu_ticks` intentionally wraps modulo 2^32. It is a compact cumulative diagnostic, not a lifetime billing quantity.
 
-`max_run_ticks` is valid because one contiguous RUNNING interval must be shorter than `ARGHTOS_TIME_HALF_RANGE`.
+`max_run_ticks` and one-shot elapsed accounting are valid provided one contiguous RUNNING residency is shorter than one full 2^32-tick clock cycle. Unsigned subtraction remains correct across one wrap; a task that runs through an entire clock cycle without any scheduler accounting point violates the profiling contract.
 
 # Continuation semantics
 
