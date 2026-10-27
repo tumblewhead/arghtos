@@ -1,7 +1,7 @@
 ---
 type: Contract
 title: "C8 - Task control record"
-description: "Concrete private per-task command/control object shared by runtime state, policy, execution, time, and diagnostics blocks."
+description: "Concrete 28-byte private per-task command/control object shared by runtime state, policy, execution, time, and diagnostics blocks."
 tags: [architecture, contract, task-control, memory, profiling]
 status: draft
 ---
@@ -9,22 +9,20 @@ status: draft
 # Key goals
 
 * Give each task one compact mutable scheduler-owned command/control object.
-* Carry the saved continuation, scheduling state, wake handshake, timing state, and basic runtime profiling.
+* Carry continuation, lifecycle state, wake handshake, timing/aging state, and required profiling.
 * Keep per-task SRAM predictable and small.
-* Avoid duplicating immutable configuration already present in C0.
+* Avoid duplicating immutable C0 configuration.
 
 # Concrete runtime record
 
 ```c
 typedef struct {
-    uintptr_t          saved_psp;       /* continuation; 0 only before frame creation */
-    arghtos_time_t     next_time;       /* next periodic release or sleep deadline */
-    arghtos_time_t     ready_since;     /* async READY aging epoch */
-    arghtos_time_t     run_start;       /* most recent dispatch timestamp */
+    uintptr_t          saved_psp;       /* continuation */
+    arghtos_time_t     next_time;       /* periodic release or sleep deadline */
+    arghtos_time_t     state_time;      /* READY age epoch OR RUNNING start time */
 
-    uint32_t           total_cpu_ticks; /* modulo-2^32 accumulated task CPU time */
+    uint32_t           total_cpu_ticks; /* modulo-2^32 accumulated CPU time */
     uint32_t           max_run_ticks;   /* largest observed contiguous run */
-    uint32_t           last_run_ticks;  /* most recent contiguous run */
 
     uint16_t           dispatch_count;  /* saturating */
     uint16_t           preempt_count;   /* saturating */
@@ -38,18 +36,36 @@ typedef struct {
 On the required 32-bit Cortex-M23 ABI:
 
 ```c
-_Static_assert(sizeof(uintptr_t) == 4u, "Cortex-M23 port requires 32-bit uintptr_t");
-_Static_assert(sizeof(arghtos_task_control_t) == 36u,
+_Static_assert(sizeof(uintptr_t) == 4u, "Cortex-M23 requires 32-bit uintptr_t");
+_Static_assert(sizeof(arghtos_task_control_t) == 28u,
                "task control record SRAM contract changed");
 ```
 
-At the default `ARGHTOS_MAX_TASKS=32`, the task-control array occupies exactly:
+At the default `ARGHTOS_MAX_TASKS=32`:
 
 ```text
-32 * 36 = 1152 bytes
+32 * 28 = 896 bytes
 ```
 
-Task stacks and immutable descriptors are not included in that number.
+This is mandatory scheduler SRAM.
+
+# Why state_time is shared
+
+READY-aging time and RUNNING-start time are never simultaneously needed.
+
+`state_time` therefore has state-dependent meaning:
+
+| State/class | state_time meaning |
+|---|---|
+| READY async | timestamp at which current READY residency began |
+| RUNNING any | timestamp at which current contiguous run began |
+| all other cases | unspecified / ignored |
+
+The transition READY -> RUNNING consumes the aging timestamp and replaces it with the run-start timestamp.
+
+The transition RUNNING -> READY for an async task consumes the run-start timestamp during accounting and replaces it with the new READY epoch.
+
+This saves four bytes per task without losing information required by the contracts.
 
 # Flag bits
 
@@ -59,7 +75,7 @@ Task stacks and immutable descriptors are not included in that number.
 #define ARGHTOS_TCF_RESERVED_MASK    (0xFCu)
 ```
 
-Reserved bits must remain zero in v1.
+Reserved bits remain zero in v1.
 
 # Field ownership
 
@@ -67,63 +83,49 @@ Reserved bits must remain zero in v1.
 |---|---|---|
 | saved_psp | B4 execution path | B4 |
 | next_time | B3 time/release, C1 sleep | B3 |
-| ready_since | lifecycle/release transition | B2 policy |
-| run_start | B5 dispatch accounting | B5 |
+| state_time | B1/B5 transition accounting | B2/B5 |
 | total_cpu_ticks | B5 | C5 snapshot |
 | max_run_ticks | B5 | C5 snapshot |
-| last_run_ticks | B5 | C5 snapshot |
 | dispatch_count | B5 | C5 snapshot |
 | preempt_count | B5 | C5 snapshot |
 | overrun_count | B3/B5 | C5 snapshot |
-| state | B1 lifecycle core | all scheduler blocks |
+| state | B1 lifecycle core | scheduler blocks |
 | flags | B1/B5 | B1/B5/C5 |
 
-One logical owner must exist for each mutation path even if the implementation keeps these functions in one translation unit.
+# next_time meaning
 
-# State-dependent field meaning
-
-* `next_time` is meaningful for periodic tasks and SLEEPING async tasks.
-* `ready_since` is meaningful only for READY async tasks.
-* `run_start` is meaningful only for RUNNING tasks.
-* `wake_pending` is meaningful only for async tasks.
-* `overrun_count` is meaningful primarily for periodic tasks.
-
-Unused fields need not be zeroed continuously, but initialization and diagnostics must never interpret a field outside its valid state/class.
+* periodic task: next absolute release epoch;
+* SLEEPING async task: sleep deadline;
+* otherwise: ignored.
 
 # Counter behavior
 
 All 16-bit counters saturate at `UINT16_MAX`; they never wrap.
 
-`total_cpu_ticks` intentionally wraps modulo 2^32. It is a lightweight cumulative diagnostic counter, not a lifetime billing counter.
+`total_cpu_ticks` intentionally wraps modulo 2^32.
 
-`last_run_ticks` and `max_run_ticks` represent contiguous execution intervals and are valid only when each measured interval is less than half the scheduler clock range.
+`max_run_ticks` is meaningful only because each contiguous run is required to be less than the scheduler half-range.
 
 # Continuation semantics
 
-`saved_psp` is the task continuation.
+`saved_psp` is the only scheduler continuation pointer.
 
-No second continuation pointer exists. Application continuations/state machines are application data, not scheduler state.
-
-This directly satisfies the original continuation requirement without duplicating processor context.
+Application state-machine continuations are application data and do not belong in the scheduler object.
 
 # Priority semantics
 
-Base priority is immutable C0 configuration and is not copied into C8.
+Base async priority remains immutable in C0.
 
-Effective async priority is calculated from:
-
-```text
-C0.async_priority + age(C8.ready_since)
-```
-
-and is never stored persistently unless a future measured optimization justifies adding storage.
+Effective priority is derived from C0 base priority and the READY-age represented by C8 `state_time`. It is not stored.
 
 # Atomicity
 
-Any update involving both `state` and another control field that determines the meaning of that state is one atomic scheduler transaction. Examples:
+Any update involving both `state` and the state-dependent meaning of `state_time` is one atomic scheduler transaction.
 
-* setting `ready_since` while entering READY;
-* setting `next_time` while entering SLEEPING;
+Examples:
+
+* entering async READY and writing the READY epoch;
+* entering RUNNING and replacing state_time with run-start time;
 * consuming `wake_pending` while deciding whether WAITING is committed;
 * saving PSP while relinquishing current CPU ownership.
 
@@ -133,12 +135,12 @@ Any update involving both `state` and another control field that determines the 
 
 # Dangerous aspects
 
-* Adding "just one more field" per task and silently breaking the SRAM target.
+* Reading `state_time` using the wrong state interpretation.
+* Adding per-task fields without rechecking the SRAM target.
 * Duplicating immutable descriptor data.
-* Wrapping diagnostic counters that are expected to indicate "many."
-* Reading state-dependent fields when they are not valid.
 * More than one code path believing it owns `saved_psp`.
+* Allowing saturating counters to wrap.
 
 # Boundary specification
 
-C8 is private scheduler SRAM. Application code receives diagnostic snapshots, never a pointer to this record.
+C8 is private scheduler SRAM. Application code receives C5 snapshots, never a pointer to this record.
