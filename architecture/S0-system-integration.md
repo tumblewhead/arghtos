@@ -127,7 +127,7 @@ sequenceDiagram
 The system report SHALL present two numbers:
 
 1. **ArghtOS resident footprint**, using C9: kernel/port code, read-only constants/literals, C0 descriptors, C8/C9 state, optional crash record, and MSP accounting.
-2. **Total MCU SRAM**, which additionally includes application task code/data, task PSP stacks, driver buffers/state, DMA/event storage, and all other resident software.
+2. **Total MCU SRAM**, which uses the actual physical MSP reservation and additionally includes application task code/data, task PSP stacks, driver buffers/state, DMA/event storage, and all other resident software.
 
 No section is excluded merely because it is named `.text`, `.rodata`, or is declared `const`.
 
