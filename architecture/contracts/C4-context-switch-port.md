@@ -58,7 +58,7 @@ It may return `ARGHTOS_ERR_BAD_CONFIG` if the target integration cannot satisfy 
 
 `arghtos_port_stack_valid(base,size)` is a pure/bounded configuration check used by C0.
 
-It returns true only if the region can hold a valid initial task frame under the target ABI, including required alignment and the 64-byte minimum saved frame.
+It returns true only if the region can hold the scheduler's worst-case saved-context overhead under the target ABI, including required alignment. V1 reserves 68 bytes of context overhead: 32 bytes for R4-R11, 32 bytes for the basic hardware frame, and up to one 4-byte hardware alignment word.
 
 It does not inspect overlap with other task stacks; C0 owns pairwise overlap validation.
 
@@ -202,14 +202,18 @@ higher address
 lower address
 ```
 
-A complete dormant saved context therefore occupies 16 32-bit words, 64 bytes, before any ordinary task stack use.
+The deliberately synthesized dormant context is 16 words = 64 bytes because the initial stack top is 8-byte aligned.
+
+During ordinary task execution, exception entry may add one 4-byte alignment word when the interrupted PSP was only 4-byte aligned. The worst scheduler context overhead is therefore 68 bytes before ordinary task stack use.
+
+The stacked xPSR alignment indicator governs hardware unstacking; the software R4-R11 save/restore remains symmetric around the hardware frame.
 
 # Initial context
 
 `arghtos_port_build_initial_psp()`:
 
 1. computes the highest 8-byte-aligned address within the provided stack;
-2. verifies at least 64 bytes are available for the initial saved frame;
+2. verifies the configured stack satisfies the 68-byte worst-case scheduler context reserve, even though the synthesized initial frame itself uses 64 bytes;
 3. creates a frame equivalent to a preempted task;
 4. sets R4-R12 and R0-R3 to zero;
 5. sets stacked LR to `return_guard`;
