@@ -43,7 +43,7 @@ all ArghtOS-resident SRAM counts:
   .data / .bss / .noinit
   required C0 descriptors
   C8/C9 runtime state
-  optional crash record
+  required crash record
   ArghtOS-only MSP requirement
 ```
 
