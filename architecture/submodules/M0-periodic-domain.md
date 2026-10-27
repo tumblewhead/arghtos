@@ -8,7 +8,7 @@ status: draft
 
 # Key goals
 
-* Release periodic jobs at absolute compile-time-defined periods and phases.
+* Release synchronous periodic jobs from the scheduler start epoch with zero phase.
 * Preserve fixed RMS ordering.
 * Permit at most one active instance per periodic task.
 * Record overrun and deadline evidence.
@@ -22,7 +22,7 @@ Contracts C0, C3, C5, and C6.
 
 ```mermaid
 flowchart LR
-  CFG["B0<br/>T,D,phase"] --> TIME["B3 release"]
+  CFG["B0<br/>T, D=T, phase=0"] --> TIME["B3 release"]
   TIME --> STATE["B1 READY"]
   STATE --> POL["B2 RMS select"]
   POL --> RUN["dispatch"]
