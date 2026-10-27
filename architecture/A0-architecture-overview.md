@@ -124,7 +124,7 @@ stateDiagram-v2
 | read-only scheduler constants | ArghtOS/port | yes |
 | C0 descriptor table | application-declared, scheduler-required | yes |
 | C8/C9 state | ArghtOS | yes |
-| MSP | system integration | yes in reported footprint |
+| MSP | system integration | ArghtOS-only MSP depth in scheduler subtotal; physical MSP reservation in S0 total |
 | task PSP stacks | application | excluded from ArghtOS subtotal |
 | application task bodies | application | excluded from ArghtOS subtotal |
 | hardware event queues/DMA | driver/application | excluded from ArghtOS subtotal |
