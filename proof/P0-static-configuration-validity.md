@@ -1,96 +1,114 @@
 ---
 type: Proof
-title: "P0 - Static configuration validity"
-description: "The configured scheduler instance is finite, statically allocated, and internally well-formed before execution begins."
-tags: [scheduler, cortex-m23, proof, configuration, static-memory]
-generated:
-  by: openai/gpt-5.6-sol
-  at: 2026-10-27T20:08:00Z
+title: "P0 - Static configuration and resident-footprint boundedness"
+description: "The configured scheduler instance has finite static resources, no dynamic allocation, and a link-time bounded SRAM-resident footprint."
+tags: [scheduler, cortex-m23, proof, configuration, static-memory, footprint]
 status: draft
-sources:
-  - id: okf-v0.2
-    title: "Open Knowledge Format v0.2"
-    resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md
 ---
 
 # Statement
 
-For a build with compile-time constant `SCHED_MAX_TASKS = N`, every scheduler-owned object has a statically bounded cardinality and size, every task identifier is drawn from a finite set, and no scheduler operation requires dynamic allocation.
+For compile-time capacity `ARGHTOS_MAX_TASKS` and configured task count `N <= ARGHTOS_MAX_TASKS`:
+
+1. task identity is finite;
+2. no runtime operation allocates scheduler storage;
+3. all ArghtOS code/data/configuration has finite link-time size; and
+4. the complete ArghtOS resident SRAM footprint is bounded for the lifetime of the program.
 
 # Assumptions
 
-1. `N >= 1`.
-2. Every configured task has exactly one statically defined descriptor.
-3. Every configured task stack is supplied by the application as a statically allocated region.
-4. Scheduler-owned SRAM excludes application task stacks.
-5. Task creation at runtime means activation of a predeclared task, not allocation of a new descriptor or stack.
-6. No scheduler API calls `malloc`, `calloc`, `realloc`, `free`, or an equivalent allocator.
+1. `1 <= N <= ARGHTOS_MAX_TASKS <= 254`.
+2. Every task has exactly one C0 descriptor.
+3. Task stacks are statically supplied and excluded from the ArghtOS overhead target by explicit requirement.
+4. All ArghtOS code and data, including read-only sections, execute/reside from SRAM.
+5. No scheduler API invokes a dynamic allocator.
+6. No runtime operation creates a new task descriptor or stack.
 
 # Proof
 
-Let the task identifier domain be `T = {0, 1, ..., N-1}`.
+Let:
 
-The scheduler state is composed only of:
+* `M_cfg(N) = 16N` bytes for C0 task descriptors;
+* `M_ctl(N) = 20N` bytes for C8 task controls;
+* `M_global = 20` bytes for C9 global state;
+* `M_crash` be 0 or 64 bytes;
+* `M_code` be linked ArghtOS/port executable bytes resident in SRAM;
+* `M_const` be linked ArghtOS/port read-only constants/literals resident in SRAM;
+* `M_other` be any additional linked ArghtOS resident data not already represented above;
+* `M_MSP` be the reserved MSP contribution required by the integration.
 
-* fixed kernel state whose size is independent of `N`;
-* arrays or bitsets whose maximum length is a compile-time function of `N`; and
-* per-task runtime state with exactly one slot per member of `T`.
+Every term is finite at link/integration time.
 
-Therefore the total scheduler-owned SRAM can be written as:
+Therefore:
 
-`M(N) = M_fixed + N * M_task + M_sets(N)`
+```text
+F_arghtos(N) =
+    M_cfg(N)
+  + M_ctl(N)
+  + M_global
+  + M_crash
+  + M_code
+  + M_const
+  + M_other
+  + M_MSP
+```
 
-where every term is known at link time.
+is finite.
 
-Because the runtime cannot extend `T`, allocate another descriptor, or allocate another stack, execution cannot increase scheduler-owned storage beyond `M(N)`.
+Because runtime execution changes none of these storage cardinalities and performs no allocation, the resident footprint cannot grow beyond the linked/reserved amount.
 
-Thus the configured instance has finite, compile-time bounded scheduler state.
+# Concrete metadata lower bound
+
+At `N=32`:
+
+```text
+C0 descriptors = 512 B
+C8 controls    = 640 B
+C9 global      =  20 B
+----------------------
+metadata       = 1172 B
+```
+
+With crash capture enabled:
+
+```text
+metadata + crash = 1236 B
+```
+
+This is a lower bound before ArghtOS `.text`, `.rodata`, literals, other sections, and MSP.
+
+# Soft-target status
+
+The requirement:
+
+```text
+F_arghtos(32) <= 1536 B
+```
+
+is a **soft target and is not yet proven**.
+
+The present contracts leave 364 B before crash capture, or 300 B with crash capture, for code/constants/MSP/other resident bytes. Actual feasibility cannot be established until implementation and linker-map evidence exist.
 
 # Architecture test
 
-The implementation SHALL provide build-time assertions or generated checks that establish:
+A build claiming a footprint result SHALL provide a linker/map-derived report that:
 
-1. the task table contains at most `SCHED_MAX_TASKS` entries;
-2. every task ID is unique and in range;
-3. every required stack pointer and size is non-null and valid for the selected port;
-4. no scheduler translation unit references a dynamic allocation symbol;
-5. scheduler-owned SRAM for the default `SCHED_MAX_TASKS=32` configuration is reported separately from task stacks; and
-6. the default configuration SHOULD satisfy the soft target of at most 1.5 KiB scheduler-owned SRAM.
+1. identifies configured `N`;
+2. includes ArghtOS/port `.text`;
+3. includes ArghtOS/port `.rodata`, literal pools, and jump tables;
+4. includes `.data`, `.bss`, `.noinit`, and C0 descriptors;
+5. includes the configured crash record when enabled;
+6. reports the MSP reservation used by the integration;
+7. excludes application task stacks only from the ArghtOS-overhead subtotal, while reporting them in the S0 system total;
+8. proves no dynamic allocator reference exists in ArghtOS.
 
 # Dependencies
 
-This proof is foundational and is referenced by [P1](P1-task-state-invariants.md), [P2](P2-context-stack-integrity.md), and [P7](P7-bounded-memory-and-work.md).
-
-# Concrete v1 instantiation
-
-The concrete contracts now instantiate the mutable scheduler state as:
-
-```text
-M_task = 28 bytes
-M_global = 12 bytes
-M_ready_sets = 0 bytes
-```
-
-The reference selector scans the bounded task-control array and therefore requires no separate dynamic ready-queue storage.
-
-For compile-time capacity `N = ARGHTOS_MAX_TASKS`:
-
-```text
-M_core(N) = 12 + 28*N
-```
-
-At the default `N=32`:
-
-```text
-M_core(32) = 908 bytes
-```
-
-An optional crash record adds 64 bytes. MSP reservation and any port-specific mutable bytes remain target-integration terms and are reported separately under C9.
+P1, P2, and P7 depend on this finite static resource model.
 
 # Open obligations
 
-Final target qualification must instantiate:
-
-* MSP reservation/high-water bound;
-* any port-specific mutable bytes;
-* linker/map evidence that immutable task descriptors reside outside mutable scheduler SRAM as intended.
+* actual ArghtOS/port code and constant size;
+* target MSP reservation/high-water bound;
+* any additional port-resident data;
+* final linker-map attribution and soft-target result.
