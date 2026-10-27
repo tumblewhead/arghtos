@@ -38,7 +38,7 @@ An implementation MAY encode these states differently provided the externally ob
 | RUNNING | yield | READY |
 | RUNNING | wait | WAITING |
 | RUNNING | sleep_until | SLEEPING |
-| RUNNING | completion of bounded periodic job | DORMANT or scheduler-defined inactive state |
+| RUNNING | completion of bounded periodic job | DORMANT |
 | RUNNING | fatal task condition | FAULTED |
 | WAITING | wake | READY |
 | SLEEPING | release time reached | READY |
