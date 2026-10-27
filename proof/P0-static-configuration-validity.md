@@ -31,7 +31,7 @@ Let:
 * `M_cfg(N) = 16N` bytes for C0 task descriptors;
 * `M_ctl(C) = 20C` bytes for the statically allocated C8 control array;
 * `M_global = 20` bytes for C9 global state;
-* `M_crash` be 0 or 64 bytes;
+* `M_crash = 64` bytes for the required v1 crash record;
 * `M_code` be linked ArghtOS/port executable bytes resident in SRAM;
 * `M_const` be linked ArghtOS/port read-only constants/literals resident in SRAM;
 * `M_other` be any additional linked ArghtOS resident data not already represented above;
@@ -69,10 +69,10 @@ C9 global      =  20 B
 metadata       = 1172 B
 ```
 
-With crash capture enabled:
+With the required crash record:
 
 ```text
-metadata + crash = 1236 B
+pre-code resident lower bound = 1236 B
 ```
 
 This is a lower bound before ArghtOS `.text`, `.rodata`, literals, other sections, and MSP.
@@ -87,7 +87,7 @@ F_arghtos(32) <= 1536 B
 
 is a **soft target and is not yet proven**.
 
-The present contracts leave 364 B before crash capture, or 300 B with crash capture, for code/constants/MSP/other resident bytes. Actual feasibility cannot be established until implementation and linker-map evidence exist.
+The present contracts leave 364 B before crash capture, leaving 300 B after the required crash record, for code/constants/MSP/other resident bytes. Actual feasibility cannot be established until implementation and linker-map evidence exist.
 
 # Architecture test
 
