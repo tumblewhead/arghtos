@@ -52,12 +52,17 @@ The Cortex-M23 port SHALL have tests or static checks for:
 2. save/restore symmetry for all software-saved registers;
 3. correct exception return into Thread mode using PSP;
 4. MSP use in scheduler/exception handlers;
-5. required stack alignment;
+5. required stack alignment and the possible 4-byte hardware exception-alignment padding indicated by stacked xPSR bit 9;
 6. pairwise stack-region non-overlap;
 7. PSP-in-range checks in debug or validation builds; and
-8. a stack sentinel or equivalent low-cost high-water/corruption diagnostic when enabled.
+8. a stack sentinel or equivalent low-cost high-water/corruption diagnostic when enabled; and
+9. at least 68 bytes of scheduler context reserve in each configured task stack before application stack demand is added.
 
 A hardware test SHALL context-switch between tasks containing distinct register canaries and demonstrate exact restoration.
+
+# Context-size note
+
+The synthesized initial frame is 64 bytes when created on an 8-byte-aligned stack top. A later exception can require one additional 4-byte alignment word, so runtime scheduler context overhead can reach 68 bytes.
 
 # Non-claim
 
