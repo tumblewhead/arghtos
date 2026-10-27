@@ -25,6 +25,14 @@ Therefore scheduler-owned SRAM is bounded for the lifetime of the program.
 
 # Work bound
 
+The concrete v1 core mutable state is bounded by:
+
+```text
+12 bytes global state + 28 * ARGHTOS_MAX_TASKS bytes task control
+```
+
+which is 908 bytes at the default 32-task capacity. The optional crash record is 64 bytes. MSP and port-specific mutable state remain explicit integration terms under C9.
+
 The scheduler SHALL contain no loop whose iteration count depends on an unbounded runtime-produced collection.
 
 Permitted loops must have a compile-time upper bound such as:
