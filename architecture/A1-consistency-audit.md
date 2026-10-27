@@ -77,7 +77,7 @@ C9 global         20 B
                  1172 B
 ```
 
-Optional crash record raises this to 1236 B.
+The required 64-byte crash record raises the pre-code resident lower bound to 1236 B.
 
 ## Capacity versus configured task count
 
@@ -184,15 +184,13 @@ F_arghtos(32 tasks) <= 1536 B
 Known metadata:
 
 ```text
-1172 B without crash record
-1236 B with crash record
+1236 B including required crash record
 ```
 
 Remaining before the target:
 
 ```text
-364 B without crash record
-300 B with crash record
+300 B
 ```
 
 That remainder must contain ArghtOS/port code, constants/literals, ArghtOS-only MSP requirement, and any other required resident bytes.
@@ -209,6 +207,6 @@ However, module design SHALL include:
 * a no-hidden-table rule;
 * explicit attribution of port and inline/header-generated code;
 * linker-map footprint tests from the first compilable skeleton;
-* an early decision on whether crash capture is enabled in the minimum-footprint profile.
+* the required crash record included in every v1 footprint profile.
 
 No claim that the 1.5 KiB target is met is permitted until linked evidence exists.
