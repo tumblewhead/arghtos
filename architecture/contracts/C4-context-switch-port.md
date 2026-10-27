@@ -18,6 +18,9 @@ status: draft
 # Port-provided functions
 
 ```c
+arghtos_result_t arghtos_port_init(void);
+bool arghtos_port_stack_valid(void *stack_base, uint32_t stack_size);
+
 arghtos_irq_key_t arghtos_port_critical_enter(void);
 void arghtos_port_critical_exit(arghtos_irq_key_t key);
 
@@ -36,6 +39,29 @@ uintptr_t arghtos_port_build_initial_psp(
 ```
 
 The port also owns the vector-table implementations for SVC and PendSV.
+
+# Port initialization
+
+`arghtos_port_init()` is called exactly once by `arghtos_init()` before initial task frames are built.
+
+On `ARGHTOS_OK`, it guarantees:
+
+* the scheduler-visible timebase is ready;
+* the scheduler timer source is disarmed;
+* PendSV is configured at the least urgent scheduler-relevant exception priority;
+* SVC/PendSV integration is usable;
+* no scheduler task has been started.
+
+It may return `ARGHTOS_ERR_BAD_CONFIG` if the target integration cannot satisfy the contract.
+
+# Stack validation
+
+`arghtos_port_stack_valid(base,size)` is a pure/bounded configuration check used by C0.
+
+It returns true only if the region can hold a valid initial task frame under the target ABI, including required alignment and the 64-byte minimum saved frame.
+
+It does not inspect overlap with other task stacks; C0 owns pairwise overlap validation.
+
 
 # Critical section contract
 
