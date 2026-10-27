@@ -61,6 +61,36 @@ The implementation SHALL provide build-time assertions or generated checks that 
 
 This proof is foundational and is referenced by [P1](P1-task-state-invariants.md), [P2](P2-context-stack-integrity.md), and [P7](P7-bounded-memory-and-work.md).
 
+# Concrete v1 instantiation
+
+The concrete contracts now instantiate the mutable scheduler state as:
+
+```text
+M_task = 28 bytes
+M_global = 12 bytes
+M_ready_sets = 0 bytes
+```
+
+The reference selector scans the bounded task-control array and therefore requires no separate dynamic ready-queue storage.
+
+For compile-time capacity `N = ARGHTOS_MAX_TASKS`:
+
+```text
+M_core(N) = 12 + 28*N
+```
+
+At the default `N=32`:
+
+```text
+M_core(32) = 908 bytes
+```
+
+An optional crash record adds 64 bytes. MSP reservation and any port-specific mutable bytes remain target-integration terms and are reported separately under C9.
+
 # Open obligations
 
-The exact values of `M_fixed`, `M_task`, and `M_sets(N)` remain to be instantiated after the runtime structures are designed.
+Final target qualification must instantiate:
+
+* MSP reservation/high-water bound;
+* any port-specific mutable bytes;
+* linker/map evidence that immutable task descriptors reside outside mutable scheduler SRAM as intended.
