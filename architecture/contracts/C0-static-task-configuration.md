@@ -122,7 +122,7 @@ For every descriptor:
 
 * `entry != NULL`;
 * `stack_base != NULL`;
-* `stack_size >= 64` and satisfies the stricter C4 port check;
+* `stack_size >= 68` and satisfies the stricter C4 port check; the 68-byte minimum covers worst-case scheduler context overhead including one hardware alignment word;
 * stack regions are pairwise non-overlapping;
 * `flags == 0`.
 
