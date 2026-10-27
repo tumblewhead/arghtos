@@ -19,7 +19,6 @@ status: draft
 typedef struct {
     uint32_t total_cpu_ticks;
     uint32_t max_run_ticks;
-    uint32_t last_run_ticks;
 
     uint16_t dispatch_count;
     uint16_t preempt_count;
@@ -29,7 +28,7 @@ typedef struct {
     uint8_t  flags; /* public subset of C8 flags */
 } arghtos_task_profile_t;
 
-_Static_assert(sizeof(arghtos_task_profile_t) == 20u,
+_Static_assert(sizeof(arghtos_task_profile_t) == 16u,
                "profile ABI changed");
 ```
 
@@ -59,15 +58,14 @@ The caller never receives a pointer to the private C8 record.
 On every dispatch of task `t`:
 
 ```text
-t.run_start = now
+t.state_time = now
 t.dispatch_count = saturating_increment(t.dispatch_count)
 ```
 
 On every deschedule:
 
 ```text
-elapsed = now - t.run_start
-t.last_run_ticks = elapsed
+elapsed = now - t.state_time
 t.max_run_ticks = max(t.max_run_ticks, elapsed)
 t.total_cpu_ticks += elapsed    modulo 2^32
 ```
