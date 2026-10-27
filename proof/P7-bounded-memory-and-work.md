@@ -104,8 +104,8 @@ Crash capture:
 The project SHALL provide:
 
 * linker-map attribution of all ArghtOS/port resident sections;
-* an ArghtOS-footprint subtotal including code/constants/data/metadata/MSP;
-* a total-system SRAM report including excluded application task stacks/code and driver state;
+* an ArghtOS-footprint subtotal including code/constants/data/metadata and ArghtOS-only MSP requirement;
+* a total-system SRAM report including the physical system MSP reservation, application task stacks/code, and driver state;
 * configured task count and crash-record setting;
 * loop-bound review or static checks;
 * target timing of critical sections and dispatch paths;
