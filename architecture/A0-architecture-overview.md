@@ -153,6 +153,7 @@ stateDiagram-v2
 * [P5](../proof/P5-priority-domain-isolation.md)
 * [P6](../proof/P6-rms-schedulability.md)
 * [P7](../proof/P7-bounded-memory-and-work.md)
+* [P8](../proof/P8-async-starvation-avoidance.md)
 
 # Dangerous aspects
 
