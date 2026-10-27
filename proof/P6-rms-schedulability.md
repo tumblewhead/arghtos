@@ -85,7 +85,7 @@ Thus async application execution after the ideal periodic release is bounded onl
 
 C3 never creates multiple simultaneous instances.
 
-An observed release while the prior job remains active increments the overrun count.
+An observed release while the prior job remains active increments the missed-release count.
 
 Any such overrun is runtime evidence that the assumed timing envelope was violated or the task set was not operating within its proven conditions.
 
