@@ -179,8 +179,25 @@ static void test_static_dispatch_and_async_wake(void)
         ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
     assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_DORMANT);
 
+#if ARGHTOS_R5G_SCHEDULE16
+    {
+        const arghtos_context_t second_periodic_context =
+            arghtos_kernel_dispatch(periodic_context);
+
+        assert(second_periodic_context == c[2].context);
+        assert(arghtos_test_kernel()->current_task == 2u);
+
+        assert(arghtos_port_service_call(
+            ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
+        assert(ARGHTOS_CTRL_STATE(&c[2]) == ARGHTOS_TASK_DORMANT);
+
+        assert(arghtos_kernel_dispatch(second_periodic_context) == c[1].context);
+        assert(arghtos_test_kernel()->current_task == 1u);
+    }
+#else
     assert(arghtos_kernel_dispatch(periodic_context) == c[1].context);
     assert(arghtos_test_kernel()->current_task == 1u);
+#endif
     assert(ARGHTOS_CTRL_AGE(&c[1]) == 0u);
 }
 
