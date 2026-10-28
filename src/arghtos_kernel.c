@@ -453,7 +453,6 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 {
     arghtos_task_control_t *c;
 
-#endif
 #if !ARGHTOS_SPECIALIZED_SERVICES
     if (!task_id_valid(id)) {
         *result = ARGHTOS_ERR_BAD_TASK_ID;
