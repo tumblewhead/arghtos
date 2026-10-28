@@ -69,9 +69,13 @@ The public header must not expose:
 * kernel-global objects;
 * private profiling mutation helpers.
 
-# Platform header: arghtos_port.h
+# Abstract port header: arghtos_port.h
 
-The platform header contains the functions a Cortex-M23 port must implement or bind:
+`arghtos_port.h` is architecture-neutral. It is the only platform abstraction surface that portable kernel C may include.
+
+It must not include vendor headers or expose Cortex-specific registers, exception names, frame layouts, or interrupt-controller details.
+
+A target port implements or binds:
 
 ```c
 arghtos_result_t arghtos_port_init(void);
@@ -148,9 +152,9 @@ _Noreturn void arghtos_fatal(
 
 Application translation units may include `arghtos.h`.
 
-Port translation units may include both `arghtos.h` and `arghtos_port.h`.
+Port translation units may include both `arghtos.h` and `arghtos_port.h`, plus target-private headers under `port/<target>/`.
 
-Kernel translation units may additionally include `arghtos_internal.h`.
+Portable kernel translation units may include `arghtos_internal.h` and the architecture-neutral `arghtos_port.h`, but no target-private header.
 
 Application code must never include `arghtos_internal.h`.
 
@@ -195,7 +199,7 @@ Any machine code or literal data emitted into application translation units beca
 # Dangerous aspects
 
 * Exposing C8/C9 in the public header and freezing implementation layout accidentally.
-* Putting vendor device headers in `arghtos.h`.
+* Putting vendor device headers in `arghtos.h`, `arghtos_port.h`, `arghtos_internal.h`, or `arghtos_kernel.c`.
 * Allowing application code to call private dispatch/context helpers.
 * Creating duplicate public and interrupt-specific APIs with inconsistent semantics.
 * Leaking Cortex-M assembly details into portable kernel C.
@@ -203,3 +207,27 @@ Any machine code or literal data emitted into application translation units beca
 # Boundary specification
 
 C10 defines compile-time visibility only. Behavioral meaning remains owned by C0-C9.
+
+# Port-private header
+
+A target may define:
+
+```text
+port/<target>/arghtos_port_private.h
+```
+
+for target-only register definitions, vendor/CMSIS includes, exception constants, frame details, and port-local helpers.
+
+That header must never be included by portable kernel code.
+
+# No target conditionals in portable kernel
+
+The portable kernel must not contain target-selection branches such as:
+
+```c
+#ifdef __ARM_ARCH_8M_BASE__
+...
+#endif
+```
+
+Target selection occurs at build/link composition by choosing one `port/<target>/` implementation.
