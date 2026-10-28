@@ -82,7 +82,7 @@ static void test_prestart_interrupt_wake_is_rejected(void)
     assert(arghtos_init(&cfg) == ARGHTOS_OK);
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     assert(arghtos_wake_from_interrupt(0u) == ARGHTOS_ERR_BAD_STATE);
-    assert(arghtos_test_controls()ARGHTOS_CTRL_STATE(&[0]) == ARGHTOS_TASK_DORMANT);
+    assert(ARGHTOS_CTRL_STATE(&arghtos_test_controls()[0]) == ARGHTOS_TASK_DORMANT);
     assert(arghtos_host_dispatch_request_count() == 0u);
 }
 
@@ -403,7 +403,7 @@ static void test_profile_snapshot_is_committed_only(void)
     (void)arghtos_kernel_dispatch(ctx);
     assert(arghtos_profile_get(0u, &p) == ARGHTOS_OK);
     assert(p.total_cpu_ticks == 25u);
-    assert(ARGHTOS_CTRL_MAX_RUN(&p) == 25u);
+    assert(p.max_run_ticks == 25u);
 }
 
 static void test_invalid_wake_id_does_not_mutate(void)
