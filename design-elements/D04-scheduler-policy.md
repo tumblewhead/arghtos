@@ -131,7 +131,7 @@ normalize outgoing state if still RUNNING
 winner = select_next()
 mark winner RUNNING
 set run_start
-return saved_psp
+return context
 ```
 
 D04 itself does not update saved PSP, run_start, or current_task.
