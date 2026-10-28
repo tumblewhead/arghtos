@@ -5,7 +5,11 @@
 
 extern void SVC_Handler(void);
 extern void PendSV_Handler(void);
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+extern ARGHTOS_NORETURN void arghtos_task_start_trampoline(arghtos_task_fn_t entry);
+#else
 extern ARGHTOS_NORETURN void arghtos_task_start_trampoline(void);
+#endif
 extern ARGHTOS_NORETURN void arghtos_task_return_guard(void);
 
 __attribute__((section(".app_stacks"), aligned(8)))
@@ -31,12 +35,19 @@ static void task_stub(void)
 #else
 #define ARGHTOS_META_SLOT_INIT .age_credit = 0u, .status = 0u,
 #endif
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+#define ARGHTOS_TIME_ENTRY_INIT .entry_or_next.entry = task_stub,
+#define ARGHTOS_ENTRY_FIELD_INIT
+#else
+#define ARGHTOS_TIME_ENTRY_INIT .next_time = 0u,
+#define ARGHTOS_ENTRY_FIELD_INIT .entry = task_stub,
+#endif
 #define SLOT(i, p) { \
     .context = (arghtos_context_t)(uintptr_t)&app_stacks[(i)][sizeof(app_stacks[(i)])], \
-    .next_time = 0u, \
+    ARGHTOS_TIME_ENTRY_INIT \
     ARGHTOS_PROFILE_SLOT_INIT \
     ARGHTOS_META_SLOT_INIT \
-    .entry = task_stub, \
+    ARGHTOS_ENTRY_FIELD_INIT \
     .schedule = ARGHTOS_STATIC_PERIOD(p) \
 }
 
