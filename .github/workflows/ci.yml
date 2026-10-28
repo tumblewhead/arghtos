@@ -49,15 +49,15 @@ jobs:
       - name: Cortex-M23 footprint LTO omit-frame-pointer R4n
         run: make m23-footprint-r4n
 
-      - name: Cortex-M23 footprint live ICF experiment R4o
-        run: make m23-footprint-r4o
+      - name: Cortex-M23 footprint live no-exidx experiment R4p
+        run: make m23-footprint-r4p
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4h r4m r4n r4o; do
+          for p in r3c r4h r4m r4n r4p; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
           done
-          for p in r3c r4h r4m r4n r4o; do
+          for p in r3c r4h r4m r4n r4p; do
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
             echo "--- largest $p symbols ---"
@@ -73,17 +73,17 @@ jobs:
             build/footprint-r4h.json
             build/footprint-r4m.json
             build/footprint-r4n.json
-            build/footprint-r4o.json
+            build/footprint-r4p.json
             build/m23-r3c.map
             build/m23-r4h.map
             build/m23-r4m.map
             build/m23-r4n.map
-            build/m23-r4o.map
+            build/m23-r4p.map
             build/m23-r3c-symbols.txt
             build/m23-r4h-symbols.txt
             build/m23-r4m-symbols.txt
             build/m23-r4n-symbols.txt
-            build/m23-r4o-symbols.txt
+            build/m23-r4p-symbols.txt
             build/m23-r4n.elf
-            build/m23-r4o.elf
+            build/m23-r4p.elf
             build/*.su
