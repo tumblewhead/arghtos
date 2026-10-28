@@ -307,3 +307,16 @@ ordering and does not depend on this refinement.
 The refinement therefore changes representation/order only in the trusted
 generated profile; it does not change RMS priority semantics, async priority
 semantics, lifecycle behavior, or the public task-ID type.
+
+# R5s generated crash startup image
+
+The trusted generated minimum-size profile may include C5's 64-byte crash
+record in the generated startup image with the invariant header and zero
+payload required by C5 R5s.
+
+Build/generator evidence must establish that this image is materialized before
+`arghtos_init()`. This is the same class of startup-image premise used by the
+R5l/R5m generated task context/state refinements.
+
+The crash record remains scheduler-owned writable storage and its full 64 bytes
+remain part of the ArghtOS resident-footprint accounting.
