@@ -8,20 +8,14 @@ Read [agents.md](agents.md) first. Repository state is authoritative.
 
 ```text
 repo:   https://github.com/tumblewhead/arghtos
-base:   main @ dcf188aae8765d0d65d729af706da4bdaa922474
-branch: implementation/r4-feature-specialization-001
-PR:     #3
-title:  R4: freeze minimum-footprint Cortex-M23 production profile at 2294 B
+base:   main @ bf44d8495074360f2fb6283322e323ff7f62d24f
+branch: implementation/r5-size-specialization-001
+phase:  R5 footprint reduction
 ```
 
-PR #3 is in **freeze / merge-gate mode**. Do not start another R4 footprint
-experiment on this branch.
+PR #3 was squash-merged to main. R4 is frozen.
 
-## Frozen result
-
-The final same-revision R3c reference is 3104 B. Earlier R4 documents may show
-the historical 3080 B R3c value from earlier source revisions; do not rewrite
-those historical measurements.
+## Frozen control
 
 Default capacity:
 
@@ -29,162 +23,121 @@ Default capacity:
 24 tasks
 ```
 
-Complete physical ArghtOS resident footprint:
+Final R4 control:
 
 ```text
-physical R3c final reference          3104 B
-R4h corrected physical baseline      2778 B
-R4m full LTO                          2530 B
-R4n omit frame pointer                2450 B
-R4p no ARM unwind index               2434 B
-R4q no jump tables                    2410 B
-R4s split task metadata               2402 B
-R4u entry/next-time lifetime overlay  2322 B
-R4v compact PendSV assembly            2298 B
-R4y direct SVC EXC_RETURN branch       2294 B
---------------------------------------------
-frozen accepted minimum               2294 B
-soft target                           1536 B
-remaining gap                          758 B
+R4y complete resident footprint = 2294 B
+linked before MSP               = 2214 B
+ArghtOS-only MSP                 =   80 B
+soft target                      = 1536 B
+remaining gap                    =  758 B
 ```
 
-R4y:
+The final same-revision profiling-enabled R3c reference on the frozen R4 source
+was 3104 B.
 
-```text
-linked before MSP  2214 B
-ArghtOS-only MSP      80 B
-total               2294 B
-```
+R4y remains the immutable control for R5 experiments.
 
-See:
+## R5 rules
 
-* [implementation/R4-freeze.md](implementation/R4-freeze.md)
-* [implementation/R4y-direct-svc-return.md](implementation/R4y-direct-svc-return.md)
+R5 may trade runtime cycles for resident bytes but must preserve:
 
-## Supported minimum-size profile
+* portable C11 kernel boundary;
+* synchronous periodic RMS semantics;
+* async residual-capacity semantics and age credit;
+* wake/wait race closure;
+* arithmetic delayed-release catch-up;
+* required 64-byte crash record;
+* no heap;
+* bounded work;
+* Cortex-M23 task-context ABI unless an owning contract/proof is explicitly
+  updated;
+* correct first-dispatch MSP reclamation and alignment handling;
+* PRIMASK and race-free idle protocol.
 
-The frozen R4y minimum-size Cortex-M23 profile uses:
+Only linked Cortex-M23 evidence counts.
 
-* static/trusted production configuration;
-* 24-task maximum;
-* compact runtime + compact descriptor + unified slot;
-* optional runtime profiling disabled only in this minimum-size profile;
-* accepted size-first selector;
-* no-profile dispatch clock read removed;
-* unused start epoch removed;
+## Current accepted minimum-size profile
+
+R4y uses:
+
+* trusted/static production configuration;
+* compact runtime/descriptor/unified slot;
+* no runtime profiling in minimum profile;
+* size-first selector;
+* no dispatch clock read;
+* no start epoch;
 * split task metadata;
 * entry/next-time lifetime overlay;
 * full LTO;
 * `-fomit-frame-pointer`;
 * `-fno-jump-tables`;
-* linker script without unused ARM unwind index;
-* compact Thumb-1 PendSV save/restore;
+* no ARM unwind index;
+* compact PendSV R4-R11 save/restore;
 * direct SVC branch to saved EXC_RETURN.
 
-The portable kernel remains target-independent C11.
+## Exact next action: R5a compact PendSV tail/alignment
 
-## Preserved semantics / contracts
+Keep R4y as same-revision control.
 
-R4y preserves:
+R5a should change only `port/cortex_m23/arghtos_context.S`, behind an
+R5a-only assembly define.
 
-* synchronous periodic RMS scheduling;
-* equal-period lower-ID tie order;
-* one active periodic instance;
-* arithmetic delayed-release catch-up;
-* async residual-capacity scheduling and age credit;
-* pending-wake race closure;
-* async return as fatal;
-* required 64-byte crash record;
-* no heap;
-* bounded scheduler work;
-* portable kernel / target-port boundary;
-* Cortex-M23 32-byte software R4-R11 task frame;
-* first-dispatch MSP reclamation;
-* PRIMASK serialization and race-free idle WFI protocol.
+### First-dispatch xPSR alignment decode
 
-## Rejected experiment history
+Current:
 
-Rejected/neutral R4 experiments remain documented under `implementation/`.
-They are evidence, not supported build profiles.
-
-Notable rejected/neutral results include:
-
-```text
-R4c looped crash copy                 +8 B
-R4d whole-prefix crash clear           0 B
-R4e timer sentinel                    +4 B
-R4f specialized startup timer          0 B
-R4i service if-chain                   0 B
-R4j fault-range source rewrite         0 B
-R4k two-pass time engine              +4 B
-R4l wake-result hoist                  0 B
-R4o lld --icf=safe                     0 B
-R4r forced machine outliner            0 B
-R4t ID-native metadata indexing        0 B
-R4w global no-inline                +296 B
-R4x fault helper                     +20 B
-R4x time_due helper                  +16 B
-R4x task_is_async helper             +32 B
-R4z timer-delta recomputation          0 B
+```asm
+ldr  r1, [r5, #28]
+lsrs r1, r1, #9
+movs r2, #1
+ands r1, r2
+lsls r1, r1, #2
 ```
 
-The post-freeze R4aa/R4ab research commits were intentionally removed from the
-PR branch before merge because they were not accepted checkpoints.
+Experiment:
 
-## Freeze cleanup completed
-
-The merge branch now:
-
-* removes post-R4y experimental helper translation units;
-* removes rejected R4t/R4x/R4z private source switches;
-* removes rejected legacy kernel/port experiment branches from product source;
-* keeps useful wake/state regression coverage;
-* collapses the Makefile from the lab matrix to supported/reference profiles;
-* collapses CI to supported/reference profiles;
-* preserves all measured experiment checkpoint documents;
-* updates PR #3 title/body to the complete R4 scope.
-
-Supported Makefile/CI surfaces are now:
-
-* generic host tests;
-* accepted size-first selector host regression;
-* profiling-enabled R3c reference;
-* accepted minimum-source R4u host tests;
-* ASan/UBSan;
-* generic Cortex-M23 compile;
-* generic footprint harness;
-* R3c footprint reference;
-* final R4y footprint;
-* R3c/R4y map and symbol evidence.
-
-## Final merge-gate evidence
-
-```text
-CI run:    40669625107
-head:      1eb28496a311cae30e4944da3da8fbaafbb6794e
-conclusion: success
+```asm
+ldr  r1, [r5, #28]
+lsrs r1, r1, #7
+movs r2, #4
+ands r1, r2
 ```
 
-All frozen CI steps passed.
+Both produce either 0 or 4 from xPSR bit 9.
 
-Final same-revision footprint evidence:
+### PendSV exception return
 
-```text
-R3c reference  3104 B
-R4y minimum    2294 B
-saved           810 B
+Current compact path:
+
+```asm
+mov lr, r2
+bx  lr
 ```
 
-The commit that records this evidence is documentation-only. Its CI must remain
-green before PR #3 is marked ready.
+R5a:
 
-## Exact next action
+```asm
+bx r2
+```
 
-PR #3 is ready for review/merge.
+R4y already proved the same direct-EXC_RETURN branch principle in SVC.
 
-1. Confirm CI for this final documentation-only handoff commit is green.
-2. User should merge PR #3, preferably with **Squash and merge**.
-3. After merge, start any new footprint research from fresh canonical `main`,
-   using frozen R4y as the control.
+### Acceptance
 
-Do not add another experiment to PR #3.
+1. Preserve R4y control.
+2. Add R5a target only; do not mutate R4y.
+3. Run frozen host/sanitizer/portability gates.
+4. Link R4y and R5a in the same revision.
+5. Inspect disassembly and symbol sizes.
+6. Verify:
+   * first-dispatch alignment result remains exactly 0 or 4;
+   * saved task frame remains unchanged;
+   * PSP/MSP ownership is unchanged;
+   * PRIMASK/idle behavior is unchanged;
+   * MSP bound remains 80 B.
+7. Accept only if physical total <2294 B.
+8. Record result and refresh this file.
+
+After R5a, the next likely assembly experiment is compact EXC_RETURN bit-2
+testing in PendSV/HardFault. Do not combine it with R5a until R5a is measured.
