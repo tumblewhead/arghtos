@@ -538,7 +538,7 @@ static bool current_running(arghtos_task_id_t *id)
 {
     if ((kernel.current_task == ARGHTOS_TASK_ID_INVALID) ||
         !task_id_valid(kernel.current_task) ||
-        (ARGHTOS_CTRL_STATE(&controls[kernel.current_task]) != ARGHTOS_TASK_RUNNING)) {
+        (ARGHTOS_CTRL_STATE_ID(kernel.current_task) != ARGHTOS_TASK_RUNNING)) {
         return false;
     }
 
@@ -678,7 +678,7 @@ ARGHTOS_NORETURN void arghtos_start(void)
 #if ARGHTOS_SIZE_FIRST_START_TIMER
         const uint32_t period = ARGHTOS_TASK_PERIOD(id);
         if (period != 0u) {
-            ARGHTOS_CTRL_SET_STATE(&controls[id], ARGHTOS_TASK_READY);
+            ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
             controls[id].next_time = start + period;
             if (period < earliest_period) {
                 earliest_period = period;
@@ -686,7 +686,7 @@ ARGHTOS_NORETURN void arghtos_start(void)
         }
 #else
         if (task_is_periodic(id)) {
-            ARGHTOS_CTRL_SET_STATE(&controls[id], ARGHTOS_TASK_READY);
+            ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
             controls[id].next_time = start + ARGHTOS_TASK_PERIOD(id);
 #if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
             timer_consider(start, controls[id].next_time,
@@ -869,9 +869,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 
 #if ARGHTOS_SIZE_FIRST_SERVICE_IF_CHAIN
     if (service_id == ARGHTOS_SERVICE_YIELD) {
-        ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_READY);
+        ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_READY);
         if (task_is_async(self)) {
-            ARGHTOS_CTRL_AGE(&controls[self]) = 0u;
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
         }
         dispatch = true;
     } else if (service_id == ARGHTOS_SERVICE_WAIT) {
@@ -880,11 +880,11 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             result = ARGHTOS_ERR_BAD_TASK_CLASS;
         } else
 #endif
-        if (ARGHTOS_CTRL_WAKE_PENDING(&controls[self])) {
-            ARGHTOS_CTRL_CLEAR_WAKE(&controls[self]);
+        if (ARGHTOS_CTRL_WAKE_PENDING_ID(self)) {
+            ARGHTOS_CTRL_CLEAR_WAKE_ID(self);
         } else {
-            ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_WAITING);
-            ARGHTOS_CTRL_AGE(&controls[self]) = 0u;
+            ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_WAITING);
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
             dispatch = true;
         }
     } else if (service_id == ARGHTOS_SERVICE_SLEEP_UNTIL) {
@@ -906,8 +906,8 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 #endif
                 {
                     controls[self].next_time = deadline;
-                    ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_SLEEPING);
-                    ARGHTOS_CTRL_AGE(&controls[self]) = 0u;
+                    ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
+                    ARGHTOS_CTRL_AGE_ID(self) = 0u;
                     (void)process_time_locked(now);
                     dispatch = true;
                 }
@@ -925,7 +925,7 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
         } else
 #endif
         {
-            ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_DORMANT);
+            ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_DORMANT);
             dispatch = true;
         }
     } else {
@@ -935,9 +935,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 #else
     switch (service_id) {
     case ARGHTOS_SERVICE_YIELD:
-        ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_READY);
+        ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_READY);
         if (task_is_async(self)) {
-            ARGHTOS_CTRL_AGE(&controls[self]) = 0u;
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
         }
         dispatch = true;
         break;
@@ -949,11 +949,11 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             break;
         }
 #endif
-        if (ARGHTOS_CTRL_WAKE_PENDING(&controls[self])) {
-            ARGHTOS_CTRL_CLEAR_WAKE(&controls[self]);
+        if (ARGHTOS_CTRL_WAKE_PENDING_ID(self)) {
+            ARGHTOS_CTRL_CLEAR_WAKE_ID(self);
         } else {
-            ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_WAITING);
-            ARGHTOS_CTRL_AGE(&controls[self]) = 0u;
+            ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_WAITING);
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
             dispatch = true;
         }
         break;
@@ -983,8 +983,8 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 #endif
 
             controls[self].next_time = deadline;
-            ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_SLEEPING);
-            ARGHTOS_CTRL_AGE(&controls[self]) = 0u;
+            ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
             (void)process_time_locked(now);
             dispatch = true;
         }
@@ -1001,7 +1001,7 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             break;
         }
 #endif
-        ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_DORMANT);
+        ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_DORMANT);
         dispatch = true;
         break;
 
@@ -1032,7 +1032,7 @@ arghtos_task_id_t arghtos_select_next(void)
         const uint32_t period = ARGHTOS_TASK_PERIOD(id);
 
         if ((period != 0u) &&
-            (ARGHTOS_CTRL_STATE(&controls[id]) == ARGHTOS_TASK_READY) &&
+            (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) &&
             (period < best_period)) {
             best = id;
             best_period = period;
@@ -1053,8 +1053,8 @@ arghtos_task_id_t arghtos_select_next(void)
          */
         for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
             if (task_is_async(id) &&
-                (ARGHTOS_CTRL_STATE(&controls[id]) == ARGHTOS_TASK_READY)) {
-                uint8_t age = ARGHTOS_CTRL_AGE(&controls[id]);
+                (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY)) {
+                uint8_t age = ARGHTOS_CTRL_AGE_ID(id);
                 const uint8_t ceiling =
                     (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX;
                 uint16_t raised;
@@ -1062,7 +1062,7 @@ arghtos_task_id_t arghtos_select_next(void)
 
                 if (age != UINT8_MAX) {
                     ++age;
-                    ARGHTOS_CTRL_AGE(&controls[id]) = age;
+                    ARGHTOS_CTRL_AGE_ID(id) = age;
                 }
 
                 raised = (uint16_t)ARGHTOS_TASK_PRIORITY(id) +
@@ -1086,7 +1086,7 @@ arghtos_task_id_t arghtos_select_next(void)
 
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         if (task_is_periodic(id) &&
-            (ARGHTOS_CTRL_STATE(&controls[id]) == ARGHTOS_TASK_READY)) {
+            (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY)) {
             if ((best == ARGHTOS_TASK_ID_INVALID) ||
                 (ARGHTOS_TASK_PERIOD(id) < ARGHTOS_TASK_PERIOD(best)) ||
                 ((ARGHTOS_TASK_PERIOD(id) == ARGHTOS_TASK_PERIOD(best)) &&
@@ -1102,18 +1102,18 @@ arghtos_task_id_t arghtos_select_next(void)
 
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         if (task_is_async(id) &&
-            (ARGHTOS_CTRL_STATE(&controls[id]) == ARGHTOS_TASK_READY)) {
+            (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY)) {
             const uint8_t ceiling =
                 (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX;
             uint16_t raised;
             uint8_t effective;
 
-            if (ARGHTOS_CTRL_AGE(&controls[id]) != UINT8_MAX) {
-                ARGHTOS_CTRL_AGE(&controls[id])++;
+            if (ARGHTOS_CTRL_AGE_ID(id) != UINT8_MAX) {
+                ARGHTOS_CTRL_AGE_ID(id)++;
             }
 
             raised = (uint16_t)ARGHTOS_TASK_PRIORITY(id) +
-                     (uint16_t)ARGHTOS_CTRL_AGE(&controls[id]);
+                     (uint16_t)ARGHTOS_CTRL_AGE_ID(id);
             effective = (raised > ceiling) ? ceiling : (uint8_t)raised;
 
             if (best == ARGHTOS_TASK_ID_INVALID) {
@@ -1123,16 +1123,16 @@ arghtos_task_id_t arghtos_select_next(void)
                     (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX;
                 const uint16_t best_raised =
                     (uint16_t)ARGHTOS_TASK_PRIORITY(best) +
-                    (uint16_t)ARGHTOS_CTRL_AGE(&controls[best]);
+                    (uint16_t)ARGHTOS_CTRL_AGE_ID(best);
                 const uint8_t best_effective =
                     (best_raised > best_ceiling) ?
                     best_ceiling : (uint8_t)best_raised;
 
                 if ((effective > best_effective) ||
                     ((effective == best_effective) &&
-                     (ARGHTOS_CTRL_AGE(&controls[id]) > ARGHTOS_CTRL_AGE(&controls[best]))) ||
+                     (ARGHTOS_CTRL_AGE_ID(id) > ARGHTOS_CTRL_AGE_ID(best))) ||
                     ((effective == best_effective) &&
-                     (ARGHTOS_CTRL_AGE(&controls[id]) == ARGHTOS_CTRL_AGE(&controls[best])) &&
+                     (ARGHTOS_CTRL_AGE_ID(id) == ARGHTOS_CTRL_AGE_ID(best)) &&
                      (id < best))) {
                     best = id;
                 }
@@ -1201,14 +1201,14 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
         return ARGHTOS_CONTEXT_NONE;
     }
 
-    if ((ARGHTOS_CTRL_STATE(&controls[next]) != ARGHTOS_TASK_READY) ||
+    if ((ARGHTOS_CTRL_STATE_ID(next) != ARGHTOS_TASK_READY) ||
         (controls[next].context == ARGHTOS_CONTEXT_NONE)) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
 
-    ARGHTOS_CTRL_SET_STATE(&controls[next], ARGHTOS_TASK_RUNNING);
+    ARGHTOS_CTRL_SET_STATE_ID(next, ARGHTOS_TASK_RUNNING);
     if (task_is_async(next)) {
-        ARGHTOS_CTRL_AGE(&controls[next]) = 0u;
+        ARGHTOS_CTRL_AGE_ID(next) = 0u;
     }
 
     kernel.current_task = next;
@@ -1267,7 +1267,7 @@ ARGHTOS_NORETURN void arghtos_fatal(
 
     if (task_fault_attributed(reason) &&
         task_id_valid(kernel.current_task)) {
-        ARGHTOS_CTRL_SET_STATE(&controls[kernel.current_task], ARGHTOS_TASK_FAULTED);
+        ARGHTOS_CTRL_SET_STATE_ID(kernel.current_task, ARGHTOS_TASK_FAULTED);
     }
 
     r = ARGHTOS_CRASH_RECORD;
