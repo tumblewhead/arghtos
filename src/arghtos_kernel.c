@@ -275,7 +275,21 @@ static void missed_release_add(
 #endif
 }
 
-#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+#if ARGHTOS_RECOMPUTE_TIMER_DELTA
+static void timer_consider(
+    arghtos_time_t now,
+    arghtos_time_t t,
+    bool *have,
+    arghtos_time_t *best)
+{
+    const uint32_t delta = t - now;
+
+    if ((!*have) || (delta < (uint32_t)(*best - now))) {
+        *have = true;
+        *best = t;
+    }
+}
+#elif ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
 static void timer_consider(
     arghtos_time_t now,
     arghtos_time_t t,
@@ -384,6 +398,9 @@ static bool process_time_locked(arghtos_time_t now)
 #if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
     arghtos_time_t best_time = 0u;
     uint32_t best_delta = UINT32_MAX;
+#elif ARGHTOS_RECOMPUTE_TIMER_DELTA
+    bool have_timer = false;
+    arghtos_time_t best_time = 0u;
 #else
     bool have_timer = false;
     arghtos_time_t best_time = 0u;
@@ -421,6 +438,8 @@ static bool process_time_locked(arghtos_time_t now)
 
 #if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
             timer_consider(now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
+#elif ARGHTOS_RECOMPUTE_TIMER_DELTA
+            timer_consider(now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time);
 #else
             timer_consider(
                 now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
@@ -433,6 +452,8 @@ static bool process_time_locked(arghtos_time_t now)
             } else {
 #if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
                 timer_consider(now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
+#elif ARGHTOS_RECOMPUTE_TIMER_DELTA
+                timer_consider(now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time);
 #else
                 timer_consider(
                     now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
