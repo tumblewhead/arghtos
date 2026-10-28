@@ -110,16 +110,17 @@ The order is deliberately designed so invalid external input cannot cause a poin
 2. config->tasks != NULL
 3. config->crash_record != NULL
 4. 1 <= task_count <= ARGHTOS_MAX_TASKS
-5. port_init()
-6. validate each descriptor scalar/pointer/alignment rule
+5. validate each descriptor scalar/pointer rule
+6. call pure port_stack_valid() for each task
 7. pairwise stack-overlap validation
-8. only then copy persistent pointers/count into C9
-9. initialize C8
-10. synthesize all dormant contexts
-11. mark INITIALIZED
+8. only after the full external configuration is valid: port_init()
+9. copy persistent pointers/count into C9
+10. initialize C8
+11. synthesize all dormant contexts
+12. mark INITIALIZED
 ```
 
-If any validation fails before step 8, C9 remains uncommitted.
+If any validation fails before port_init, no persistent scheduler state or hardware-port state is committed.
 
 If context construction fails after step 8, init must leave the scheduler non-startable and return a deterministic error/fatal according to the exact failure class.
 
