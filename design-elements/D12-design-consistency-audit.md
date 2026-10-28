@@ -160,7 +160,7 @@ D10 reserves that 300 B as:
 
 These are red-line measurement envelopes, not predictions.
 
-I0 demonstrates that these red-line budgets are not feasible for the current feature set: the linked implementation is 4106 B before MSP.
+I0 demonstrates that these red-line budgets are not feasible for the current feature set: the linked implementation is 4118 B before MSP.
 
 # First implementation checkpoint
 
@@ -245,7 +245,7 @@ Heavy instrumentation inside critical/PendSV paths can invalidate measured overh
 
 The next stage may implement D01-D09 and the D10/D11 support tooling.
 
-The footprint-first checkpoint is complete. Portable implementation and host verification may continue, but any effort aimed at the 1.5 KiB goal must first address the measured 2570-byte pre-MSP deficit.
+The footprint-first checkpoint is complete. Portable implementation and host verification may continue, but any effort aimed at the 1.5 KiB goal must first address the measured 2582-byte pre-MSP deficit.
 
 # Portability gate
 
