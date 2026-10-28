@@ -18,12 +18,20 @@ static void async_task(void) {}
 arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
     {
         .context = (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)],
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+        .entry_or_next.entry = periodic_task,
+#else
         .entry = periodic_task,
+#endif
         .schedule = ARGHTOS_STATIC_PERIOD(10u)
     },
     {
         .context = (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)],
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+        .entry_or_next.entry = async_task,
+#else
         .entry = async_task,
+#endif
         .schedule = ARGHTOS_STATIC_ASYNC(3u)
     }
 };
@@ -52,6 +60,10 @@ static void reset_all(void)
         (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)];
     arghtos_static_slots[1].context =
         (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)];
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[0]) = periodic_task;
+    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[1]) = async_task;
+#endif
 #endif
     arghtos_host_reset();
     memset(&arghtos_static_crash_record, 0, sizeof(arghtos_static_crash_record));
@@ -77,11 +89,14 @@ static void test_static_init_ignores_runtime_config(void)
     arghtos_host_set_time(100u);
 
     assert(arghtos_init(NULL) == ARGHTOS_OK);
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+    assert(arghtos_host_initial_arg() == (uintptr_t)async_task);
+#endif
     start_and_escape();
 
     c = arghtos_test_controls();
     assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
-    assert(c[0].next_time == 110u);
+    assert(ARGHTOS_CTRL_NEXT(&c[0]) == 110u);
     assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_DORMANT);
     assert(arghtos_host_timer_is_armed());
     assert(arghtos_host_timer_deadline() == 110u);
