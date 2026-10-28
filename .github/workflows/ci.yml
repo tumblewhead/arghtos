@@ -64,6 +64,9 @@ jobs:
       - name: Host live R5v unit-period timer
         run: make host-test-r5v
 
+      - name: Host live R5w trusted crash port
+        run: make host-test-r5w
+
       - name: Host live R5c compact wake result
         run: make host-test-r5c
 
@@ -160,9 +163,12 @@ jobs:
       - name: Cortex-M23 live R5v unit-period timer
         run: make m23-footprint-r5v
 
+      - name: Cortex-M23 live R5w trusted crash port
+        run: make m23-footprint-r5w
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h r5i r5k r5l r5m r5n r5o r5p r5q r5r r5s r5t r5v; do
+          for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h r5i r5k r5l r5m r5n r5o r5p r5q r5r r5s r5t r5v r5w; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -199,6 +205,7 @@ jobs:
             build/footprint-r5t.json
             build/footprint-r5u.json
             build/footprint-r5v.json
+            build/footprint-r5w.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5a.map
@@ -221,6 +228,7 @@ jobs:
             build/m23-r5s.map
             build/m23-r5t.map
             build/m23-r5v.map
+            build/m23-r5w.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5a-symbols.txt
@@ -243,6 +251,7 @@ jobs:
             build/m23-r5s-symbols.txt
             build/m23-r5t-symbols.txt
             build/m23-r5v-symbols.txt
+            build/m23-r5w-symbols.txt
             build/m23-r4y.elf
             build/m23-r5a.elf
             build/m23-r5b.elf
@@ -264,4 +273,5 @@ jobs:
             build/m23-r5s.elf
             build/m23-r5t.elf
             build/m23-r5v.elf
+            build/m23-r5w.elf
             build/*.su
