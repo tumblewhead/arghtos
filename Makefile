@@ -15,7 +15,7 @@ M23_COMMON := --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -std=c11 \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -fstack-usage -Oz \
 	-Wall -Wextra -Werror -Iinclude -Isrc -Iport/cortex_m23
 
-.PHONY: all portability-check host-test host-test-size-selector host-test-size-crash-clear host-test-size-timer-sentinel host-test-size-start-timer host-test-size-service-ifchain host-test-size-fault-range host-test-size-time-two-pass host-test-size-wake-result-hoist host-test-compact host-test-static host-test-r2a host-test-r2b host-test-r2c host-test-r3a host-test-r3b host-test-r3c host-test-r4a host-test-r4b host-test-r4g host-test-r4h host-test-r4s host-test-r4t host-test-r4u host-test-r4x host-sanitize m23-compile m23-footprint m23-footprint-compact m23-footprint-static m23-footprint-r2a m23-footprint-r2b m23-footprint-r2c m23-footprint-r3a m23-footprint-r3b m23-footprint-r3c m23-footprint-r4a m23-footprint-r4b m23-footprint-r4c m23-footprint-r4d m23-footprint-r4e m23-footprint-r4f m23-footprint-r4g m23-footprint-r4h m23-footprint-r4i m23-footprint-r4j m23-footprint-r4k m23-footprint-r4l m23-footprint-r4m m23-footprint-r4n m23-footprint-r4o m23-footprint-r4p m23-footprint-r4q m23-footprint-r4r m23-footprint-r4s m23-footprint-r4t m23-footprint-r4u m23-footprint-r4v m23-footprint-r4w m23-footprint-r4y m23-footprint-r4x footprint-report clean
+.PHONY: all portability-check host-test host-test-size-selector host-test-size-crash-clear host-test-size-timer-sentinel host-test-size-start-timer host-test-size-service-ifchain host-test-size-fault-range host-test-size-time-two-pass host-test-size-wake-result-hoist host-test-compact host-test-static host-test-r2a host-test-r2b host-test-r2c host-test-r3a host-test-r3b host-test-r3c host-test-r4a host-test-r4b host-test-r4g host-test-r4h host-test-r4s host-test-r4t host-test-r4u host-test-r4x host-test-r4z host-sanitize m23-compile m23-footprint m23-footprint-compact m23-footprint-static m23-footprint-r2a m23-footprint-r2b m23-footprint-r2c m23-footprint-r3a m23-footprint-r3b m23-footprint-r3c m23-footprint-r4a m23-footprint-r4b m23-footprint-r4c m23-footprint-r4d m23-footprint-r4e m23-footprint-r4f m23-footprint-r4g m23-footprint-r4h m23-footprint-r4i m23-footprint-r4j m23-footprint-r4k m23-footprint-r4l m23-footprint-r4m m23-footprint-r4n m23-footprint-r4o m23-footprint-r4p m23-footprint-r4q m23-footprint-r4r m23-footprint-r4s m23-footprint-r4t m23-footprint-r4u m23-footprint-r4v m23-footprint-r4w m23-footprint-r4y m23-footprint-r4x m23-footprint-r4z footprint-report clean
 
 all: portability-check host-test m23-compile
 
@@ -68,6 +68,11 @@ host-test-size-wake-result-hoist: | $(BUILD)
 	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_SIZE_FIRST_WAKE_RESULT_HOIST=1 $(HOST_SRCS) \
 		-o $(BUILD)/host-tests-size-wake-result-hoist
 	$(BUILD)/host-tests-size-wake-result-hoist
+
+host-test-r4z: | $(BUILD)
+	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_RECOMPUTE_TIMER_DELTA=1 $(HOST_SRCS) \
+		-o $(BUILD)/host-tests-r4z
+	$(BUILD)/host-tests-r4z
 
 host-test-compact: | $(BUILD)
 	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 $(HOST_SRCS) \
@@ -1484,6 +1489,49 @@ m23-footprint-r4x: | $(BUILD)
 		--msp $(M23_ARGHTOS_MSP_OMIT_FP) --json \
 		> $(BUILD)/footprint-r4x.json
 	cat $(BUILD)/footprint-r4x.json
+
+m23-footprint-r4z: | $(BUILD)
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables -DARGHTOS_TRUSTED_CONFIG=1 \
+		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
+		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
+		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
+		-DARGHTOS_SPECIALIZED_SERVICES=1 -DARGHTOS_MINIMAL_VALIDATION=1 \
+		-DARGHTOS_RUNTIME_PROFILING=0 -DARGHTOS_SIZE_FIRST_SELECTOR=1 \
+		-DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 -DARGHTOS_SIZE_FIRST_NO_START_TIME=1 \
+		-DARGHTOS_SPLIT_META=1 -DARGHTOS_ENTRY_NEXT_OVERLAY=1 \
+		-DARGHTOS_RECOMPUTE_TIMER_DELTA=1 \
+		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_r4z.o
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables \
+		-DARGHTOS_ENTRY_NEXT_OVERLAY=1 -c port/cortex_m23/arghtos_port.c \
+		-o $(BUILD)/arghtos_port_m23_r4z.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
+		-DARGHTOS_COMPACT_PENDSV=1 -DARGHTOS_COMPACT_SVC_RETURN=1 -ffunction-sections -c port/cortex_m23/arghtos_context.S \
+		-o $(BUILD)/arghtos_context_m23_r4z.o
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables -c footprint/m23_board_stub.c \
+		-o $(BUILD)/m23_board_stub_r4z.o
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables \
+		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
+		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
+		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
+		-DARGHTOS_SPECIALIZED_SERVICES=1 -DARGHTOS_MINIMAL_VALIDATION=1 \
+		-DARGHTOS_RUNTIME_PROFILING=0 -DARGHTOS_SIZE_FIRST_SELECTOR=1 \
+		-DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 -DARGHTOS_SIZE_FIRST_NO_START_TIME=1 \
+		-DARGHTOS_SPLIT_META=1 -DARGHTOS_ENTRY_NEXT_OVERLAY=1 \
+		-DARGHTOS_RECOMPUTE_TIMER_DELTA=1 \
+		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_r4z.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib -flto -fomit-frame-pointer -fno-jump-tables \
+		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-r4z.map \
+		-Wl,-T,footprint/m23_min_no_exidx.ld -o $(BUILD)/m23-r4z.elf \
+		$(BUILD)/arghtos_kernel_m23_r4z.o \
+		$(BUILD)/arghtos_port_m23_r4z.o \
+		$(BUILD)/arghtos_context_m23_r4z.o \
+		$(BUILD)/m23_board_stub_r4z.o \
+		$(BUILD)/m23_footprint_r4z.o
+	size -A $(BUILD)/m23-r4z.elf
+	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r4z.map \
+		--msp $(M23_ARGHTOS_MSP_OMIT_FP) --json \
+		> $(BUILD)/footprint-r4z.json
+	cat $(BUILD)/footprint-r4z.json
 
 footprint-report: m23-footprint
 
