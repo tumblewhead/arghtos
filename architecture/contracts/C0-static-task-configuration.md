@@ -281,3 +281,29 @@ succeeds.
 
 The generic/debug initialization path continues to validate and initialize
 runtime state explicitly.
+
+# R5p generated class/order refinement
+
+The trusted generated minimum-size profile may choose the generated descriptor
+order so task class and RMS order are encoded by task ID.
+
+For that profile the generator emits one constant periodic count `P` and
+establishes:
+
+```text
+task IDs [0, P)  = periodic tasks
+task IDs [P, N)  = async tasks
+```
+
+The periodic prefix is sorted by nondecreasing period. For equal periods, the
+generator assigns increasing task IDs in the deterministic tie order used by
+C6.
+
+Task ID remains exactly the zero-based index of the generated task table. Any
+application-facing generated task-ID constants refer to this final generated
+index. The generic/runtime-config profile retains its existing descriptor
+ordering and does not depend on this refinement.
+
+The refinement therefore changes representation/order only in the trusted
+generated profile; it does not change RMS priority semantics, async priority
+semantics, lifecycle behavior, or the public task-ID type.
