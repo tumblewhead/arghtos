@@ -62,27 +62,39 @@ Canonical first footprint build uses `-Oz`, section GC, no libc, and all section
 {
   "kernel_code_data": 2934,
   "port_c_code_data": 396,
-  "context_asm": 164,
+  "context_asm": 172,
   "board_adapter": 12,
   "task_descriptors": 512,
   "crash_record": 64,
   "linker_resident_metadata": 16,
   "arghtos_only_msp": 0,
-  "arghtos_resident_total": 4098,
+  "arghtos_resident_total": 4106,
   "soft_target": 1536,
-  "delta_to_target": -2562,
+  "delta_to_target": -2570,
   "target_met": false
 }
 ```
 
-This is still optimistic because `arghtos_only_msp` is zero in the current report.
+The raw linker report above keeps `arghtos_only_msp=0` so code/data attribution can be read separately.
+
+Static stack-usage analysis of the stabilized `-Oz` build gives a current ArghtOS-only MSP lower bound of approximately 104 B for the normal SVC sleep path:
+
+```text
+SVC assembly save          8 B
+arghtos_kernel_service    40 B
+process_time_locked       56 B
+------------------------------
+static lower bound       104 B
+```
+
+The first-dispatch port also now reclaims the startup MSP hardware frame before returning to the first PSP task.
 
 Therefore:
 
 ```text
-measured before MSP    4098 B
+measured before MSP    4106 B
 soft target            1536 B
-excess                 2562 B
+excess                 2570 B
 ```
 
 # Compiler-size sweep
@@ -90,9 +102,9 @@ excess                 2562 B
 Exploratory full-link section totals:
 
 ```text
--Os current .text              3284 B
--Oz current .text              3032 B
--Oz + LTO current .text        2740 B
+-Os current .text              3292 B
+-Oz current .text              3040 B
+-Oz + LTO current .text        2748 B
 ```
 
 LTO helps, but not nearly enough to bridge the gap. The footprint problem is architectural/feature-representation scale, not merely an optimization-flag problem.
@@ -116,4 +128,20 @@ Still required before P2 is discharged:
 
 Implementation can continue, but no artifact may claim the 1.5 KiB target is met.
 
-Before investing heavily in further code-size polishing, the next engineering decision should explicitly address the 2562-byte pre-MSP footprint deficit through architectural or requirement-level reduction rather than accounting changes.
+Before investing heavily in further code-size polishing, the next engineering decision should explicitly address the 2570-byte pre-MSP footprint deficit through architectural or requirement-level reduction rather than accounting changes.
+
+
+# Static complete lower bound
+
+Applying the current 104-byte ArghtOS-only MSP estimate:
+
+```text
+linked before MSP       4106 B
+static ArghtOS MSP       104 B
+-----------------------------
+current lower bound     4210 B
+soft target             1536 B
+excess                  2674 B
+```
+
+This is still not a hardware high-water proof; device-handler nesting can increase the physical MSP reservation.
