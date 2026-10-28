@@ -15,6 +15,9 @@ static bool host_masked;
 static uint32_t host_idle_calls;
 static jmp_buf *host_start_env;
 static jmp_buf *host_fault_env;
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+static uintptr_t host_initial_arg_value;
+#endif
 
 void arghtos_host_reset(void)
 {
@@ -29,6 +32,9 @@ void arghtos_host_reset(void)
     host_idle_calls = 0u;
     host_start_env = NULL;
     host_fault_env = NULL;
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+    host_initial_arg_value = 0u;
+#endif
 }
 
 void arghtos_host_set_mode(arghtos_host_mode_t mode) { host_mode = mode; }
@@ -45,6 +51,9 @@ bool arghtos_host_interrupts_masked(void) { return host_masked; }
 uint32_t arghtos_host_idle_count(void) { return host_idle_calls; }
 void arghtos_host_set_start_jmp(jmp_buf *env) { host_start_env = env; }
 void arghtos_host_set_fault_jmp(jmp_buf *env) { host_fault_env = env; }
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+uintptr_t arghtos_host_initial_arg(void) { return host_initial_arg_value; }
+#endif
 
 arghtos_result_t arghtos_port_init(void)
 {
@@ -157,6 +166,27 @@ arghtos_context_t arghtos_port_build_initial_context_top(
 
     return (arghtos_context_t)top;
 }
+
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+arghtos_context_t arghtos_port_build_initial_context_top_arg(
+    void *stack_top,
+    void (*thread_start)(arghtos_task_fn_t),
+    void (*return_guard)(void),
+    arghtos_task_fn_t initial_arg)
+{
+    const uintptr_t top = (uintptr_t)stack_top;
+    (void)thread_start;
+    (void)return_guard;
+
+    if ((stack_top == NULL) || ((top & 0x7u) != 0u) ||
+        (initial_arg == NULL)) {
+        return ARGHTOS_CONTEXT_NONE;
+    }
+
+    host_initial_arg_value = (uintptr_t)initial_arg;
+    return (arghtos_context_t)top;
+}
+#endif
 
 void arghtos_port_crash_fill(
     arghtos_crash_record_t *record,
