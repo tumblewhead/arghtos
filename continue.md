@@ -31,10 +31,11 @@ R5a accepted minimum            = 2290 B
 R5b accepted minimum            = 2286 B
 R5d accepted minimum            = 2270 B
 R5e accepted minimum            = 2202 B
-linked before MSP               = 2122 B
+R5h accepted minimum            = 1970 B
+linked before MSP               = 1890 B
 ArghtOS-only MSP                =   80 B
 soft target                     = 1536 B
-remaining gap                   =  666 B
+remaining gap                   =  434 B
 ```
 
 The final same-revision profiling-enabled R3c reference on the frozen R4 source
@@ -178,50 +179,81 @@ The variable-length schedule stream saves 72 B of configuration state but adds
 See
 [implementation/R5f-variable-schedule-stream.md](implementation/R5f-variable-schedule-stream.md).
 
-## Exact next action: R5g fixed 16-bit schedule codes
-
-Keep R5e as the accepted control at 2202 B. R5f is not the base.
-
-R5g should remove the 32-bit per-task schedule word exactly as R5f did, but use
-an O(1) fixed-width 16-bit schedule table.
-
-Proposed encoding:
+## R5g rejected result
 
 ```text
-0x0001..0x7EFF  direct periodic period
-0x8001..0x80FE  direct async priority 1..254
-0x7F00..0x7F17  overflow index 0..23
-other values    reserved / invalid
+CI 40673681141  success
+
+R5e 2202 B
+R5g 2218 B
+delta +16 B
 ```
 
-For an overflow code, an optional exact 32-bit table stores the original
-schedule value. The footprint harness periods 1..24 require no overflow table.
+R5g saved 48 B of configuration state but its general 32-bit schedule
+reconstruction path added 64 B of code.
 
-R5g footprint data target:
+See [implementation/R5g-schedule16.md](implementation/R5g-schedule16.md).
+
+## R5h accepted result
 
 ```text
-core slots     8 B * 24 = 192 B
-status meta    1 B * 24 =  24 B
-schedule16     2 B * 24 =  48 B
--------------------------------
-total                     264 B
+CI 40674018494  success
+
+R5e 2202 B
+R5h 1970 B
+saved 232 B
 ```
 
-versus R5e 312 B, a raw 48 B opportunity.
+R5h keeps the fixed 16-bit representation but specializes zero-overflow
+generated configurations to direct halfword access.
 
-The accessor must be O(1), preferably small enough to inline cleanly under LTO.
-Full legal period/priority semantics must remain representable through the
-overflow path.
+```text
+.text          1910 -> 1726 B
+.arghtos_cfg    312 ->  264 B
+```
+
+See
+[implementation/R5h-direct-schedule16.md](implementation/R5h-direct-schedule16.md).
+
+## Exact next action: R5i fixed 8-bit schedule codes
+
+Keep R5h as accepted control at 1970 B.
+
+Use one O(1) byte per task:
+
+```text
+0x01..0x5F  direct periodic period 1..95
+0x60..0x77  overflow index 0..23
+0x81..0xFF  direct async priority 1..127
+```
+
+All longer periods and async priorities 128..254 remain representable through
+the optional exact 32-bit overflow table.
+
+For the current footprint fixture, all periods are 1..24 and overflow count is
+zero. The target path should therefore compile to direct byte access with no
+overflow helper.
+
+Raw resident-state target:
+
+```text
+core slots      8 * 24 = 192 B
+status meta     1 * 24 =  24 B
+schedule8       1 * 24 =  24 B
+------------------------------
+total                    240 B
+```
+
+This is another 24 B raw saving versus R5h, with possible text reduction from
+byte access.
 
 Acceptance:
 
-1. Preserve R5e same-revision control.
-2. Build R5g on accepted R5a+b+d+e features, not R5f.
-3. Host tests must exercise:
-   * direct periodic code;
-   * direct async code;
-   * exact overflow periodic code.
-4. Cortex-M23 footprint harness may use zero overflow entries.
-5. Measure task/config state, accessor/code growth, and total resident bytes.
-6. Accept only if total <2202 B.
+1. Preserve R5h same-revision control.
+2. Host general encoding must exercise direct periodic, direct async, and
+   overflow exact-value forms.
+3. Target fixture uses zero overflow entries.
+4. Keep all legal schedule values representable.
+5. Run host/sanitizer/portability and Cortex-M23 comparison.
+6. Accept only if total <1970 B.
 7. Refresh this handoff.
