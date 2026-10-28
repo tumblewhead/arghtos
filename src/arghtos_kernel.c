@@ -87,9 +87,13 @@ static void control_clear(arghtos_task_control_t *c)
 {
     c->context = ARGHTOS_CONTEXT_NONE;
     c->next_time = 0u;
+#if ARGHTOS_RUNTIME_PROFILING
     c->total_cpu_ticks = 0u;
+#endif
 #if ARGHTOS_COMPACT_RUNTIME
+#if ARGHTOS_RUNTIME_PROFILING
     c->max_run_ticks = 0u;
+#endif
     c->age_credit = 0u;
     c->status = 0u;
     ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_DORMANT);
@@ -433,7 +437,9 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
     (void)init_crash;
 #endif
     kernel.start_time = 0u;
+#if ARGHTOS_RUNTIME_PROFILING
     kernel.run_start = 0u;
+#endif
     kernel.current_task = ARGHTOS_TASK_ID_INVALID;
     kernel.flags = ARGHTOS_KF_INITIALIZED;
 #if ARGHTOS_STATIC_CONFIG
@@ -583,6 +589,7 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     return result;
 }
 
+#if ARGHTOS_RUNTIME_PROFILING
 arghtos_result_t arghtos_profile_get(
     arghtos_task_id_t task_id,
     arghtos_task_profile_t *out)
@@ -616,6 +623,7 @@ arghtos_result_t arghtos_profile_get(
 
     return ARGHTOS_OK;
 }
+#endif
 
 arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 {
@@ -795,7 +803,9 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
 
     if (outgoing_context != ARGHTOS_CONTEXT_NONE) {
         arghtos_task_control_t *c;
+#if ARGHTOS_RUNTIME_PROFILING
         uint32_t elapsed;
+#endif
 
         if ((kernel.current_task == ARGHTOS_TASK_ID_INVALID) ||
             !task_id_valid(kernel.current_task)) {
@@ -805,6 +815,7 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
         c = &controls[kernel.current_task];
         c->context = outgoing_context;
 
+#if ARGHTOS_RUNTIME_PROFILING
         elapsed = now - kernel.run_start;
         c->total_cpu_ticks += elapsed;
 #if ARGHTOS_COMPACT_RUNTIME
@@ -816,6 +827,7 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
         if (elapsed > c->max_run_ticks) {
             c->max_run_ticks = elapsed;
         }
+#endif
 #endif
 
         if (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_RUNNING) {
@@ -846,7 +858,11 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
     }
 
     kernel.current_task = next;
+#if ARGHTOS_RUNTIME_PROFILING
     kernel.run_start = now;
+#else
+    (void)now;
+#endif
     return controls[next].context;
 }
 
@@ -981,7 +997,9 @@ void arghtos_test_reset(void)
     }
 
     kernel.start_time = 0u;
+#if ARGHTOS_RUNTIME_PROFILING
     kernel.run_start = 0u;
+#endif
     kernel.current_task = ARGHTOS_TASK_ID_INVALID;
     kernel.flags = 0u;
 #if ARGHTOS_STATIC_CONFIG
