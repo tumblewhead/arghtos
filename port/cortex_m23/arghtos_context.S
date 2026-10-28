@@ -167,3 +167,66 @@ HardFault_Handler:
     mov r1, r2
     b arghtos_m23_hardfault_entry
 .size HardFault_Handler, .-HardFault_Handler
+
+#if ARGHTOS_R5K_ASM_CRASH_FILL
+.global arghtos_port_crash_fill
+.type arghtos_port_crash_fill, %function
+.thumb_func
+arghtos_port_crash_fill:
+    /* port_format = 0x4D23 */
+    movs r2, #0x23
+    strb r2, [r0, #16]
+    movs r2, #0x4d
+    strb r2, [r0, #17]
+
+    cmp r1, #0
+    beq 6f
+
+    /*
+     * Non-NULL target context. Optimistically set the full payload count;
+     * the no-basic-frame branch corrects it to three words.
+     */
+    movs r2, #10
+    strb r2, [r0, #18]
+
+    adds r0, #20
+    ldmia r1!, {r2, r3}
+    stmia r0!, {r2, r3}
+    ldmia r1!, {r2, r3}
+    str r2, [r0, #0]
+
+    cmp r3, #0
+    beq 5f
+
+    /* Copy stacked R0-R3. */
+    adds r0, #4
+    ldmia r3!, {r1, r2}
+    stmia r0!, {r1, r2}
+    ldmia r3!, {r1, r2}
+    stmia r0!, {r1, r2}
+
+    /* Skip stacked R12; copy stacked LR, PC, xPSR. */
+    adds r3, #4
+    ldmia r3!, {r1, r2}
+    stmia r0!, {r1, r2}
+    ldr r1, [r3, #0]
+    str r1, [r0, #0]
+    bx lr
+
+5:
+    /* r0 currently points at record + 28; port_words is record + 18. */
+    subs r0, #10
+    movs r2, #3
+    strb r2, [r0, #0]
+    bx lr
+
+6:
+    movs r2, #2
+    strb r2, [r0, #18]
+    mrs r2, msp
+    str r2, [r0, #20]
+    mrs r2, psp
+    str r2, [r0, #24]
+    bx lr
+.size arghtos_port_crash_fill, .-arghtos_port_crash_fill
+#endif
