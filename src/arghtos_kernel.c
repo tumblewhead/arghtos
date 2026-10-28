@@ -1259,6 +1259,10 @@ void arghtos_timer_interrupt(void)
     }
 }
 
+#if ARGHTOS_EXTERNAL_FAULT_PREDICATE
+bool arghtos_task_fault_attributed(arghtos_fault_reason_t reason);
+#define task_fault_attributed arghtos_task_fault_attributed
+#else
 static bool task_fault_attributed(arghtos_fault_reason_t reason)
 {
 #if ARGHTOS_SIZE_FIRST_FAULT_RANGE
@@ -1271,6 +1275,7 @@ static bool task_fault_attributed(arghtos_fault_reason_t reason)
            (reason == ARGHTOS_FAULT_CPU_EXCEPTION);
 #endif
 }
+#endif
 
 ARGHTOS_NORETURN void arghtos_fatal(
     arghtos_fault_reason_t reason,
