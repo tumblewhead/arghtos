@@ -78,6 +78,14 @@ _Noreturn void arghtos_fatal(
 
 Everything else should be `static` unless a measured port need proves otherwise.
 
+# Kernel dispatch serialization precondition
+
+D06 calls `arghtos_kernel_dispatch()` with normal scheduler-relevant interrupts masked by PRIMASK.
+
+D09 therefore assumes C8/C9 mutation is serialized for the entire dispatch transaction and does not independently open a second critical section.
+
+If dispatch returns no winner, D06 keeps that serialization across the transition into the race-free WFI protocol described in C4/D06.
+
 # Kernel dispatch algorithm
 
 This is the critical integration transaction.
@@ -385,7 +393,17 @@ A five-entry table may create resident rodata and indirect-call overhead.
 * compare simple branch/switch code size;
 * choose measured smaller form, not stylistic preference.
 
-## 8. Cross-module static helper accidentally becomes external
+## 8. Dispatch called without D06 serialization
+
+If a timer/device handler can preempt D09 while it is normalizing state or running the mutating async selector, C8 can be modified concurrently.
+
+**Tester should:**
+
+* instrument the target/host port to assert PRIMASK/serialization state at every `arghtos_kernel_dispatch()` entry;
+* deliberately attempt a handler wake during each dispatch phase in the host model;
+* require that the wake is deferred until after the serialized transaction.
+
+## 9. Cross-module static helper accidentally becomes external
 
 External linkage can prevent optimizations and expands symbol/API surface.
 
