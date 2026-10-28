@@ -35,7 +35,7 @@ The public application header contains only:
 * C0 task/configuration types;
 * C1 task lifecycle API;
 * C5 public profiling snapshot/API;
-* C5 crash-record type and validity constants, because C0 permits application-provided crash storage;
+* C5 crash-record type and validity constants, because v1 requires application-provided crash storage;
 * public constants required to configure tasks.
 
 Required public function set:
@@ -131,7 +131,7 @@ _Noreturn void arghtos_task_return_guard(void);
 Representative required internal symbols:
 
 ```c
-arghtos_task_id_t arghtos_select_next(arghtos_time_t now);
+arghtos_task_id_t arghtos_select_next(void);
 uintptr_t arghtos_kernel_dispatch(uintptr_t outgoing_saved_psp);
 
 _Noreturn void arghtos_fatal(
