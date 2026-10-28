@@ -151,6 +151,9 @@ jobs:
       - name: Cortex-M23 live R5t always-armed timer
         run: make m23-footprint-r5t
 
+      - name: Cortex-M23 live R5u 64-byte MSP requalification
+        run: make m23-footprint-r5u
+
       - name: Symbol-size report
         run: |
           for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h r5i r5k r5l r5m r5n r5o r5p r5q r5r r5s r5t; do
@@ -188,6 +191,7 @@ jobs:
             build/footprint-r5r.json
             build/footprint-r5s.json
             build/footprint-r5t.json
+            build/footprint-r5u.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5a.map
