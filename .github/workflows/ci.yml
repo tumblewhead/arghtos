@@ -40,6 +40,12 @@ jobs:
       - name: Host live timer-delta recomputation profile R4z
         run: make host-test-r4z
 
+      - name: Host selective time_due profile R4x-time
+        run: make host-test-r4x-time
+
+      - name: Host selective task_is_async profile R4x-async
+        run: make host-test-r4x-async
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -61,12 +67,18 @@ jobs:
       - name: Cortex-M23 live timer-delta recomputation profile R4z
         run: make m23-footprint-r4z
 
+      - name: Cortex-M23 selective time_due profile R4x-time
+        run: make m23-footprint-r4x-time
+
+      - name: Cortex-M23 selective task_is_async profile R4x-async
+        run: make m23-footprint-r4x-async
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r4z; do
+          for p in r3c r4y r4z r4x-time r4x-async; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
           done
-          for p in r3c r4y r4z; do
+          for p in r3c r4y r4z r4x-time r4x-async; do
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
             echo "--- largest $p symbols ---"
@@ -81,12 +93,20 @@ jobs:
             build/footprint-r3c.json
             build/footprint-r4y.json
             build/footprint-r4z.json
+            build/footprint-r4x-time.json
+            build/footprint-r4x-async.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r4z.map
+            build/m23-r4x-time.map
+            build/m23-r4x-async.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r4z-symbols.txt
+            build/m23-r4x-time-symbols.txt
+            build/m23-r4x-async-symbols.txt
             build/m23-r4y.elf
             build/m23-r4z.elf
+            build/m23-r4x-time.elf
+            build/m23-r4x-async.elf
             build/*.su
