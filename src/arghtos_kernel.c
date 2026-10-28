@@ -1432,33 +1432,49 @@ ARGHTOS_NORETURN void arghtos_fatal(
     kernel.flags |= ARGHTOS_KF_FAULT_ACTIVE;
 
     if (task_fault_attributed(reason) &&
-        task_id_valid(kernel.current_task)) {
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+        (kernel.current_task != ARGHTOS_TASK_ID_INVALID)
+#else
+        task_id_valid(kernel.current_task)
+#endif
+    ) {
         ARGHTOS_CTRL_SET_STATE_ID(kernel.current_task, ARGHTOS_TASK_FAULTED);
     }
 
     r = ARGHTOS_CRASH_RECORD;
 #if ARGHTOS_R5S_PRESEEDED_CRASH
     /*
-     * The trusted generated startup image already supplies the invariant
-     * header, invalid task ID, zero flags/port payload, and invalid commit.
-     * Fatal is non-returning and recursive fatal terminates before recapture.
+     * The trusted generated startup image supplies the invariant header and
+     * invalid commit. R5w additionally preseeds PORT_STATE_VALID and relies on
+     * the selected port's 1..10 payload-count contract.
      */
+#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT
     r->commit_magic = 0u;
+#endif
     r->reason = reason;
     r->timestamp = arghtos_port_time_now();
 
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+    if (kernel.current_task != ARGHTOS_TASK_ID_INVALID) {
+        r->task_id = kernel.current_task;
+        r->flags |= ARGHTOS_CRASH_F_TASK_VALID;
+    }
+#else
     if (task_id_valid(kernel.current_task)) {
         r->task_id = kernel.current_task;
         r->flags = ARGHTOS_CRASH_F_TASK_VALID;
     }
+#endif
 
     arghtos_port_crash_fill(r, port_fault_context);
+#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT
     if (r->port_words > 10u) {
         r->port_words = 10u;
     }
     if (r->port_words != 0u) {
         r->flags |= ARGHTOS_CRASH_F_PORT_STATE_VALID;
     }
+#endif
 
     atomic_thread_fence(memory_order_release);
     r->commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC;
