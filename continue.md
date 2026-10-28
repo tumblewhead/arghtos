@@ -4,7 +4,7 @@ Last refreshed: 2026-10-28
 
 Read [agents.md](agents.md) first. Repository state is authoritative.
 
-## Repository / active work
+## Active repository state
 
 ```text
 repo:   https://github.com/tumblewhead/arghtos
@@ -13,76 +13,73 @@ branch: implementation/r4-feature-specialization-001
 PR:     #3 (draft)
 ```
 
-## Objective
+Soft target:
 
 ```text
-soft target: 1536 B complete ArghtOS resident footprint
-tasks:       24
+1536 B complete ArghtOS resident footprint
+24-task default
 ```
 
-All ArghtOS-induced resident bytes count: code, constants/literals, data,
-BSS/noinit, generated scheduler metadata, crash state, target port, assembly,
-linker metadata/alignment, and ArghtOS-only MSP.
+Physical linker output-section occupancy is authoritative. All ArghtOS code,
+constants, data, generated scheduler state, crash state, port code, assembly,
+alignment/linker metadata, and ArghtOS-only MSP count.
 
-Physical linker output-section occupancy is authoritative. Only explicit
-application-owned `.app_*` inputs are excluded from the ArghtOS subtotal.
+## Minimum-size policy
 
-## Minimum-size production policy
+Runtime profiling is optional in the minimum-size production profile and
+enabled by default elsewhere.
 
-Runtime profiling is optional in the minimum-size profile and remains enabled
-by default elsewhere.
-
-Minimum-size work may trade cycles/runtime for resident bytes, but must
-preserve scheduler semantics, C11 defined behavior, portability boundaries,
-bounded work, crash integrity, wake/wait correctness, and required invariants.
+Minimum-size work may trade cycles for bytes, but must retain scheduler
+semantics, C11 defined behavior, portability boundaries, bounded work, crash
+integrity, wake/wait correctness, and required invariants.
 
 ## Accepted footprint chain
 
 ```text
 physical R3c                           3080 B
-
-R4a optional runtime profiling         -227 B feature delta
-R4b size-first selector                 -64 B
-R4g remove dead dispatch clock read      -8 B
-R4h remove unused start epoch            -3 B
-
-R4h corrected physical baseline        2778 B
-R4m full LTO, MSP 88 B                 2530 B
-R4n omit frame pointer, MSP 80 B       2450 B
-R4p discard unused unwind index        2434 B
-R4q -fno-jump-tables                   2410 B
+R4h corrected physical baseline       2778 B
+R4m full LTO                           2530 B
+R4n omit frame pointer                 2450 B
+R4p no ARM unwind index                2434 B
+R4q no jump tables                     2410 B
 R4s split task metadata                2402 B
+R4u entry/next-time lifetime overlay   2322 B
 ---------------------------------------------
-current accepted minimum               2402 B
+current accepted minimum               2322 B
 soft target                            1536 B
-remaining gap                           866 B
+remaining gap                           786 B
 ```
 
-R4s:
+R4u:
 
 ```text
-linked before MSP  2322 B
+linked before MSP  2242 B
 MSP                  80 B
-total               2402 B
+total               2322 B
 ```
 
-Authoritative R4s CI:
+Authoritative R4u CI:
 
 ```text
-40664462833  success
+40665626084  success
 ```
 
-Task metadata changed:
+R4u changes task metadata:
 
 ```text
-R4q 480 B
 R4s 432 B
-raw saving 48 B
-code-growth tax 40 B
-net saving 8 B
+R4u 336 B
+raw saving 96 B
+code-growth tax 16 B
+net saving 80 B
 ```
 
-See [implementation/R4s-split-meta.md](implementation/R4s-split-meta.md).
+The overlaid word contains task entry before init and runtime `next_time`
+after init. The Cortex-M23 initial frame carries entry in stacked R0. The
+trampoline retains entry in R4, already covered by the normal R4-R11 context,
+so there is no extra PSP context/frame storage.
+
+See [implementation/R4u-entry-next-overlay.md](implementation/R4u-entry-next-overlay.md).
 
 ## Rejected / neutral experiments
 
@@ -97,110 +94,77 @@ R4k two-pass time engine           +4 B
 R4l wake-result hoist               0 B
 R4o lld --icf=safe                  0 B
 R4r forced machine outliner         0 B
+R4t ID-native metadata indexing     0 B
 ```
 
-## Exact next action: R4t entry/next-time overlay experiment
+R4t CI: 40665299726, success, R4s=R4t=2402 B.
 
-The accepted R4s core is:
+## Exact next action: R4v compact PendSV assembly
+
+R4u retains the original 130-byte Cortex-M23 PendSV handler.
+
+R4v should preserve the exact C4 frame and execution protocol while using
+denser Thumb-1 save/restore sequences:
+
+Outgoing task:
 
 ```text
-context    4 B
-next_time  4 B
-entry      4 B
-schedule   4 B
-----------------
-core      16 B/task
-
-parallel age/status metadata = 2 B/task
-total                         = 18 B/task
+save R4-R7 with STMIA
+reuse R4-R7 as temporaries for R8-R11
+save those four with a second STMIA
 ```
 
-Observation: `entry` is needed only when the task begins. `next_time` is
-runtime state and is not needed before initialization has built the initial
-task context.
-
-R4t hypothesis:
-
-1. Reuse one 4-byte core field as:
-   * pre-init: task entry pointer;
-   * post-init: `next_time`.
-2. Pass the entry pointer into the initial task context in the Cortex-M23
-   hardware frame R0 slot.
-3. Change the common portable trampoline to accept the entry function as its
-   initial argument and retain/use that argument for periodic re-entry.
-4. Keep `context/initial_stack_top` and `schedule` as the other two 4-byte
-   core fields.
-
-Target R4t core:
+Incoming task:
 
 ```text
-context_or_initial_stack_top   4 B
-entry_or_next_time             4 B
-schedule                       4 B
-----------------------------------
-core                          12 B/task
-parallel metadata              2 B/task
-----------------------------------
-total                         14 B/task
+restore R4-R7 with LDMIA
+restore high-register values in two LDMIA pairs
+move them into R8-R11
 ```
 
-Raw metadata opportunity versus R4s:
+Also test replacing the literal load of EXC_RETURN 0xFFFFFFFD with:
 
-```text
-(18 - 14) * 24 = 96 B
+```asm
+movs r2, #2
+mvns r2, r2
 ```
 
-This is an architecture/representation experiment, not a silent canonical
-change.
+Requirements:
 
-Before accepting R4t:
-
-* preserve R4s as same-revision control;
-* update/extend the architecture-neutral port ABI only if required;
-* keep target-specific frame construction under `port/cortex_m23/`;
-* verify task-entry argument survives initial dispatch and repeated periodic
-  jobs;
-* verify async-return fatal behavior;
-* verify no extra ArghtOS-resident table appears;
-* report any PSP stack/register impact separately;
-* re-audit MSP;
-* update C4/C8/D06/D08 or other owning contracts/design docs before promotion.
-
-If R4t is not smaller than 2402 B, reject and remove the experimental path.
+1. Keep R4u as same-revision control.
+2. Put compact PendSV behind an assembly build define for R4v only.
+3. Preserve saved context exactly:
+   * 32 B software R4-R11;
+   * existing hardware frame;
+   * outgoing context token still points at saved R4.
+4. Preserve first-dispatch MSP frame reclamation and xPSR alignment handling.
+5. Preserve PRIMASK save/restore and race-free idle loop.
+6. Run all host/sanitizer/portability gates plus Cortex-M23 link.
+7. Inspect R4u/R4v disassembly and symbol sizes.
+8. Re-audit normal MSP; assembly compaction itself must not increase C stack.
+9. Accept only if total physical footprint <2322 B.
+10. Refresh implementation docs and this file.
 
 ## Architecture rules
 
-* Portable kernel remains target-independent C11.
-* Cortex-M23 details remain under `port/cortex_m23/`.
-* No dynamic allocation.
-* Periodic tasks: synchronous RMS, phase 0, D=T, one active instance.
-* Async tasks never outrank READY periodic work.
-* Age credit remains scheduler state.
-* Wake/wait uses the one-bit pending-wake handshake.
-* Periodic missed-release catch-up remains arithmetic.
-* Required 64-byte crash record remains.
-* Do not hide scheduler-required resident state in application-owned exclusions.
-* Do not remove internal invariants merely for bytes.
+* portable kernel remains target-independent C11;
+* Cortex-M23 mechanics remain under `port/cortex_m23/`;
+* no dynamic allocation;
+* periodic synchronous RMS semantics remain;
+* async age/wake semantics remain;
+* arithmetic missed-release catch-up remains;
+* required 64-byte crash record remains;
+* no hidden application-owned exclusions;
+* do not remove invariants merely for bytes.
 
 ## Useful files
 
 * [agents.md](agents.md)
 * this file
-* [implementation/R4q-no-jump-tables.md](implementation/R4q-no-jump-tables.md)
-* [implementation/R4s-split-meta.md](implementation/R4s-split-meta.md)
+* [implementation/R4u-entry-next-overlay.md](implementation/R4u-entry-next-overlay.md)
 * [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
-* [architecture/contracts/C8-task-control-record.md](architecture/contracts/C8-task-control-record.md)
 * [design-elements/D06-cortex-m23-port.md](design-elements/D06-cortex-m23-port.md)
-* [design-elements/D08-task-trampoline.md](design-elements/D08-task-trampoline.md)
-* [design-elements/D10-build-footprint.md](design-elements/D10-build-footprint.md)
 * [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
-* [proof/P7-bounded-memory-and-work.md](proof/P7-bounded-memory-and-work.md)
-* `src/arghtos_internal.h`
-* `src/arghtos_kernel.c`
-* `src/arghtos_kernel_port.h`
-* `include/arghtos/arghtos_port.h`
-* `port/cortex_m23/arghtos_port.c`
-* `footprint/m23_footprint.c`
-* `tests/test_static_profile.c`
+* `port/cortex_m23/arghtos_context.S`
 * `Makefile`
 * `.github/workflows/ci.yml`
