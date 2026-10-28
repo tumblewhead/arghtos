@@ -91,6 +91,9 @@ jobs:
       - name: Cortex-M23 live R5i schedule8 profile
         run: make m23-footprint-r5i
 
+      - name: Cortex-M23 live R5j 72-byte MSP requalification
+        run: make m23-footprint-r5j
+
       - name: Symbol-size report
         run: |
           for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h r5i; do
@@ -117,6 +120,7 @@ jobs:
             build/footprint-r5g.json
             build/footprint-r5h.json
             build/footprint-r5i.json
+            build/footprint-r5j.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5a.map
