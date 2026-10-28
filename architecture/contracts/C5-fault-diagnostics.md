@@ -201,3 +201,17 @@ Code implementing diagnostics, fault capture, constants, and literal data also c
 # Boundary specification
 
 C5 captures architecture-neutral evidence. Target register/frame extraction belongs entirely to the selected port. Export, formatting, telemetry, and post-reset policy are external.
+
+# R3 minimum-footprint production profile
+
+The generic/debug profile validates profile call context, output pointer, and task ID.
+
+The R3 production profile assumes:
+
+* `arghtos_profile_get()` is called from task context;
+* `out` is non-NULL;
+* `task_id` identifies a configured task.
+
+The atomic snapshot operation and returned field semantics are unchanged for valid calls.
+
+Fatal-path integrity checks are not removed by R3.
