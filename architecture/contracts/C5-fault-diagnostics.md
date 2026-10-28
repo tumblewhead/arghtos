@@ -76,32 +76,19 @@ The count may therefore advance by more than one in one delayed timer service.
 
 The snapshot exposes C8 `age_credit` only as diagnostic state. C5 does not interpret it as time.
 
-# Exception frame ABI
+# Generic port crash payload
+
+The public crash record is architecture-neutral. The kernel does not expose or interpret a Cortex exception-frame type.
+
+Crash flags are generic:
 
 ```c
-typedef struct {
-    uint32_t r0;
-    uint32_t r1;
-    uint32_t r2;
-    uint32_t r3;
-    uint32_t r12;
-    uint32_t lr;
-    uint32_t pc;
-    uint32_t xpsr;
-} arghtos_exception_frame_t;
-
-_Static_assert(sizeof(arghtos_exception_frame_t) == 32u,
-               "exception frame ABI changed");
+#define ARGHTOS_CRASH_F_TASK_VALID       (1u << 0)
+#define ARGHTOS_CRASH_F_PORT_STATE_VALID (1u << 1)
+#define ARGHTOS_CRASH_F_RESERVED         (0xFCu)
 ```
 
-Crash flags:
-
-```c
-#define ARGHTOS_CRASH_F_FRAME_VALID (1u << 0)
-#define ARGHTOS_CRASH_F_TASK_VALID  (1u << 1)
-#define ARGHTOS_CRASH_F_PSP_VALID   (1u << 2)
-#define ARGHTOS_CRASH_F_RESERVED    (0xF8u)
-```
+The target port owns the meaning of `port_format`, `port_words`, and `port_state[]` below.
 
 # Fault reasons
 
@@ -120,7 +107,7 @@ enum {
 };
 ```
 
-# Required 64-byte crash record
+# Required architecture-neutral 64-byte crash record
 
 ```c
 #define ARGHTOS_CRASH_MAGIC        0x41524748u
@@ -137,18 +124,12 @@ typedef struct arghtos_crash_record {
     uint8_t  flags;
 
     uint32_t timestamp;
-    uint32_t msp;
-    uint32_t psp;
-    uint32_t exc_return;
 
-    uint32_t r0;
-    uint32_t r1;
-    uint32_t r2;
-    uint32_t r3;
-    uint32_t r12;
-    uint32_t lr;
-    uint32_t pc;
-    uint32_t xpsr;
+    uint16_t port_format;
+    uint8_t  port_words;
+    uint8_t  reserved;
+
+    uint32_t port_state[10];
 
     uint32_t commit_magic;
 } arghtos_crash_record_t;
@@ -156,6 +137,8 @@ typedef struct arghtos_crash_record {
 _Static_assert(sizeof(arghtos_crash_record_t) == 64u,
                "crash record ABI changed");
 ```
+
+`port_words` is in the range 0..10. The portable kernel zeros the port payload before asking the selected port to fill it. A target port may define one or more `port_format` identifiers in its own port documentation.
 
 # Crash commit protocol
 
@@ -165,23 +148,28 @@ A record is valid only if magic, version, size, and commit marker all match.
 
 # Fatal kernel entry
 
+Portable kernel faults use:
+
 ```c
 _Noreturn void arghtos_fatal(
     arghtos_fault_reason_t reason,
-    const arghtos_exception_frame_t *exception_frame,
-    uint32_t exc_return);
+    const void *port_fault_context);
 ```
+
+The `port_fault_context` pointer is opaque to portable code. It may be NULL for a kernel-detected invariant fault.
 
 The fatal path:
 
 1. sets the C9 fault-active guard;
 2. prevents normal scheduler mutation;
-3. if the fault is attributable to the current task and a valid current task exists, sets that task state to FAULTED;
-4. captures the best available task/time/MSP/PSP/frame state;
-5. commits the crash record if configured;
-6. calls the terminal port hook.
+3. if the fault is attributable to the current task, marks that task FAULTED;
+4. writes generic crash header/task/time fields;
+5. zeros the generic port payload;
+6. calls `arghtos_port_crash_fill(record, port_fault_context)`;
+7. writes the crash commit marker last;
+8. calls the terminal port hook.
 
-Kernel-global faults that are not attributable to one task do not invent a FAULTED task.
+The portable kernel never dereferences `port_fault_context`.
 
 # Terminal hook
 
@@ -210,4 +198,4 @@ Code implementing diagnostics, fault capture, constants, and literal data also c
 
 # Boundary specification
 
-C5 captures compact evidence only. Export, formatting, telemetry, and post-reset policy are external.
+C5 captures architecture-neutral evidence. Target register/frame extraction belongs entirely to the selected port. Export, formatting, telemetry, and post-reset policy are external.
