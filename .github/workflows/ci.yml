@@ -39,8 +39,8 @@ jobs:
 
       - name: Symbol-size report
         run: |
-          llvm-nm -S --size-sort --radix=d build/m23.elf > build/m23-symbols.txt || true
-          llvm-nm -S --size-sort --radix=d build/m23-compact.elf > build/m23-compact-symbols.txt || true
+          nm -S --size-sort --radix=d build/m23.elf > build/m23-symbols.txt || true
+          nm -S --size-sort --radix=d build/m23-compact.elf > build/m23-compact-symbols.txt || true
           echo '--- baseline ---'
           cat build/footprint.json
           echo '--- compact R1a ---'
