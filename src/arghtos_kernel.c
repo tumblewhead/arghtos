@@ -9,6 +9,22 @@
 #define ARGHTOS_TRUSTED_CONFIG 0
 #endif
 
+#if ARGHTOS_STATIC_CONFIG && !ARGHTOS_TRUSTED_CONFIG
+#error "ARGHTOS_STATIC_CONFIG requires ARGHTOS_TRUSTED_CONFIG=1"
+#endif
+
+#if ARGHTOS_STATIC_CONFIG
+extern const arghtos_task_config_t arghtos_static_tasks[ARGHTOS_STATIC_TASK_COUNT];
+extern arghtos_crash_record_t arghtos_static_crash_record;
+#define ARGHTOS_TASK_TABLE   (arghtos_static_tasks)
+#define ARGHTOS_TASK_COUNT   ((uint8_t)ARGHTOS_STATIC_TASK_COUNT)
+#define ARGHTOS_CRASH_RECORD (&arghtos_static_crash_record)
+#else
+#define ARGHTOS_TASK_TABLE   (ARGHTOS_TASK_TABLE)
+#define ARGHTOS_TASK_COUNT   (ARGHTOS_TASK_COUNT)
+#define ARGHTOS_CRASH_RECORD (ARGHTOS_CRASH_RECORD)
+#endif
+
 static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
 static arghtos_kernel_state_t kernel;
 
@@ -24,17 +40,17 @@ static bool duration_valid(arghtos_duration_t dt)
 
 static bool task_id_valid(arghtos_task_id_t id)
 {
-    return id < kernel.task_count;
+    return id < ARGHTOS_TASK_COUNT;
 }
 
 static bool task_is_periodic(arghtos_task_id_t id)
 {
-    return kernel.tasks[id].period != 0u;
+    return ARGHTOS_TASK_TABLE[id].period != 0u;
 }
 
 static bool task_is_async(arghtos_task_id_t id)
 {
-    return kernel.tasks[id].period == 0u;
+    return ARGHTOS_TASK_TABLE[id].period == 0u;
 }
 
 static void control_clear(arghtos_task_control_t *c)
@@ -176,8 +192,8 @@ static bool process_time_locked(arghtos_time_t now)
     uint32_t best_delta = 0u;
     uint8_t id;
 
-    for (id = 0u; id < kernel.task_count; ++id) {
-        const arghtos_task_config_t *d = &kernel.tasks[id];
+    for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
+        const arghtos_task_config_t *d = &ARGHTOS_TASK_TABLE[id];
         arghtos_task_control_t *c = &controls[id];
 
         if (d->period != 0u) {
@@ -287,23 +303,29 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 {
     arghtos_result_t r;
     uint8_t id;
+    const arghtos_task_config_t *init_tasks;
+    arghtos_crash_record_t *init_crash;
+    uint8_t init_count;
 
     if ((kernel.flags & ARGHTOS_KF_INITIALIZED) != 0u) {
         return ARGHTOS_ERR_BAD_STATE;
     }
 
+#if ARGHTOS_STATIC_CONFIG
+    (void)config;
+    init_tasks = arghtos_static_tasks;
+    init_crash = &arghtos_static_crash_record;
+    init_count = (uint8_t)ARGHTOS_STATIC_TASK_COUNT;
+#else
 #if !ARGHTOS_TRUSTED_CONFIG
     r = validate_config(config);
     if (r != ARGHTOS_OK) {
         return r;
     }
-#else
-    /*
-     * I1 compact profile: configuration validity, stack layout, and task-table
-     * constraints are build/generator evidence rather than runtime work.
-     * The generic I0 profile keeps the complete validation path above.
-     */
-    (void)config;
+#endif
+    init_tasks = config->tasks;
+    init_crash = config->crash_record;
+    init_count = config->task_count;
 #endif
 
     r = arghtos_port_init();
@@ -311,11 +333,11 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
         return r;
     }
 
-    for (id = 0u; id < config->task_count; ++id) {
+    for (id = 0u; id < init_count; ++id) {
         control_clear(&controls[id]);
         controls[id].context = arghtos_port_build_initial_context(
-            config->tasks[id].stack_base,
-            config->tasks[id].stack_size,
+            init_tasks[id].stack_base,
+            init_tasks[id].stack_size,
             arghtos_task_start_trampoline,
             arghtos_task_return_guard);
 
@@ -328,14 +350,23 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
         control_clear(&controls[id]);
     }
 
-    kernel.tasks = config->tasks;
-    kernel.crash_record = config->crash_record;
+#if !ARGHTOS_STATIC_CONFIG
+    kernel.tasks = init_tasks;
+    kernel.crash_record = init_crash;
+    kernel.task_count = init_count;
+#else
+    (void)init_crash;
+#endif
     kernel.start_time = 0u;
     kernel.run_start = 0u;
     kernel.current_task = ARGHTOS_TASK_ID_INVALID;
-    kernel.task_count = config->task_count;
     kernel.flags = ARGHTOS_KF_INITIALIZED;
+#if ARGHTOS_STATIC_CONFIG
+    kernel.reserved[0] = 0u;
+    kernel.reserved[1] = 0u;
+#else
     kernel.reserved = 0u;
+#endif
 
     arghtos_port_timer_disarm();
     return ARGHTOS_OK;
@@ -359,10 +390,10 @@ ARGHTOS_NORETURN void arghtos_start(void)
     start = arghtos_port_time_now();
     kernel.start_time = start;
 
-    for (id = 0u; id < kernel.task_count; ++id) {
+    for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         if (task_is_periodic(id)) {
             controls[id].state = ARGHTOS_TASK_READY;
-            controls[id].next_time = start + kernel.tasks[id].period;
+            controls[id].next_time = start + ARGHTOS_TASK_TABLE[id].period;
             timer_consider(start, controls[id].next_time,
                            &have_timer, &earliest, &earliest_delta);
         }
@@ -582,12 +613,12 @@ arghtos_task_id_t arghtos_select_next(void)
     arghtos_task_id_t best = ARGHTOS_TASK_ID_INVALID;
     uint8_t id;
 
-    for (id = 0u; id < kernel.task_count; ++id) {
+    for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         if (task_is_periodic(id) &&
             (controls[id].state == ARGHTOS_TASK_READY)) {
             if ((best == ARGHTOS_TASK_ID_INVALID) ||
-                (kernel.tasks[id].period < kernel.tasks[best].period) ||
-                ((kernel.tasks[id].period == kernel.tasks[best].period) &&
+                (ARGHTOS_TASK_TABLE[id].period < ARGHTOS_TASK_TABLE[best].period) ||
+                ((ARGHTOS_TASK_TABLE[id].period == ARGHTOS_TASK_TABLE[best].period) &&
                  (id < best))) {
                 best = id;
             }
@@ -598,7 +629,7 @@ arghtos_task_id_t arghtos_select_next(void)
         return best;
     }
 
-    for (id = 0u; id < kernel.task_count; ++id) {
+    for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         if (task_is_async(id) &&
             (controls[id].state == ARGHTOS_TASK_READY)) {
             const uint8_t ceiling =
@@ -610,7 +641,7 @@ arghtos_task_id_t arghtos_select_next(void)
                 controls[id].age_credit++;
             }
 
-            raised = (uint16_t)kernel.tasks[id].async_priority +
+            raised = (uint16_t)ARGHTOS_TASK_TABLE[id].async_priority +
                      (uint16_t)controls[id].age_credit;
             effective = (raised > ceiling) ? ceiling : (uint8_t)raised;
 
@@ -620,7 +651,7 @@ arghtos_task_id_t arghtos_select_next(void)
                 const uint8_t best_ceiling =
                     (uint8_t)(ARGHTOS_ASYNC_PRIORITY_LEVELS - 1u);
                 const uint16_t best_raised =
-                    (uint16_t)kernel.tasks[best].async_priority +
+                    (uint16_t)ARGHTOS_TASK_TABLE[best].async_priority +
                     (uint16_t)controls[best].age_credit;
                 const uint8_t best_effective =
                     (best_raised > best_ceiling) ?
@@ -745,7 +776,7 @@ ARGHTOS_NORETURN void arghtos_fatal(
         controls[kernel.current_task].state = ARGHTOS_TASK_FAULTED;
     }
 
-    r = kernel.crash_record;
+    r = ARGHTOS_CRASH_RECORD;
     if (r != NULL) {
         r->commit_magic = 0u;
         r->magic = ARGHTOS_CRASH_MAGIC;
@@ -792,7 +823,7 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
 
-    d = &kernel.tasks[id];
+    d = &ARGHTOS_TASK_TABLE[id];
 
     if (d->period != 0u) {
         for (;;) {
@@ -833,13 +864,18 @@ void arghtos_test_reset(void)
         control_clear(&controls[id]);
     }
 
-    kernel.tasks = NULL;
-    kernel.crash_record = NULL;
     kernel.start_time = 0u;
     kernel.run_start = 0u;
     kernel.current_task = ARGHTOS_TASK_ID_INVALID;
-    kernel.task_count = 0u;
     kernel.flags = 0u;
+#if ARGHTOS_STATIC_CONFIG
+    kernel.reserved[0] = 0u;
+    kernel.reserved[1] = 0u;
+#else
+    kernel.tasks = NULL;
+    kernel.crash_record = NULL;
+    kernel.task_count = 0u;
     kernel.reserved = 0u;
+#endif
 }
 #endif
