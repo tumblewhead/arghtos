@@ -8,6 +8,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+#define ARGHTOS_TEST_PERIOD 1u
+#else
+#define ARGHTOS_TEST_PERIOD 10u
+#endif
+
 #if (ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5H_DIRECT_SCHEDULE16) || \
     (ARGHTOS_R5I_SCHEDULE8 && ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT > 0u)
 #define ARGHTOS_TEST_THREE_TASKS 1
@@ -118,7 +124,7 @@ uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT] 
 };
 #else
 uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
-    10u,
+    ARGHTOS_TEST_PERIOD,
     ARGHTOS_R5I_ASYNC_BASE | 3u
 };
 #endif
@@ -229,10 +235,10 @@ static void test_static_init_ignores_runtime_config(void)
 
     c = arghtos_test_controls();
     assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
-    assert(ARGHTOS_CTRL_NEXT(&c[0]) == 110u);
+    assert(ARGHTOS_CTRL_NEXT(&c[0]) == 100u + ARGHTOS_TEST_PERIOD);
     assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_DORMANT);
     assert(arghtos_host_timer_is_armed());
-    assert(arghtos_host_timer_deadline() == 110u);
+    assert(arghtos_host_timer_deadline() == 100u + ARGHTOS_TEST_PERIOD);
 }
 
 static void test_static_dispatch_and_async_wake(void)
