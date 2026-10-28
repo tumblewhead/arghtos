@@ -1,8 +1,8 @@
 ---
 type: CodeModuleDesign
 title: "D03 - Lifecycle, wake, and syscall gateway"
-description: "Design of yield/wait/sleep/wake transitions, pending-wake handshake, SVC request decoding, and context validation."
-tags: [design, lifecycle, wake, svc, async]
+description: "Design of yield/wait/sleep/wake transitions, pending-wake handshake, abstract task-service dispatch, and context validation."
+tags: [design, lifecycle, wake, service-call, async]
 status: draft
 ---
 
@@ -203,7 +203,7 @@ RUNNING -> DORMANT
 request dispatch
 ```
 
-The saved PSP remains in the task trampoline continuation and is reused on the next release.
+The opaque saved context remains in the task trampoline continuation and is reused on the next release.
 
 Async task return never enters this normal service; D08 routes it to C5 fatal handling.
 
@@ -232,7 +232,7 @@ flowchart TD
   WI --> WC["common wake core"]
   WT --> WC
 
-  Y --> DISP["request PendSV"]
+  Y --> DISP["request dispatch handoff"]
   W --> DISP
   S --> DISP
   R --> DISP
@@ -312,13 +312,13 @@ The periodic job disappears until the next period.
 
 * periodic job yields halfway through;
 * verify state becomes READY, not DORMANT;
-* verify same job resumes its saved PSP and completes before task-return service.
+* verify the same job resumes its saved context and completes before task-return service.
 
 ## 5. Dispatch request while state is half-updated
 
-**Bad implementation:** PendSV is requested before `next_time` or state is fully committed.
+**Bad implementation:** dispatch handoff is requested before `next_time` or state is fully committed.
 
-If exception priority allows PendSV to run immediately after critical exit, selector/time logic can observe inconsistent fields.
+If exception priority allows dispatch handoff to run immediately after critical exit, selector/time logic can observe inconsistent fields.
 
 **Tester should:**
 
@@ -345,8 +345,8 @@ D03 depends on D06 restoring the exact prior mask state.
 **Tester should:**
 
 * host-model nested keys;
-* target-test nested critical calls from SVC/kernel paths;
-* inspect PRIMASK before outer enter, inner enter/exit, outer exit.
+* target-test nested critical calls from service/kernel paths;
+* verify the abstract serialization key restores the exact prior target masking/locking state at outer/inner boundaries.
 
 # Test seam
 
@@ -361,4 +361,4 @@ Every state transition should be directly testable without executing a target tr
 
 # Boundary specification
 
-D03 owns lifecycle state transitions and wake semantics. It does not select the next task, manipulate PSP/MSP, or preserve device event multiplicity.
+D03 owns lifecycle state transitions and wake semantics. It does not select the next task, manipulate target context registers/stacks, or preserve device event multiplicity.
