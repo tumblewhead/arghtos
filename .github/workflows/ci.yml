@@ -34,6 +34,9 @@ jobs:
       - name: Host live R5c compact wake result
         run: make host-test-r5c
 
+      - name: Host live R5d compact service outcome
+        run: make host-test-r5d
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -55,9 +58,12 @@ jobs:
       - name: Cortex-M23 live R5c compact wake result
         run: make m23-footprint-r5c
 
+      - name: Cortex-M23 live R5d compact service outcome
+        run: make m23-footprint-r5d
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5a r5b r5c; do
+          for p in r3c r4y r5a r5b r5c r5d; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -75,18 +81,22 @@ jobs:
             build/footprint-r5a.json
             build/footprint-r5b.json
             build/footprint-r5c.json
+            build/footprint-r5d.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5a.map
             build/m23-r5b.map
             build/m23-r5c.map
+            build/m23-r5d.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5a-symbols.txt
             build/m23-r5b-symbols.txt
             build/m23-r5c-symbols.txt
+            build/m23-r5d-symbols.txt
             build/m23-r4y.elf
             build/m23-r5a.elf
             build/m23-r5b.elf
             build/m23-r5c.elf
+            build/m23-r5d.elf
             build/*.su
