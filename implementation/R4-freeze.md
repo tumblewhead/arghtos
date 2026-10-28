@@ -8,6 +8,11 @@ status: accepted
 
 # Frozen accepted result
 
+The final cleanup changed compiler code shape in the profiling-enabled R3c
+reference without changing behavior. Therefore the final same-revision R3c
+reference is 3104 B. Earlier R4 experiment documents retain their historical
+3080 B R3c measurement at their original source revisions.
+
 Default task capacity:
 
 ```text
@@ -17,10 +22,10 @@ Default task capacity:
 Complete physical ArghtOS resident footprint:
 
 ```text
-R3c physical reference  3080 B
+R3c final same-revision reference 3104 B
 R4y frozen minimum      2294 B
 -----------------------------
-saved                    786 B
+saved                    810 B
 soft target             1536 B
 remaining gap            758 B
 ```
