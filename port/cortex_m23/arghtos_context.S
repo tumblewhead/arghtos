@@ -85,3 +85,21 @@ PendSV_Handler:
     mov lr, r2
     bx lr
 .size PendSV_Handler, .-PendSV_Handler
+
+
+.global HardFault_Handler
+.type HardFault_Handler, %function
+.thumb_func
+HardFault_Handler:
+    mov r0, lr
+    mrs r2, msp
+    mrs r3, psp
+    movs r1, #4
+    tst r0, r1
+    beq 1f
+    mov r1, r3
+    b arghtos_m23_hardfault_entry
+1:
+    mov r1, r2
+    b arghtos_m23_hardfault_entry
+.size HardFault_Handler, .-HardFault_Handler
