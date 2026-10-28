@@ -920,7 +920,9 @@ arghtos_task_id_t arghtos_select_next(void)
 
 arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
 {
+#if ARGHTOS_RUNTIME_PROFILING || !ARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME
     const arghtos_time_t now = arghtos_port_time_now();
+#endif
     arghtos_task_id_t next;
 
     if ((kernel.flags & ARGHTOS_KF_STARTED) == 0u) {
@@ -986,7 +988,7 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
     kernel.current_task = next;
 #if ARGHTOS_RUNTIME_PROFILING
     kernel.run_start = now;
-#else
+#elif !ARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME
     (void)now;
 #endif
     return controls[next].context;
