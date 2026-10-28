@@ -286,6 +286,15 @@ static void test_static_crash_record_symbol_is_used(void)
     jmp_buf env;
 
     reset_all();
+#if ARGHTOS_R5S_PRESEEDED_CRASH
+    assert(arghtos_static_crash_record.magic == ARGHTOS_CRASH_MAGIC);
+    assert(arghtos_static_crash_record.version == ARGHTOS_CRASH_VERSION);
+    assert(arghtos_static_crash_record.size == sizeof(arghtos_crash_record_t));
+    assert(arghtos_static_crash_record.task_id == ARGHTOS_TASK_ID_INVALID);
+    assert(arghtos_static_crash_record.flags == 0u);
+    assert(arghtos_static_crash_record.port_words == 0u);
+    assert(arghtos_static_crash_record.commit_magic == 0u);
+#endif
     assert(arghtos_init(NULL) == ARGHTOS_OK);
     start_and_escape();
 
