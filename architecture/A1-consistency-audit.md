@@ -12,7 +12,7 @@ The proof/architecture/contract set is internally consistent enough to enter cod
 
 This does **not** mean all proofs are discharged.
 
-The 1.5 KiB soft footprint target has now been tested by I0 and is not met: the linked baseline is 4012 B before MSP.
+The 1.5 KiB soft footprint target has now been tested by I0 and is not met: the linked baseline is 4098 B before MSP.
 
 # Scope checked
 
@@ -195,7 +195,7 @@ Remaining before the target:
 
 That remainder must contain ArghtOS/port code, constants/literals, ArghtOS-only MSP requirement, and any other required resident bytes.
 
-I0 has resolved this risk into a measured failure: the current implementation is 4012 B before MSP, 2476 B above the 1536 B soft target. Retaining the target now requires architecture/requirement reduction, not merely compiler tuning.
+I0 has resolved this risk into a measured failure: the current implementation is 4012 B before MSP, 2562 B above the 1536 B soft target. Retaining the target now requires architecture/requirement reduction, not merely compiler tuning.
 
 # Gate for next stage
 
