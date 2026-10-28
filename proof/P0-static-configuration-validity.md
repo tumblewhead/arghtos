@@ -85,9 +85,19 @@ The requirement:
 F_arghtos(32) <= 1536 B
 ```
 
-is a **soft target and is not yet proven**.
+is a **soft target and is disproven by the I0 implementation baseline**.
 
-The present contracts leave 300 B after the required crash record for code/constants, the ArghtOS-only MSP requirement, and other resident bytes. Actual feasibility cannot be established until implementation and linker-map evidence exist.
+The first linked Cortex-M23 I0 build reports:
+
+```text
+ArghtOS resident before MSP = 4012 B
+soft target                 = 1536 B
+excess before MSP           = 2476 B
+```
+
+The report already includes retained portable kernel code/data, Cortex-M23 port C, context assembly, board-adapter bytes, 32 task descriptors, the required crash record, and linker-resident metadata. The ArghtOS-only MSP term is still zero in this baseline, so 4012 B is an optimistic lower bound.
+
+Therefore P0 proves **boundedness**, but the v1 32-task implementation does not satisfy the 1.5 KiB quantitative target.
 
 # Architecture test
 
@@ -106,9 +116,17 @@ A build claiming a footprint result SHALL provide a linker/map-derived report th
 
 P1, P2, and P7 depend on this finite static resource model.
 
-# Open obligations
+# Implementation evidence and remaining obligations
 
-* actual ArghtOS/port code and constant size;
-* target MSP reservation/high-water bound;
-* any additional port-resident data;
-* final linker-map attribution and soft-target result.
+I0 evidence is recorded in [../implementation/I0-footprint-skeleton.md](../implementation/I0-footprint-skeleton.md).
+
+Now known:
+
+* linked code/data/configuration lower bound: 4012 B before MSP;
+* the 1536 B soft target is not met.
+
+Still open:
+
+* target ArghtOS-only MSP requirement/high-water bound;
+* hardware-validation changes that may alter port size;
+* future architecture/requirement reductions if the 1.5 KiB goal is retained.
