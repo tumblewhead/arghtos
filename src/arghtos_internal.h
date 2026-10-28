@@ -17,8 +17,17 @@
 #define ARGHTOS_COMPACT_DESCRIPTOR 0
 #endif
 
+#ifndef ARGHTOS_UNIFIED_SLOT
+#define ARGHTOS_UNIFIED_SLOT 0
+#endif
+
 #if ARGHTOS_COMPACT_DESCRIPTOR && !ARGHTOS_STATIC_CONFIG
 #error "ARGHTOS_COMPACT_DESCRIPTOR requires ARGHTOS_STATIC_CONFIG=1"
+#endif
+
+#if ARGHTOS_UNIFIED_SLOT && \
+    (!ARGHTOS_STATIC_CONFIG || !ARGHTOS_COMPACT_RUNTIME || !ARGHTOS_COMPACT_DESCRIPTOR)
+#error "ARGHTOS_UNIFIED_SLOT requires static + compact runtime + compact descriptor"
 #endif
 
 #if ARGHTOS_STATIC_CONFIG
@@ -61,6 +70,10 @@ typedef struct {
     uint16_t          max_run_ticks;
     uint8_t           age_credit;
     uint8_t           status;
+#if ARGHTOS_UNIFIED_SLOT
+    arghtos_task_fn_t entry;
+    uint32_t          schedule;
+#endif
 } arghtos_task_control_t;
 
 #define ARGHTOS_CTRL_STATE_MASK   0x07u
@@ -152,7 +165,9 @@ _Static_assert(sizeof(arghtos_static_task_t) == 12u, "32-bit compact static desc
 _Static_assert(sizeof(arghtos_config_t) == 12u, "32-bit init config ABI changed");
 _Static_assert(sizeof(arghtos_task_profile_t) == 12u, "task profile ABI changed");
 _Static_assert(sizeof(arghtos_crash_record_t) == 64u, "crash record ABI changed");
-#if ARGHTOS_COMPACT_RUNTIME
+#if ARGHTOS_UNIFIED_SLOT
+_Static_assert(sizeof(arghtos_task_control_t) == 24u, "32-bit unified task slot ABI changed");
+#elif ARGHTOS_COMPACT_RUNTIME
 _Static_assert(sizeof(arghtos_task_control_t) == 16u, "32-bit compact task control ABI changed");
 #else
 _Static_assert(sizeof(arghtos_task_control_t) == 20u, "32-bit task control ABI changed");
