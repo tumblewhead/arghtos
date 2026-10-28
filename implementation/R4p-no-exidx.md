@@ -1,55 +1,77 @@
 ---
 type: ImplementationCheckpoint
 title: "R4p - Remove unused ARM unwind index"
-description: "Accepted minimum-size linker specialization discarding .ARM.exidx/.ARM.extab in the bare-metal production footprint."
+description: "Accepted minimum-size linker specialization discarding unused .ARM.exidx/.ARM.extab metadata."
 tags: [implementation, footprint, linker, unwind, accepted]
 status: accepted
 ---
 
 # Baseline
 
+Accepted R4n:
+
 ```text
-R4n = 2450 B
+linked before MSP  2370 B
+MSP                  80 B
+total               2450 B
 ```
 
 # Experiment
 
-Use a dedicated minimum-size linker script that discards:
+Use the minimum-size linker script
+`footprint/m23_min_no_exidx.ld` and discard:
 
 ```text
 .ARM.exidx*
 .ARM.extab*
 ```
 
-The generic/reference linker script remains unchanged.
+The minimum-size build is freestanding C plus explicit assembly and already
+uses:
 
-The Cortex-M23 production image is linked `-nostdlib`, compiler unwind tables
-are disabled, ArghtOS has no runtime unwinder, and crash capture uses the fixed
-C5 crash record rather than stack unwinding.
+```text
+-fno-unwind-tables
+-fno-asynchronous-unwind-tables
+```
+
+ArghtOS does not use language exception unwinding. Context switching and fatal
+capture are explicit scheduler/port mechanisms.
 
 # Measured result
 
-CI run 40663752503 passed.
+Authoritative CI run 40663752503 passed.
 
 ```text
-R4n  2450 B
-R4p  2434 B
------------
-saved   16 B
+R4n  linked before MSP  2370 B
+R4p  linked before MSP  2354 B
+                              -16 B
+
+R4n total               2450 B
+R4p total               2434 B
+------------------------------
+saved                      16 B
 ```
 
-The complete delta is linker metadata:
+Footprint evidence:
 
 ```text
-.ARM.exidx  16 B -> 0 B
+linker resident metadata   16 B -> 0 B
+all code symbol sizes      unchanged
+task slots                 480 B unchanged
+crash record                64 B unchanged
+context assembly           188 B unchanged
+MSP                          80 B unchanged
 ```
-
-Code, task slots, crash storage, and the audited 80 B static MSP lower bound are
-unchanged.
 
 # Decision
 
-Accept the no-unwind-index linker script for the minimum-size Cortex-M23
-production profile only.
+Accept the no-exidx linker script for the minimum-size Cortex-M23 production
+profile.
 
-The reference footprint linker remains available for ordinary/debug builds.
+The ordinary/reference linker script remains available for non-minimum builds.
+
+Remaining gap:
+
+```text
+2434 - 1536 = 898 B
+```
