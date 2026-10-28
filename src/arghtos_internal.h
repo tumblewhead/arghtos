@@ -13,6 +13,14 @@
 #define ARGHTOS_COMPACT_RUNTIME 0
 #endif
 
+#ifndef ARGHTOS_COMPACT_DESCRIPTOR
+#define ARGHTOS_COMPACT_DESCRIPTOR 0
+#endif
+
+#if ARGHTOS_COMPACT_DESCRIPTOR && !ARGHTOS_STATIC_CONFIG
+#error "ARGHTOS_COMPACT_DESCRIPTOR requires ARGHTOS_STATIC_CONFIG=1"
+#endif
+
 #if ARGHTOS_STATIC_CONFIG
 #ifndef ARGHTOS_STATIC_TASK_COUNT
 #error "ARGHTOS_STATIC_TASK_COUNT required for static configuration profile"
@@ -20,6 +28,21 @@
 #if ARGHTOS_STATIC_TASK_COUNT < 1 || ARGHTOS_STATIC_TASK_COUNT > ARGHTOS_MAX_TASKS
 #error "ARGHTOS_STATIC_TASK_COUNT out of range"
 #endif
+#endif
+
+#if ARGHTOS_COMPACT_DESCRIPTOR
+typedef struct {
+    arghtos_task_fn_t entry;
+    void             *stack_top;
+    uint32_t          schedule;
+} arghtos_static_task_t;
+
+#define ARGHTOS_STATIC_ASYNC_TAG 0x80000000u
+#define ARGHTOS_STATIC_ASYNC_MASK 0x000000FFu
+
+#define ARGHTOS_STATIC_PERIOD(p) ((uint32_t)(p))
+#define ARGHTOS_STATIC_ASYNC(prio) \
+    (ARGHTOS_STATIC_ASYNC_TAG | ((uint32_t)(prio) & ARGHTOS_STATIC_ASYNC_MASK))
 #endif
 
 #define ARGHTOS_TCF_WAKE_PENDING (1u << 0)
@@ -123,6 +146,9 @@ typedef struct {
 
 #if UINTPTR_MAX == UINT32_MAX
 _Static_assert(sizeof(arghtos_task_config_t) == 16u, "32-bit task descriptor ABI changed");
+#if ARGHTOS_COMPACT_DESCRIPTOR
+_Static_assert(sizeof(arghtos_static_task_t) == 12u, "32-bit compact static descriptor ABI changed");
+#endif
 _Static_assert(sizeof(arghtos_config_t) == 12u, "32-bit init config ABI changed");
 _Static_assert(sizeof(arghtos_task_profile_t) == 12u, "task profile ABI changed");
 _Static_assert(sizeof(arghtos_crash_record_t) == 64u, "crash record ABI changed");
