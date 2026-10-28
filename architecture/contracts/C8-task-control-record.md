@@ -199,3 +199,34 @@ This replaces both the separate generic control array and the separate static
 descriptor array in the R2c profile.
 
 CI run 40649991293 validates the host and Cortex-M23 builds for this profile.
+# Minimum-size production no-profile slot
+
+When `ARGHTOS_RUNTIME_PROFILING=0` in the minimum-size unified-slot profile,
+the profiling-only fields are omitted.
+
+The retained slot is:
+
+```text
+context_or_initial_stack_top   4 B
+next_time                      4 B
+age_credit                     1 B
+status                         1 B
+alignment padding              2 B
+entry                          4 B
+schedule                       4 B
+---------------------------------
+total                         20 B/task
+```
+
+At 24 tasks:
+
+```text
+24 * 20 B = 480 B
+```
+
+The raw removal is six source-level bytes per task, but the physical saving is
+four bytes per task because `entry` and `schedule` retain 32-bit alignment.
+
+This representation is legal only for the minimum-size production profile.
+Missed-release count remains encoded in `status`; age credit remains scheduler
+state and is not optional.
