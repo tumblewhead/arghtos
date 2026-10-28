@@ -23,7 +23,9 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
 #else
         .entry = periodic_task,
 #endif
+#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE
         .schedule = ARGHTOS_STATIC_PERIOD(10u)
+#endif
     },
     {
         .context = (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)],
@@ -32,9 +34,21 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
 #else
         .entry = async_task,
 #endif
+#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE
         .schedule = ARGHTOS_STATIC_ASYNC(3u)
+#endif
     }
 };
+#if ARGHTOS_R5F_COMPRESSED_SCHEDULE
+/*
+ * Exercise both decoder forms while preserving the existing test semantics:
+ * task 0 uses escape + exact 32-bit period 10, task 1 uses one-byte async 3.
+ */
+const uint8_t arghtos_static_schedule_stream[] = {
+    ARGHTOS_R5F_SCHEDULE_ESCAPE, 10u, 0u, 0u, 0u,
+    0x83u
+};
+#endif
 #if ARGHTOS_SPLIT_META
 arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
 #endif
