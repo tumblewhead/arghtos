@@ -51,7 +51,7 @@ The 1.5 KiB target is not implied by boundedness.
 
 The proof establishes that the footprint is finite; it does not establish that it is <=1536 B.
 
-That quantitative claim requires implementation/linker evidence.
+I0 now supplies implementation/linker evidence, and the quantitative claim fails for the current 32-task v1 implementation.
 
 # Work bound
 
@@ -122,6 +122,16 @@ Its execution-time bounds are inputs to P6.
 
 # Status
 
-The boundedness proof is architecturally consistent.
+The bounded-work and bounded-storage claims remain architecturally consistent and are supported by the current host implementation.
 
-The <=1.5 KiB quantitative target remains open until code exists and a linker/MSP report is available.
+The quantitative footprint result is now known:
+
+```text
+I0 linked ArghtOS resident footprint before MSP = 4012 B
+soft target                                     = 1536 B
+delta                                           = +2476 B
+```
+
+See [I0 footprint skeleton](../implementation/I0-footprint-skeleton.md).
+
+Because MSP is not yet added, the final target footprint can only be larger. The 1.5 KiB target therefore fails at I0 even though boundedness itself is preserved.
