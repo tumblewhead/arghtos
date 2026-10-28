@@ -1,7 +1,7 @@
 ---
 type: DesignAudit
 title: "D12 - Code-module design consistency audit"
-description: "Cross-check of D00-D11 against C0-C10 and P0-P8 before implementation."
+description: "Cross-check of D00-D13 against C0-C10 and P0-P8 before implementation."
 tags: [design, audit, consistency, implementation-gate]
 status: current
 ---
@@ -32,6 +32,7 @@ This is a **design GO**, not a claim that:
 | D09 | portable integration/dispatch | `arghtos_kernel.c` |
 | D10 | build/linker/footprint | build tooling |
 | D11 | proof-oriented tests | host + target test tree |
+| D13 | porting guide | abstract ABI + new-target acceptance checklist |
 
 # Key consistency decisions
 
