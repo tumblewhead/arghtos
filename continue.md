@@ -12,32 +12,32 @@ https://github.com/tumblewhead/arghtos
 
 ## Canonical base
 
-R2c was merged to `main` as:
+R3 was merged to `main` as:
 
 ```text
-4988c639bebd6a02ab9c037b3fb0f879c58ef46b
-Merge pull request #1
-I1: footprint reduction experiments through R2c
+dcf188aae8765d0d65d729af706da4bdaa922474
+Merge pull request #2
+R3: production-profile validation and service specialization
 ```
 
-Do not resume R3 from the old I1 branch.
+R4 branches from this merged canonical main. Do not resume R4 from the old R3 branch.
 
 ## Active work
 
 Branch:
 
 ```text
-implementation/r3-production-specialization-001
+implementation/r4-feature-specialization-001
 ```
 
 Draft PR:
 
 ```text
-#2 R3: production-profile validation and service specialization
-https://github.com/tumblewhead/arghtos/pull/2
+#3 R4a: measure runtime profiling surface
+https://github.com/tumblewhead/arghtos/pull/3
 ```
 
-The branch is based directly on merged R2c `main`.
+The branch is based directly on merged R3 `main` at `dcf188aae8765d0d65d729af706da4bdaa922474`.
 
 ## Current objective
 
@@ -239,13 +239,13 @@ Implementation checkpoint:
 
 ## Current repository state
 
-R3 implementation and documentation are on the active branch and PR #2.
+R3 is merged to `main` through PR #2.
 
-R3 is measured and internally documented.
+R4a implementation and documentation are on the active branch and draft PR #3.
 
-PR #2 remains draft.
+R4a is measured and internally documented. It is experimental only because runtime profiling remains a documented v1 requirement.
 
-Do not merge it unless the user explicitly approves merging.
+Do not merge PR #3 or promote no-profiling behavior canonically unless the user explicitly approves the requirement change/merge.
 
 ## Current strategic conclusion
 
@@ -273,78 +273,91 @@ context assembly          188 B
 task slots                576 B
 ```
 
-## Exact next action
+## R4a measured result
 
-Start **R4a: profiling-surface specialization experiment** from the active R3 branch.
-
-Do not remove profiling canonically yet.
-
-The goal is to measure the maximum footprint attributable to the profiling feature before asking the user whether the requirement should change.
-
-### R4a experiment
-
-Add a compile-time experimental profile on top of R3c that disables runtime profiling only in that profile.
-
-Measure removal of:
+R4a compiles out the runtime profiling surface only in the experimental profile:
 
 * public `arghtos_profile_get()`;
-* per-task `total_cpu_ticks` storage;
-* per-task `max_run_ticks` storage;
-* run-start accounting that exists only for profiling;
-* profile snapshot copying;
-* any port/kernel code that dead-strips as a consequence.
+* per-task `total_cpu_ticks`;
+* per-task `max_run_ticks`;
+* global `run_start`;
+* dispatch-side profiling accounting.
 
-Do **not** remove:
+It retains crash logging, periodic missed-release evidence, async age credit, scheduler timing/release behavior, and R3c internal invariant checks.
 
-* periodic missed-release evidence if it is needed for scheduler/diagnostic correctness;
-* async age credit because it is scheduler state;
-* crash logging;
-* fatal handling;
-* scheduler timing/release behavior.
-
-### R4a expected structural opportunity
-
-Current R3c task slot contains 6 bytes/task used specifically by profiling:
+Authoritative CI run:
 
 ```text
-total_cpu_ticks  4 B
-max_run_ticks    2 B
---------------------
-6 B/task
-24 tasks = 144 B
+40658079082  success
 ```
 
-There is also executable accounting and API code:
+All generic/R1/R2/R3/R4a host tests, ASan/UBSan, portability, Cortex-M23 compile, R3c/R4a links, symbol reports, and evidence upload passed.
 
-* `arghtos_profile_get` ~60 B;
-* portions of dispatch accounting;
-* `run_start` global state may become removable;
-* related helper/code paths may shrink.
+Measured:
 
-R4a therefore has a plausible saving materially larger than another round of validation stripping.
+```text
+R3c  3072 B
+R4a  2845 B
+-----------
+saved  227 B
+```
 
-### R4a acceptance procedure
+Breakdown:
 
-1. Add a new experimental build profile, keeping R3c unchanged beside it.
-2. Keep generic/debug profile tests.
-3. Add host tests proving scheduling semantics are unchanged when profiling is compiled out.
-4. Run ASan/UBSan.
-5. Run portability check.
-6. Compile Cortex-M23.
-7. Link R3c and R4a in the same CI revision.
-8. Record exact linked delta and symbol changes.
-9. Update `implementation/` with the result.
-10. Refresh this `continue.md` with the result and the exact next action.
+```text
+kernel code/data        1830 -> 1699 B   -131 B
+unified task slots       576 ->  480 B    -96 B
+Cortex-M23 port C        282 ->  282 B      0 B
+context assembly         188 ->  188 B      0 B
+crash record              64 ->   64 B      0 B
+linker metadata           16 ->   16 B      0 B
+ArghtOS-only MSP         104 ->  104 B      0 B
+------------------------------------------------
+total                   3072 -> 2845 B   -227 B
+```
 
-If R4a saves meaningful space, present the measurement to the user before making profiling optional/canonical because profiling is currently a documented v1 requirement.
+Remaining gap:
 
-## Files to read before R4a
+```text
+2845 - 1536 = 1309 B
+```
+
+The expected raw 144 B per-task field opportunity became 96 B physically because the no-profile unified slot is 20 B after 32-bit alignment, not 18 B.
+
+Notable symbol changes:
+
+```text
+arghtos_profile_get       60 ->   0 B
+arghtos_kernel_dispatch  204 -> 160 B
+arghtos_select_next      232 -> 224 B
+arghtos_init             100 ->  92 B
+arghtos_start            128 -> 124 B
+arghtos_static_slots     576 -> 480 B
+```
+
+Implementation checkpoint:
+
+[implementation/R4-profiling-specialization.md](implementation/R4-profiling-specialization.md)
+
+## Exact next action
+
+Present the R4a measurement to the user and obtain the requirement decision before making profiling optional/canonical.
+
+The decision gate is:
+
+1. **Keep profiling mandatory**: do not promote R4a; retain R3c as canonical best profile and select the next R4 footprint axis.
+2. **Allow profiling to be optional in minimum-footprint production builds**: update C5/C8/C9 and affected design/proof documentation first, then promote the compile-time profile and continue from the 2845 B baseline.
+
+Do not silently choose either path. Profiling is currently a documented v1 requirement.
+
+## Files to read before continuing R4
 
 Read these first:
 
 * [agents.md](agents.md)
 * this file
 * [implementation/R3-production-specialization.md](implementation/R3-production-specialization.md)
+* [implementation/R4-profiling-specialization.md](implementation/R4-profiling-specialization.md)
 * [architecture/contracts/C5-fault-diagnostics.md](architecture/contracts/C5-fault-diagnostics.md)
 * [architecture/contracts/C8-task-control-record.md](architecture/contracts/C8-task-control-record.md)
 * [design-elements/D10-build-footprint.md](design-elements/D10-build-footprint.md)
