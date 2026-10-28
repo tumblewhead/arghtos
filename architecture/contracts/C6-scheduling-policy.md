@@ -212,3 +212,27 @@ Measured worst-case selector cost is an input to P6.
 # Boundary specification
 
 C6 owns winner selection and the serialized dispatch transaction. C3 owns timed release, C1/C2 own lifecycle requests, C4 owns processor switching, and C5 owns diagnostic presentation.
+
+# R5p generated-order selector specialization
+
+When C0's trusted generated R5p ordering is enabled, the periodic task-ID prefix
+already encodes C6 RMS order:
+
+```text
+0 .. P-1: periodic, sorted by increasing period and then increasing task ID
+P .. N-1: async
+```
+
+Therefore the minimum-size selector may select the first READY task in
+`[0,P)` without loading/comparing periodic periods at runtime.
+
+If no periodic task is READY, async aging/priority comparison is unchanged but
+may scan only `[P,N)`; class tests are unnecessary because C0 proves the
+partition.
+
+This specialization is equivalent to the ordinary C6 ordering for generated
+configurations satisfying the C0 premises. Generic/runtime-config builds retain
+the ordinary class/period checks.
+
+The selector remains bounded. The generated-order implementation inspects at
+most `N` task slots rather than the ordinary upper bound of `2*N`.
