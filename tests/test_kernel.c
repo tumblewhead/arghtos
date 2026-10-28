@@ -442,7 +442,7 @@ static void test_fatal_commits_generic_crash_record(void)
     assert((crash_record.flags & ARGHTOS_CRASH_F_PORT_STATE_VALID) != 0u);
     assert(crash_record.port_words == 1u);
     assert(crash_record.commit_magic == ARGHTOS_CRASH_COMMIT_MAGIC);
-    assert(arghtos_test_controls()ARGHTOS_CTRL_STATE(&[0]) == ARGHTOS_TASK_FAULTED);
+    assert(ARGHTOS_CTRL_STATE(&arghtos_test_controls()[0]) == ARGHTOS_TASK_FAULTED);
 }
 
 int main(void)
