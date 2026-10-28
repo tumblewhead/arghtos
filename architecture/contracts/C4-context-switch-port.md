@@ -393,3 +393,27 @@ return, normal AAPCS argument delivery presents the entry pointer in R0.
 
 The generic/debug and non-overlay profiles retain the ordinary no-argument
 initial-context API.
+
+# R5l prebuilt initial-context equivalence
+
+The trusted generated minimum-size profile may enter C4 with an initial saved
+context already present in each application-owned task stack.
+
+For Cortex-M23, that generated context must be exactly equivalent to the
+ordinary synthesized 16-word frame:
+
+```text
+software R4-R11                 8 zero words
+hardware R0                     private task-entry pointer
+hardware R1-R3,R12              zero
+hardware LR                     task return guard
+hardware PC                     task-start trampoline, Thumb bit cleared
+hardware xPSR                   Thumb state bit set
+```
+
+The saved context token still points at software-saved R4. The 64-byte initial
+frame and 68-byte worst-case scheduler context reserve are unchanged.
+
+This is a build-time realization of the existing C4 frame contract, not a new
+context ABI. PendSV save/restore, PSP ownership, exception return, and runtime
+alignment handling are unchanged.
