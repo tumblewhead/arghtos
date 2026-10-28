@@ -13,7 +13,7 @@ M23_COMMON := --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -std=c11 \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -fstack-usage -Oz \
 	-Wall -Wextra -Werror -Iinclude -Isrc -Iport/cortex_m23
 
-.PHONY: all portability-check host-test host-sanitize m23-compile m23-footprint footprint-report clean
+.PHONY: all portability-check host-test host-test-compact host-sanitize m23-compile m23-footprint m23-footprint-compact footprint-report clean
 
 all: portability-check host-test m23-compile
 
@@ -26,6 +26,11 @@ portability-check:
 host-test: | $(BUILD)
 	$(HOST_CC) $(HOST_CFLAGS) $(HOST_SRCS) -o $(BUILD)/host-tests
 	$(BUILD)/host-tests
+
+host-test-compact: | $(BUILD)
+	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 $(HOST_SRCS) \
+		-o $(BUILD)/host-tests-compact
+	$(BUILD)/host-tests-compact
 
 host-sanitize: | $(BUILD)
 	$(HOST_CC) -std=c11 -Wall -Wextra -Werror -O1 -g \
@@ -55,6 +60,33 @@ m23-footprint: m23-compile
 		--msp $(M23_ARGHTOS_MSP) --json \
 		> $(BUILD)/footprint.json
 	cat $(BUILD)/footprint.json
+
+
+m23-footprint-compact: | $(BUILD)
+	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 -c src/arghtos_kernel.c \
+		-o $(BUILD)/arghtos_kernel_m23_compact.o
+	$(CLANG) $(M23_COMMON) -c port/cortex_m23/arghtos_port.c \
+		-o $(BUILD)/arghtos_port_m23_compact.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
+		-ffunction-sections -c port/cortex_m23/arghtos_context.S \
+		-o $(BUILD)/arghtos_context_m23_compact.o
+	$(CLANG) $(M23_COMMON) -c footprint/m23_board_stub.c \
+		-o $(BUILD)/m23_board_stub_compact.o
+	$(CLANG) $(M23_COMMON) -c footprint/m23_footprint.c \
+		-o $(BUILD)/m23_footprint_compact.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib \
+		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-compact.map \
+		-Wl,-T,footprint/m23.ld -o $(BUILD)/m23-compact.elf \
+		$(BUILD)/arghtos_kernel_m23_compact.o \
+		$(BUILD)/arghtos_port_m23_compact.o \
+		$(BUILD)/arghtos_context_m23_compact.o \
+		$(BUILD)/m23_board_stub_compact.o \
+		$(BUILD)/m23_footprint_compact.o
+	size -A $(BUILD)/m23-compact.elf
+	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-compact.map \
+		--msp $(M23_ARGHTOS_MSP) --json \
+		> $(BUILD)/footprint-compact.json
+	cat $(BUILD)/footprint-compact.json
 
 footprint-report: m23-footprint
 
