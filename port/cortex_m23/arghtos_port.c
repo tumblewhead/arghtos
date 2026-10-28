@@ -1,5 +1,9 @@
 #include "arghtos_port_private.h"
 
+#ifndef ARGHTOS_R5K_ASM_CRASH_FILL
+#define ARGHTOS_R5K_ASM_CRASH_FILL 0
+#endif
+
 static inline uint32_t m23_read_primask(void)
 {
     uint32_t v;
@@ -230,6 +234,7 @@ arghtos_context_t arghtos_port_build_initial_context_top_arg(
 }
 #endif
 
+#if !ARGHTOS_R5K_ASM_CRASH_FILL
 void arghtos_port_crash_fill(
     arghtos_crash_record_t *record,
     const void *port_fault_context)
@@ -263,6 +268,7 @@ void arghtos_port_crash_fill(
         record->port_words = 3u;
     }
 }
+#endif
 
 ARGHTOS_NORETURN void arghtos_port_fault_terminal(void)
 {
