@@ -42,7 +42,7 @@ static void task_stub(void)
 #define ARGHTOS_TIME_ENTRY_INIT .next_time = 0u,
 #define ARGHTOS_ENTRY_FIELD_INIT .entry = task_stub,
 #endif
-#if ARGHTOS_R5F_COMPRESSED_SCHEDULE
+#if ARGHTOS_R5F_COMPRESSED_SCHEDULE || ARGHTOS_R5G_SCHEDULE16
 #define ARGHTOS_SCHEDULE_SLOT_INIT(p)
 #else
 #define ARGHTOS_SCHEDULE_SLOT_INIT(p) .schedule = ARGHTOS_STATIC_PERIOD(p),
@@ -68,6 +68,14 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
 #if ARGHTOS_R5F_COMPRESSED_SCHEDULE
 __attribute__((section(".arghtos_cfg")))
 uint8_t arghtos_static_schedule_stream[ARGHTOS_MAX_TASKS] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
+    9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u
+};
+#endif
+#if ARGHTOS_R5G_SCHEDULE16
+__attribute__((section(".arghtos_cfg")))
+uint16_t arghtos_static_schedule16[ARGHTOS_MAX_TASKS] = {
     1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
     9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
     17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u
