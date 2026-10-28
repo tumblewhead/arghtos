@@ -359,3 +359,37 @@ Invalid context-frame metadata, impossible PSP alignment/range in diagnostic bui
 # Boundary specification
 
 C4 owns processor execution mechanics, special-register/exception handling, and critical sections. The kernel owns task state and scheduling policy.
+
+# Minimum-size initial task argument
+
+The minimum-size Cortex-M23 profile may use the entry/next-time overlay defined
+by R4u.
+
+That profile extends initial-context construction with one architecture-neutral
+private trampoline argument:
+
+```c
+arghtos_context_t arghtos_port_build_initial_context_top_arg(
+    void *stack_top,
+    void (*thread_start)(arghtos_task_fn_t),
+    void (*return_guard)(void),
+    arghtos_task_fn_t initial_arg);
+```
+
+The argument exists only to bootstrap the private task trampoline. It does not
+change the public application task signature.
+
+For Cortex-M23, the port places `initial_arg` in stacked hardware R0 of the
+synthesized initial frame. The ordinary saved-frame layout is unchanged:
+
+```text
+software R4-R11  8 words
+hardware R0-R3,R12,LR,PC,xPSR  8 words
+total initial frame 16 words / 64 B
+```
+
+No additional context word or PSP reserve is required. On first exception
+return, normal AAPCS argument delivery presents the entry pointer in R0.
+
+The generic/debug and non-overlay profiles retain the ordinary no-argument
+initial-context API.
