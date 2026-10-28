@@ -51,6 +51,10 @@ void arghtos_port_critical_exit(arghtos_irq_key_t key);
 bool arghtos_port_is_task_context(void);
 bool arghtos_port_is_handler_context(void);
 
+arghtos_result_t arghtos_port_service_call(
+    uint8_t service_id,
+    uint32_t arg0);
+
 void arghtos_port_request_dispatch(void);
 void arghtos_port_start(void);
 void arghtos_port_idle_wait(void);
@@ -60,6 +64,10 @@ arghtos_context_t arghtos_port_build_initial_context(
     uint32_t stack_size,
     void (*thread_start)(void),
     void (*return_guard)(void));
+
+void arghtos_port_crash_fill(
+    arghtos_crash_record_t *record,
+    const void *port_fault_context);
 ```
 
 The port also owns the vector-table implementations for SVC and PendSV.
@@ -148,8 +156,8 @@ If zero is returned, the port calls `arghtos_port_idle_wait()` and then calls `a
 ```mermaid
 flowchart TD
   P["PendSV on MSP"] --> SAVE["save outgoing software context"]
-  SAVE --> KD["kernel_dispatch(saved_psp)"]
-  KD --> Q{"incoming PSP?"}
+  SAVE --> KD["kernel_dispatch(context)"]
+  KD --> Q{"incoming context?"}
   Q -- yes --> REST["restore incoming context"]
   REST --> RET["exception return to Thread/PSP"]
   Q -- no --> IDLE["port_idle_wait"]
