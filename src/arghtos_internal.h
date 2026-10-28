@@ -200,6 +200,15 @@
 #error "R5s preseeded crash record requires trusted generated static startup"
 #endif
 
+#ifndef ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+#define ARGHTOS_R5T_TIMER_ALWAYS_ARMED 0
+#endif
+
+#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED && \
+    (!ARGHTOS_R5Q_PARTITIONED_TIME || ARGHTOS_R5P_PERIODIC_COUNT < 1u)
+#error "R5t always-armed timer requires generated periodic tasks"
+#endif
+
 #if ARGHTOS_R5N_PROVEN_DISPATCH && !ARGHTOS_R5M_PRISTINE_INIT
 #error "R5n proven dispatch requires the trusted R5m generated profile"
 #endif
