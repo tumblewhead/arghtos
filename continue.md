@@ -44,10 +44,11 @@ R4p no ARM unwind index                2434 B
 R4q no jump tables                     2410 B
 R4s split task metadata                2402 B
 R4u entry/next-time lifetime overlay   2322 B
+R4v compact PendSV assembly             2298 B
 ---------------------------------------------
-current accepted minimum               2322 B
+current accepted minimum               2298 B
 soft target                            1536 B
-remaining gap                           786 B
+remaining gap                           762 B
 ```
 
 R4u:
@@ -63,6 +64,35 @@ Authoritative R4u CI:
 ```text
 40665626084  success
 ```
+
+R4v:
+
+```text
+linked before MSP  2218 B
+MSP                  80 B
+total               2298 B
+```
+
+Authoritative R4v CI:
+
+```text
+40666295535  success
+```
+
+R4v compacts only the Cortex-M23 PendSV assembly:
+
+```text
+PendSV_Handler   130 -> 108 B
+context assembly 188 -> 162 B
+physical total   2322 -> 2298 B
+```
+
+The saved R4-R11 software frame remains 32 B in the same order, the outgoing
+context token still points at saved R4, PSP advances exactly 32 B on restore,
+and first-dispatch MSP reclamation, PRIMASK handling, and the idle protocol are
+unchanged. The 80 B static MSP bound remains valid.
+
+See [implementation/R4v-compact-pendsv.md](implementation/R4v-compact-pendsv.md).
 
 R4u changes task metadata:
 
@@ -99,51 +129,42 @@ R4t ID-native metadata indexing     0 B
 
 R4t CI: 40665299726, success, R4s=R4t=2402 B.
 
-## Exact next action: R4v compact PendSV assembly
+## Exact next action: R4w no-inline compiler experiment
 
-R4u retains the original 130-byte Cortex-M23 PendSV handler.
+R4v is the accepted control at 2298 B.
 
-R4v should preserve the exact C4 frame and execution protocol while using
-denser Thumb-1 save/restore sequences:
-
-Outgoing task:
+R4w is already staged and live in CI. It applies:
 
 ```text
-save R4-R7 with STMIA
-reuse R4-R7 as temporaries for R8-R11
-save those four with a second STMIA
+-fno-inline-functions
 ```
 
-Incoming task:
+to the accepted minimum-size LTO build while retaining:
 
 ```text
-restore R4-R7 with LDMIA
-restore high-register values in two LDMIA pairs
-move them into R8-R11
+full LTO
+-fomit-frame-pointer
+-fno-jump-tables
+entry/next-time overlay
+split task metadata
+compact PendSV
+minimum linker script without ARM unwind index
 ```
 
-Also test replacing the literal load of EXC_RETURN 0xFFFFFFFD with:
+Hypothesis: after aggressive LTO, some inlined helpers may duplicate enough
+code that forcing out-of-line calls reduces resident text, even if runtime cost
+rises.
 
-```asm
-movs r2, #2
-mvns r2, r2
-```
+Acceptance procedure:
 
-Requirements:
+1. Keep R4v as same-revision control.
+2. Run all host/sanitizer/portability gates and Cortex-M23 link.
+3. Compare R4v/R4w physical totals and symbol tables.
+4. Re-audit MSP if call depth/frame structure changes.
+5. Accept only if total physical footprint <2298 B after any MSP adjustment.
+6. Record the result and refresh this file.
 
-1. Keep R4u as same-revision control.
-2. Put compact PendSV behind an assembly build define for R4v only.
-3. Preserve saved context exactly:
-   * 32 B software R4-R11;
-   * existing hardware frame;
-   * outgoing context token still points at saved R4.
-4. Preserve first-dispatch MSP frame reclamation and xPSR alignment handling.
-5. Preserve PRIMASK save/restore and race-free idle loop.
-6. Run all host/sanitizer/portability gates plus Cortex-M23 link.
-7. Inspect R4u/R4v disassembly and symbol sizes.
-8. Re-audit normal MSP; assembly compaction itself must not increase C stack.
-9. Accept only if total physical footprint <2322 B.
-10. Refresh implementation docs and this file.
+Current live workflow compares R4v against R4w.
 
 ## Architecture rules
 
