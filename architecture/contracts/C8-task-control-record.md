@@ -47,10 +47,10 @@ Therefore C8 resident size is:
 20 * ARGHTOS_MAX_TASKS
 ```
 
-At the default capacity 32:
+At the default capacity 24:
 
 ```text
-32 * 20 B = 640 B
+24 * 20 B = 480 B
 ```
 
 Unused capacity slots remain resident SRAM; runtime `task_count` does not shrink the array.
@@ -158,3 +158,44 @@ Saving `context` and relinquishing CPU ownership is one serialized dispatch tran
 # Boundary specification
 
 C8 is private ArghtOS SRAM and always counts against the resident-footprint budget.
+
+# Minimum-footprint R2c profile
+
+The 20-byte control record above remains the generic compatibility/debug
+representation.
+
+The active R2c minimum-footprint profile uses one generated 24-byte task slot
+that combines compact runtime state and compact static task properties:
+
+```text
+context_or_initial_stack_top   4 B
+next_time                      4 B
+total_cpu_ticks                4 B
+max_run_ticks                  2 B
+age_credit                     1 B
+status                         1 B
+entry                          4 B
+schedule                       4 B
+----------------------------------
+total                         24 B/task
+```
+
+The compact status byte contains:
+
+* task state: 3 bits;
+* wake-pending: 1 bit;
+* missed-release count: 4 bits, saturating at 15.
+
+The compact `max_run_ticks` saturates at 65535 ticks. `total_cpu_ticks`
+remains 32-bit modulo arithmetic.
+
+At the current 24-task default:
+
+```text
+24 * 24 B = 576 B
+```
+
+This replaces both the separate generic control array and the separate static
+descriptor array in the R2c profile.
+
+CI run 40649991293 validates the host and Cortex-M23 builds for this profile.

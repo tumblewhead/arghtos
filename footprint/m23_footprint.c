@@ -1,6 +1,7 @@
 #include <arghtos/arghtos.h>
 #include <arghtos/arghtos_port.h>
 #include "../src/arghtos_kernel_port.h"
+#include "../src/arghtos_internal.h"
 
 extern void SVC_Handler(void);
 extern void PendSV_Handler(void);
@@ -8,7 +9,7 @@ extern ARGHTOS_NORETURN void arghtos_task_start_trampoline(void);
 extern ARGHTOS_NORETURN void arghtos_task_return_guard(void);
 
 __attribute__((section(".app_stacks"), aligned(8)))
-static uint8_t app_stacks[32][128];
+static uint8_t app_stacks[24][128];
 
 __attribute__((section(".app_text"), noinline))
 static void task_stub(void)
@@ -18,16 +19,64 @@ static void task_stub(void)
 
 #define DESC(i, p) { task_stub, app_stacks[(i)], (p), sizeof(app_stacks[(i)]), 0u, 0u }
 
+#if ARGHTOS_STATIC_CONFIG
+#if ARGHTOS_UNIFIED_SLOT
+#define SLOT(i, p) { \
+    .context = (arghtos_context_t)(uintptr_t)&app_stacks[(i)][sizeof(app_stacks[(i)])], \
+    .next_time = 0u, \
+    .total_cpu_ticks = 0u, \
+    .max_run_ticks = 0u, \
+    .age_credit = 0u, \
+    .status = 0u, \
+    .entry = task_stub, \
+    .schedule = ARGHTOS_STATIC_PERIOD(p) \
+}
+
 __attribute__((section(".arghtos_cfg")))
-static const arghtos_task_config_t task_cfg[32] = {
+arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
+    SLOT(0, 1u), SLOT(1, 2u), SLOT(2, 3u), SLOT(3, 4u),
+    SLOT(4, 5u), SLOT(5, 6u), SLOT(6, 7u), SLOT(7, 8u),
+    SLOT(8, 9u), SLOT(9, 10u), SLOT(10, 11u), SLOT(11, 12u),
+    SLOT(12, 13u), SLOT(13, 14u), SLOT(14, 15u), SLOT(15, 16u),
+    SLOT(16, 17u), SLOT(17, 18u), SLOT(18, 19u), SLOT(19, 20u),
+    SLOT(20, 21u), SLOT(21, 22u), SLOT(22, 23u), SLOT(23, 24u)
+};
+#elif ARGHTOS_COMPACT_DESCRIPTOR
+#define CDESC(i, p) \
+    { task_stub, &app_stacks[(i)][sizeof(app_stacks[(i)])], ARGHTOS_STATIC_PERIOD(p) }
+
+__attribute__((section(".arghtos_cfg")))
+const arghtos_static_task_t arghtos_static_tasks[24] = {
+    CDESC(0, 1u), CDESC(1, 2u), CDESC(2, 3u), CDESC(3, 4u),
+    CDESC(4, 5u), CDESC(5, 6u), CDESC(6, 7u), CDESC(7, 8u),
+    CDESC(8, 9u), CDESC(9, 10u), CDESC(10, 11u), CDESC(11, 12u),
+    CDESC(12, 13u), CDESC(13, 14u), CDESC(14, 15u), CDESC(15, 16u),
+    CDESC(16, 17u), CDESC(17, 18u), CDESC(18, 19u), CDESC(19, 20u),
+    CDESC(20, 21u), CDESC(21, 22u), CDESC(22, 23u), CDESC(23, 24u)
+};
+#else
+__attribute__((section(".arghtos_cfg")))
+const arghtos_task_config_t arghtos_static_tasks[24] = {
     DESC(0, 1u), DESC(1, 2u), DESC(2, 3u), DESC(3, 4u),
     DESC(4, 5u), DESC(5, 6u), DESC(6, 7u), DESC(7, 8u),
     DESC(8, 9u), DESC(9, 10u), DESC(10, 11u), DESC(11, 12u),
     DESC(12, 13u), DESC(13, 14u), DESC(14, 15u), DESC(15, 16u),
     DESC(16, 17u), DESC(17, 18u), DESC(18, 19u), DESC(19, 20u),
-    DESC(20, 21u), DESC(21, 22u), DESC(22, 23u), DESC(23, 24u),
-    DESC(24, 25u), DESC(25, 26u), DESC(26, 27u), DESC(27, 28u),
-    DESC(28, 29u), DESC(29, 30u), DESC(30, 31u), DESC(31, 32u)
+    DESC(20, 21u), DESC(21, 22u), DESC(22, 23u), DESC(23, 24u)
+};
+#endif
+
+__attribute__((section(".arghtos_crash"), aligned(4)))
+arghtos_crash_record_t arghtos_static_crash_record;
+#else
+__attribute__((section(".arghtos_cfg")))
+static const arghtos_task_config_t task_cfg[24] = {
+    DESC(0, 1u), DESC(1, 2u), DESC(2, 3u), DESC(3, 4u),
+    DESC(4, 5u), DESC(5, 6u), DESC(6, 7u), DESC(7, 8u),
+    DESC(8, 9u), DESC(9, 10u), DESC(10, 11u), DESC(11, 12u),
+    DESC(12, 13u), DESC(13, 14u), DESC(14, 15u), DESC(15, 16u),
+    DESC(16, 17u), DESC(17, 18u), DESC(18, 19u), DESC(19, 20u),
+    DESC(20, 21u), DESC(21, 22u), DESC(22, 23u), DESC(23, 24u)
 };
 
 __attribute__((section(".arghtos_crash"), aligned(4)))
@@ -37,9 +86,10 @@ __attribute__((section(".app_rodata")))
 static const arghtos_config_t config = {
     task_cfg,
     &crash_record,
-    32u,
+    24u,
     {0u, 0u, 0u}
 };
+#endif
 
 __attribute__((section(".app_data")))
 static volatile uintptr_t anchor_sink;
@@ -65,7 +115,16 @@ void footprint_entry(void)
     anchor_sink = (uintptr_t)&PendSV_Handler;
     anchor_sink = (uintptr_t)&arghtos_task_start_trampoline;
     anchor_sink = (uintptr_t)&arghtos_task_return_guard;
+#if ARGHTOS_STATIC_CONFIG
+#if ARGHTOS_UNIFIED_SLOT
+    anchor_sink = (uintptr_t)&arghtos_static_slots[0];
+#else
+    anchor_sink = (uintptr_t)&arghtos_static_tasks[0];
+#endif
+    anchor_sink = (uintptr_t)&arghtos_static_crash_record;
+#else
     anchor_sink = (uintptr_t)&config;
+#endif
 
     for (;;) {
         __asm volatile("wfi");

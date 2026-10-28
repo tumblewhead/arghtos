@@ -374,3 +374,37 @@ That already exceeds the original 48 B MSP red line and yields:
 ```
 
 Target high-water testing is still required; 104 B is not a final physical MSP reservation.
+
+# Current 24-task R2c footprint profile
+
+The original 32-task red-line table above was the pre-implementation design
+target and is retained as historical design evidence.
+
+The current default capacity is 24 tasks.
+
+The active R2c compact profile has measured:
+
+```text
+unified task slots        576 B
+static C9                  12 B
+crash record               64 B
+linker metadata            16 B
+ArghtOS-only MSP          104 B
+portable kernel/code     2076 B
+Cortex-M23 port C         340 B
+context assembly          188 B
+board adapter              12 B
+------------------------------
+total                    3376 B
+```
+
+CI run: 40649991293.
+
+The build system must continue to report the generic/R1/R2 profiles
+side-by-side until the compact profile is promoted from experiment to the
+canonical implementation.
+
+The `task_descriptors` key emitted by the current footprint script is a legacy
+label. For R2c, the `.arghtos_cfg` section contains the entire 576-byte mutable
+unified slot array, not a separate descriptor table. A future reporting cleanup
+should rename this field without changing the physical accounting.

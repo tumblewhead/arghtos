@@ -135,3 +135,45 @@ delta                                           = +2586 B
 See [I0 footprint skeleton](../implementation/I0-footprint-skeleton.md).
 
 Static compiler/assembly analysis now supplies an approximately 104 B ArghtOS-only MSP lower bound, producing a current combined lower bound of about 4226 B. Hardware high-water validation can only maintain or increase the required physical reservation. The 1.5 KiB target therefore fails at I0 even though boundedness itself is preserved.
+
+# Current 24-task R2c implementation evidence
+
+The original 32-task I0 evidence remains above as the historical baseline.
+
+The current default capacity is 24 tasks. The R2c minimum-footprint profile
+combines generated configuration and runtime state into one 24-byte slot per
+task.
+
+Measured CI result:
+
+```text
+R2c complete resident footprint = 3376 B
+soft target                     = 1536 B
+excess                          = 1840 B
+```
+
+The R2c fixed slot/storage terms are bounded:
+
+```text
+unified task slots      24 * 24 B = 576 B
+static C9                            12 B
+crash record                         64 B
+linker metadata                       16 B
+ArghtOS-only MSP                     104 B
+```
+
+Runtime scheduler work remains bounded by the same task-count limits:
+
+* release processing scans at most 24 task slots;
+* selector inspects at most 48 task slots;
+* no catch-up loop scales with missed releases;
+* no runtime allocation exists.
+
+R2c therefore preserves P7 boundedness while changing the concrete storage
+representation.
+
+Evidence: CI run 40649991293 and
+[I1 footprint reduction](../implementation/I1-footprint-reduction.md).
+
+The quantitative 1.5 KiB target still fails, but the failure is now dominated
+by executable code rather than by the static metadata lower bound.

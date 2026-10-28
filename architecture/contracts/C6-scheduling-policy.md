@@ -57,7 +57,7 @@ V1 has synchronous releases and `D=T`.
 Larger numeric values are more urgent:
 
 ```text
-0 <= base < ARGHTOS_ASYNC_PRIORITY_LEVELS
+1 <= base <= ARGHTOS_ASYNC_PRIORITY_MAX
 ```
 
 # Opportunity-based async aging
@@ -81,7 +81,7 @@ Effective priority is:
 
 ```c
 uint16_t raised = (uint16_t)base + (uint16_t)age_credit;
-uint8_t ceiling = ARGHTOS_ASYNC_PRIORITY_LEVELS - 1u;
+uint8_t ceiling = ARGHTOS_ASYNC_PRIORITY_MAX;
 effective = (raised > ceiling) ? ceiling : (uint8_t)raised;
 ```
 

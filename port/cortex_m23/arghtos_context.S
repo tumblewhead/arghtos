@@ -51,8 +51,21 @@ PendSV_Handler:
     b 2f
 
 1:
+    /*
+     * First dispatch entered from Thread mode using MSP.
+     * Reclaim the hardware exception frame before switching Thread mode to
+     * PSP. xPSR[9] records whether hardware inserted one 4-byte alignment
+     * word above the basic frame.
+     */
     mrs r5, msp
+    ldr r1, [r5, #28]
+    lsrs r1, r1, #9
+    movs r2, #1
+    ands r1, r2
+    lsls r1, r1, #2
     adds r5, #32
+    adds r5, r5, r1
+    msr msp, r5
     movs r0, #0
 
 2:

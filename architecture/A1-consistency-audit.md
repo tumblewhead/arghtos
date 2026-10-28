@@ -210,3 +210,38 @@ However, module design SHALL include:
 * the required crash record included in every v1 footprint profile.
 
 Linked I0 evidence now exists and shows the target is not met. No subsequent artifact may claim otherwise without newer linker/MSP evidence.
+
+# I1 requirement and implementation update
+
+The audit's original 32-task/I0 figures are retained as historical evidence.
+
+The active I1 branch has since changed the default task capacity to 24 and
+clarified async priority sentinels:
+
+```text
+0x00       reserved / no async priority
+0x01..MAX legal async priorities
+0xFF       reserved / invalid
+MAX <= 254
+```
+
+The best measured implementation candidate is R2c:
+
+```text
+24 tasks
+unified generated/runtime slot = 24 B/task
+complete ArghtOS footprint     = 3376 B
+soft target                    = 1536 B
+excess                         = 1840 B
+```
+
+CI run 40649991293 passed all generic, R1, R2, sanitizer, portability, and
+Cortex-M23 build/footprint gates.
+
+The 1.5 KiB target therefore remains unmet, but the architecture is no longer
+blocked by metadata alone. Current state/metadata + Cortex-M23 mechanism + MSP
+consume about 1312 B, leaving only about 224 B for the portable scheduler code
+under the target.
+
+The next consistency-sensitive reduction axis is R3: production-profile
+validation/service-path specialization.

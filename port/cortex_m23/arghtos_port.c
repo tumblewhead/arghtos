@@ -138,40 +138,38 @@ ARGHTOS_NORETURN void arghtos_port_start(void)
 
 void arghtos_port_idle_wait(void)
 {
+    /*
+     * Called from the PendSV idle loop with PRIMASK=1.
+     *
+     * WFI wake qualification ignores PRIMASK for an otherwise eligible
+     * asynchronous exception. After WFI completes, briefly restore normal
+     * interrupt recognition so a pending higher-priority handler can run.
+     * On return from that handler, mask again before the next scheduler
+     * readiness check. Do not execute a second WFI after the handler has
+     * had a chance to make work READY.
+     */
     __asm volatile(
-        "dsb
-"
-        "wfi
-"
-        "cpsie i
-"
-        "dsb
-"
-        "isb
-"
-        "wfi
-"
-        "cpsid i
-"
+        "dsb\n"
+        "wfi\n"
+        "cpsie i\n"
+        "isb\n"
+        "cpsid i\n"
         ::: "memory");
 }
 
-arghtos_context_t arghtos_port_build_initial_context(
-    void *stack_base,
-    uint32_t stack_size,
+static arghtos_context_t m23_build_context_at_top(
+    uintptr_t top,
     void (*thread_start)(void),
     void (*return_guard)(void))
 {
-    uintptr_t top;
     uint32_t *sp;
     unsigned i;
 
-    if (!arghtos_port_stack_valid(stack_base, stack_size) ||
+    if ((top == 0u) || ((top & 0x7u) != 0u) ||
         (thread_start == NULL) || (return_guard == NULL)) {
         return ARGHTOS_CONTEXT_NONE;
     }
 
-    top = ((uintptr_t)stack_base + stack_size) & ~(uintptr_t)0x7u;
     sp = (uint32_t *)(top - 64u);
 
     for (i = 0u; i < 16u; ++i) {
@@ -183,6 +181,31 @@ arghtos_context_t arghtos_port_build_initial_context(
     sp[15] = ARGHTOS_M23_XPSR_T;
 
     return (arghtos_context_t)(uintptr_t)sp;
+}
+
+arghtos_context_t arghtos_port_build_initial_context(
+    void *stack_base,
+    uint32_t stack_size,
+    void (*thread_start)(void),
+    void (*return_guard)(void))
+{
+    uintptr_t top;
+
+    if (!arghtos_port_stack_valid(stack_base, stack_size)) {
+        return ARGHTOS_CONTEXT_NONE;
+    }
+
+    top = ((uintptr_t)stack_base + stack_size) & ~(uintptr_t)0x7u;
+    return m23_build_context_at_top(top, thread_start, return_guard);
+}
+
+arghtos_context_t arghtos_port_build_initial_context_top(
+    void *stack_top,
+    void (*thread_start)(void),
+    void (*return_guard)(void))
+{
+    return m23_build_context_at_top(
+        (uintptr_t)stack_top, thread_start, return_guard);
 }
 
 void arghtos_port_crash_fill(

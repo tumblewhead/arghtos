@@ -142,6 +142,22 @@ arghtos_context_t arghtos_port_build_initial_context(
     return top == 0u ? ARGHTOS_CONTEXT_NONE : (arghtos_context_t)top;
 }
 
+arghtos_context_t arghtos_port_build_initial_context_top(
+    void *stack_top,
+    void (*thread_start)(void),
+    void (*return_guard)(void))
+{
+    const uintptr_t top = (uintptr_t)stack_top;
+    (void)thread_start;
+    (void)return_guard;
+
+    if ((stack_top == NULL) || ((top & 0x7u) != 0u)) {
+        return ARGHTOS_CONTEXT_NONE;
+    }
+
+    return (arghtos_context_t)top;
+}
+
 void arghtos_port_crash_fill(
     arghtos_crash_record_t *record,
     const void *port_fault_context)
