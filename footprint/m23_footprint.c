@@ -89,6 +89,14 @@ uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
     17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u
 };
 #endif
+#if ARGHTOS_R5I_SCHEDULE8
+__attribute__((section(".arghtos_cfg")))
+uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
+    9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u
+};
+#endif
 #if ARGHTOS_SPLIT_META
 __attribute__((section(".arghtos_cfg")))
 arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
