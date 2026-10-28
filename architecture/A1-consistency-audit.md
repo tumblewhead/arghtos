@@ -12,7 +12,7 @@ The proof/architecture/contract set is internally consistent enough to enter cod
 
 This does **not** mean all proofs are discharged.
 
-The 1.5 KiB soft footprint target is not established and is a high-risk implementation constraint.
+The 1.5 KiB soft footprint target has now been tested by I0 and is not met: the linked baseline is 4012 B before MSP.
 
 # Scope checked
 
@@ -195,7 +195,7 @@ Remaining before the target:
 
 That remainder must contain ArghtOS/port code, constants/literals, ArghtOS-only MSP requirement, and any other required resident bytes.
 
-Therefore the 1.5 KiB target is **not proven and appears extremely tight**. It must be treated as a first-class optimization metric in module design and implementation.
+I0 has resolved this risk into a measured failure: the current implementation is 4012 B before MSP, 2476 B above the 1536 B soft target. Retaining the target now requires architecture/requirement reduction, not merely compiler tuning.
 
 # Gate for next stage
 
@@ -209,4 +209,4 @@ However, module design SHALL include:
 * linker-map footprint tests from the first compilable skeleton;
 * the required crash record included in every v1 footprint profile.
 
-No claim that the 1.5 KiB target is met is permitted until linked evidence exists.
+Linked I0 evidence now exists and shows the target is not met. No subsequent artifact may claim otherwise without newer linker/MSP evidence.
