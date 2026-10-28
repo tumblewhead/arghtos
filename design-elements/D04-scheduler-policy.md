@@ -94,7 +94,7 @@ This is a critical module invariant.
 
 # Selector call count
 
-One PendSV dispatch decision causes exactly one logical selector evaluation.
+One kernel dispatch decision causes exactly one logical selector evaluation.
 
 If the same outgoing task remains the winner, that still counts as a dispatch opportunity and async credit increments according to C6 only if the periodic READY set was empty.
 
@@ -106,7 +106,7 @@ If no READY task exists:
 return ARGHTOS_TASK_ID_INVALID
 ```
 
-D04 does not execute WFI and does not alter C9 current task itself.
+D04 does not enter the target idle mechanism and does not alter C9 current task itself.
 
 # Complexity
 
@@ -134,7 +134,7 @@ set run_start
 return context
 ```
 
-D04 itself does not update saved PSP, run_start, or current_task.
+D04 itself does not update the opaque context token, run_start, or current_task.
 
 # Key goals
 
@@ -166,7 +166,7 @@ Every READY async task ages twice.
 
 **Tester should:**
 
-* instrument selector invocation count per PendSV;
+* instrument selector invocation count per dispatch handoff;
 * require exactly one logical selection per dispatch;
 * run a two-async-task trace and compare exact credit values after each dispatch opportunity.
 
