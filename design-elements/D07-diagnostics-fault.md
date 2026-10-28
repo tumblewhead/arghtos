@@ -24,7 +24,7 @@ Portable logic in:
 src/arghtos_kernel.c
 ```
 
-Architecture register/frame extraction support in D06.
+Architecture register/frame extraction is entirely owned by the selected port through `arghtos_port_crash_fill()`.
 
 # Owned persistent storage
 
@@ -63,8 +63,7 @@ static void missed_release_add(
 
 _Noreturn void arghtos_fatal(
     arghtos_fault_reason_t reason,
-    const arghtos_exception_frame_t *frame,
-    uint32_t exc_return);
+    const void *port_fault_context);
 ```
 
 The first two helpers may be folded directly into D09 dispatch if that is smaller.
@@ -130,8 +129,8 @@ record.size = 64
 record.reason = reason
 record.task_id / flags
 record.timestamp
-record.msp / psp / exc_return
-record.r0-r3/r12/lr/pc/xpsr if frame valid
+zero record.port_format / port_words / port_state[]
+arghtos_port_crash_fill(record, port_fault_context)
 
 compiler barrier / required ordering primitive
 record.commit_magic = CRAS
@@ -173,15 +172,15 @@ before crash snapshot.
 
 Kernel-global corruption faults do not assign FAULTED arbitrarily.
 
-# Frame validity
+# Port-fault context opacity
 
-For a CPU exception, D06 supplies a valid basic exception frame pointer and EXC_RETURN.
+`port_fault_context` is never dereferenced by D07.
 
-For a kernel-detected invariant fault, frame may be NULL and EXC_RETURN zero.
+For a CPU/architecture exception, the selected port passes whatever private context pointer it needs and later interprets it inside `arghtos_port_crash_fill()`.
 
-Crash flags state which fields are trustworthy.
+For a kernel-detected invariant fault, `port_fault_context` may be NULL. D07 zeroes the generic port payload before calling the port, so a port that has nothing useful to add can leave `port_words=0` and clear PORT_STATE_VALID.
 
-Unused/invalid register fields should be zeroed deterministically rather than left as stale prior crash data.
+The portable crash path therefore contains no architecture register names.
 
 # Fatal terminal hook
 
@@ -262,12 +261,12 @@ Reset/power loss during later writes produces a record that looks valid but is h
 
 ## 5. Frame pointer assumed valid for kernel invariant fault
 
-**Bad implementation:** `arghtos_fatal(..., NULL,0)` still dereferences frame to fill PC/LR.
+**Bad implementation:** portable D07 casts `port_fault_context` to a Cortex frame and reads PC/LR directly.
 
 **Tester should:**
 
-* invoke every kernel-detected fault with NULL frame in host model;
-* verify register fields are zero and FRAME_VALID is clear;
+* invoke every kernel-detected fault with NULL port context in the host model;
+* verify generic port payload starts zero and only the fake port may populate it;
 * use memory sanitizers.
 
 ## 6. Running task profile expected to be "live"
@@ -304,12 +303,12 @@ A convenient `switch(reason) -> "bad dispatch"` table can exceed the code/data b
 Host tests can provide:
 
 * deterministic fake clock;
-* synthetic exception frame;
+* synthetic opaque port-fault context owned by the fake port;
 * crash record initialized to a poison pattern;
 * terminal hook replaced by longjmp/test abort.
 
-Target tests must verify MSP/PSP capture against actual special registers.
+Each target port must verify that its own documented `port_state[]` format captures the intended architecture state.
 
 # Boundary specification
 
-D07 owns evidence capture and profiling presentation. It does not decide scheduling, recovery policy beyond terminal handoff, or telemetry transport.
+D07 owns architecture-neutral evidence capture and profiling presentation. Target register/frame extraction belongs to the selected port. D07 does not decide scheduling, recovery policy beyond terminal handoff, or telemetry transport.
