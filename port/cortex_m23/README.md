@@ -9,7 +9,7 @@ This directory implements the architecture-neutral `arghtos_port.h` ABI for Arm 
 - Task service call: fixed `SVC #0`, service ID in R0, arg0 in R1, result in R0.
 - Dispatch request / task handoff: PendSV.
 - Scheduler serialization: PRIMASK.
-- Idle: PRIMASK-serialized WFI protocol.
+- Idle: PRIMASK-serialized WFI protocol with no unmasked second WFI.
 - Context token: saved PSP address encoded in `arghtos_context_t`.
 
 ## Context layout
@@ -21,6 +21,10 @@ The software-saved frame contains R4-R11 below the Cortex-M basic hardware frame
 The MCU/board integration supplies `arghtos_m23_board_time_now()`, `arghtos_m23_board_timer_arm()`, `arghtos_m23_board_timer_disarm()`, and `arghtos_m23_board_fault_terminal()`.
 
 The board adapter must document scheduler tick frequency, timer width, timer-delivery jitter, and clock-change behavior.
+
+## HardFault and crash capture
+
+`HardFault_Handler` captures EXC_RETURN plus the MSP/PSP values at handler entry, identifies the basic stacked frame, and enters the generic `arghtos_fatal(ARGHTOS_FAULT_CPU_EXCEPTION, ...)` path. A recursive fault during capture terminates through the C9 fault-active guard.
 
 ## Crash payload format 0x4D23
 
