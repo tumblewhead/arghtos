@@ -236,3 +236,31 @@ the ordinary class/period checks.
 
 The selector remains bounded. The generated-order implementation inspects at
 most `N` task slots rather than the ordinary upper bound of `2*N`.
+
+# R5r derived age-zero invariant
+
+For the trusted generated minimum-size profile, C6 may rely on the following
+inductive invariant for asynchronous tasks:
+
+```text
+age_credit != 0  =>  state == READY
+```
+
+Reason:
+
+1. generated startup begins with zero age credit;
+2. age credit increases only while an async task is READY at an async dispatch
+   opportunity;
+3. the only READY -> RUNNING transition is selector dispatch, and selector
+   dispatch resets the selected async task's credit to zero before it runs;
+4. no operation increments credit while RUNNING, WAITING, SLEEPING, DORMANT, or
+   FAULTED.
+
+Consequently explicit `age_credit = 0` stores on transitions that begin from
+RUNNING/WAITING/SLEEPING/DORMANT are redundant in the trusted profile. The
+observable C6 rule remains that tasks entering READY from those states have zero
+credit.
+
+The READY-selected -> RUNNING reset remains mandatory because the selected task
+may have accumulated nonzero credit while READY. Generic/debug profiles retain
+the explicit reset stores.
