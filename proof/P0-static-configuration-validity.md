@@ -90,9 +90,9 @@ is a **soft target and is disproven by the I0 implementation baseline**.
 The first linked Cortex-M23 I0 build reports:
 
 ```text
-ArghtOS resident before MSP = 4012 B
+ArghtOS resident before MSP = 4098 B
 soft target                 = 1536 B
-excess before MSP           = 2476 B
+excess before MSP           = 2562 B
 ```
 
 The report already includes retained portable kernel code/data, Cortex-M23 port C, context assembly, board-adapter bytes, 32 task descriptors, the required crash record, and linker-resident metadata. The ArghtOS-only MSP term is still zero in this baseline, so 4012 B is an optimistic lower bound.
