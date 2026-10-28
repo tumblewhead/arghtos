@@ -160,8 +160,8 @@ Supported Makefile/CI surfaces are now:
 ## Final merge-gate evidence
 
 ```text
-CI run:    40669529301
-head:      c62e8ac51af76e9ed148e856b2a808c64c1f4cc9
+CI run:    40669625107
+head:      1eb28496a311cae30e4944da3da8fbaafbb6794e
 conclusion: success
 ```
 
@@ -180,11 +180,11 @@ green before PR #3 is marked ready.
 
 ## Exact next action
 
-1. Confirm CI for this documentation-only handoff commit is green.
-2. Confirm PR #3 remains mergeable.
-3. Mark PR #3 ready for review/merge.
-4. User should merge PR #3, preferably with **Squash and merge**.
-5. After merge, start any new footprint research from fresh canonical `main`,
+PR #3 is ready for review/merge.
+
+1. Confirm CI for this final documentation-only handoff commit is green.
+2. User should merge PR #3, preferably with **Squash and merge**.
+3. After merge, start any new footprint research from fresh canonical `main`,
    using frozen R4y as the control.
 
 Do not add another experiment to PR #3.
