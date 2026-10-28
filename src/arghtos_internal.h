@@ -154,7 +154,7 @@
 #error "R5o generated start timer requires accepted R5n generated profile"
 #endif
 
-#if ARGHTOS_R5O_MIN_PERIOD >= ARGHTOS_TIME_HALF_RANGE
+#if ARGHTOS_R5O_MIN_PERIOD >= 0x80000000u
 #error "R5o minimum period must satisfy the scheduler half-range rule"
 #endif
 
