@@ -418,7 +418,9 @@ static bool process_time_locked(arghtos_time_t now)
         if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_SLEEPING) {
             if (time_due(now, ARGHTOS_CTRL_NEXT(c))) {
                 ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
                 ARGHTOS_CTRL_AGE_ID(id) = 0u;
+#endif
                 changed = true;
             } else {
                 timer_consider(
@@ -460,7 +462,9 @@ static bool process_time_locked(arghtos_time_t now)
         } else if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_SLEEPING) {
             if (time_due(now, ARGHTOS_CTRL_NEXT(c))) {
                 ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
                 ARGHTOS_CTRL_AGE_ID(id) = 0u;
+#endif
                 changed = true;
             } else {
                 timer_consider(
@@ -491,7 +495,9 @@ static uint8_t wake_locked_compact(arghtos_task_id_t id)
     case ARGHTOS_TASK_DORMANT:
     case ARGHTOS_TASK_WAITING:
         ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
         ARGHTOS_CTRL_AGE_ID(id) = 0u;
+#endif
         ARGHTOS_CTRL_CLEAR_WAKE_ID(id);
         return ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
 
@@ -530,7 +536,9 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
     case ARGHTOS_TASK_DORMANT:
     case ARGHTOS_TASK_WAITING:
         ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
         ARGHTOS_CTRL_AGE_ID(id) = 0u;
+#endif
         ARGHTOS_CTRL_CLEAR_WAKE_ID(id);
         *result = ARGHTOS_OK;
         return true;
@@ -921,9 +929,11 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
     switch (service_id) {
     case ARGHTOS_SERVICE_YIELD:
         ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
         if (task_is_async(self)) {
             ARGHTOS_CTRL_AGE_ID(self) = 0u;
         }
+#endif
         outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
         break;
 
@@ -932,7 +942,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             ARGHTOS_CTRL_CLEAR_WAKE_ID(self);
         } else {
             ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_WAITING);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
             ARGHTOS_CTRL_AGE_ID(self) = 0u;
+#endif
             outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
         }
         break;
@@ -954,7 +966,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
                 break;
             }
 #endif
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
             ARGHTOS_CTRL_AGE_ID(self) = 0u;
+#endif
             ARGHTOS_CTRL_NEXT(&controls[self]) = deadline;
             ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
             (void)process_time_locked(now);
@@ -1286,9 +1300,11 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
 
         if (ARGHTOS_CTRL_STATE_ID(kernel.current_task) == ARGHTOS_TASK_RUNNING) {
             ARGHTOS_CTRL_SET_STATE_ID(kernel.current_task, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
             if (task_is_async(kernel.current_task)) {
                 ARGHTOS_CTRL_AGE_ID(kernel.current_task) = 0u;
             }
+#endif
         }
 #if ARGHTOS_R5N_PROVEN_DISPATCH
     }
