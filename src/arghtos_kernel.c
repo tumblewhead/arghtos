@@ -495,6 +495,7 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
         arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
     }
 }
+#endif
 
 #if !ARGHTOS_SPECIALIZED_SERVICES
 static bool current_running(arghtos_task_id_t *id)
