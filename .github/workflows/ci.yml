@@ -43,9 +43,12 @@ jobs:
       - name: Cortex-M23 accepted minimum R4y
         run: make m23-footprint-r4y
 
+      - name: Cortex-M23 live R5a compact PendSV tail
+        run: make m23-footprint-r5a
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y; do
+          for p in r3c r4y r5a; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -60,9 +63,13 @@ jobs:
           path: |
             build/footprint-r3c.json
             build/footprint-r4y.json
+            build/footprint-r5a.json
             build/m23-r3c.map
             build/m23-r4y.map
+            build/m23-r5a.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
+            build/m23-r5a-symbols.txt
             build/m23-r4y.elf
+            build/m23-r5a.elf
             build/*.su
