@@ -233,20 +233,25 @@ static arghtos_result_t validate_config(const arghtos_config_t *config)
 
 #endif
 
-static void missed_release_add(arghtos_task_control_t *c, uint32_t count)
+static void missed_release_add(
+    arghtos_task_id_t id,
+    arghtos_task_control_t *c,
+    uint32_t count)
 {
 #if ARGHTOS_COMPACT_RUNTIME
-    const uint32_t current = ARGHTOS_CTRL_MISSED(c);
+    const uint32_t current = ARGHTOS_CTRL_MISSED_ID(id);
     const uint32_t room = ARGHTOS_CTRL_MISSED_MAX - current;
 
+    (void)c;
     if (count >= room) {
-        ARGHTOS_CTRL_SET_MISSED(c, ARGHTOS_CTRL_MISSED_MAX);
+        ARGHTOS_CTRL_SET_MISSED_ID(id, ARGHTOS_CTRL_MISSED_MAX);
     } else {
-        ARGHTOS_CTRL_SET_MISSED(c, current + count);
+        ARGHTOS_CTRL_SET_MISSED_ID(id, current + count);
     }
 #else
     const uint32_t room = (uint32_t)UINT8_MAX - c->missed_release_count;
 
+    (void)id;
     if (count >= room) {
         c->missed_release_count = UINT8_MAX;
     } else {
@@ -319,7 +324,7 @@ static bool process_time_locked(arghtos_time_t now)
                 }
 
                 if (missed != 0u) {
-                    missed_release_add(c, missed);
+                    missed_release_add(id, c, missed);
                 }
             }
         } else if ((ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_SLEEPING) &&
@@ -396,7 +401,7 @@ static bool process_time_locked(arghtos_time_t now)
                 }
 
                 if (missed != 0u) {
-                    missed_release_add(c, missed);
+                    missed_release_add(id, c, missed);
                 }
             }
 
