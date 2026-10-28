@@ -416,8 +416,8 @@ static void test_invalid_wake_id_does_not_mutate(void)
     before = c[0];
     assert(arghtos_wake(99u) == ARGHTOS_ERR_BAD_TASK_ID);
     assert(c[0].context == before.context);
-    assert(c[0].state == before.state);
-    assert(c[0].flags == before.flags);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_CTRL_STATE(&before));
+    assert(ARGHTOS_CTRL_FLAGS(&c[0]) == ARGHTOS_CTRL_FLAGS(&before));
     assert(c[0].age_credit == before.age_credit);
 }
 
