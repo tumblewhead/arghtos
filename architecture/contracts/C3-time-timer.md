@@ -47,6 +47,14 @@ The scheduler-visible rate is fixed at `ARGHTOS_TIME_HZ`.
 
 If the hardware timer is narrower than 32 bits, the port extends/adapts it without exposing that mechanism to scheduler policy.
 
+# Time-read call contexts
+
+`arghtos_port_time_now()` is a read-only bounded operation that is safe from TASK, supported HANDLER, and KERNEL contexts.
+
+It performs no scheduler-state mutation and may be used by the public `arghtos_sleep_for()` wrapper to form an absolute deadline before entering the SVC ownership-changing path.
+
+If a narrow hardware timer requires software extension, the port must make this read safe in those contexts without introducing unbounded retry.
+
 # One-shot deadline contract
 
 `arghtos_port_timer_arm(t)` replaces the prior scheduler timer target.
