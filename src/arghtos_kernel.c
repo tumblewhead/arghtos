@@ -203,6 +203,7 @@ static bool task_is_async(arghtos_task_id_t id)
     return ARGHTOS_TASK_PERIOD(id) == 0u;
 }
 
+#if !ARGHTOS_R5M_PRISTINE_INIT || defined(ARGHTOS_TEST)
 static void control_clear(arghtos_task_id_t id, arghtos_task_control_t *c)
 {
     c->context = ARGHTOS_CONTEXT_NONE;
@@ -226,6 +227,7 @@ static void control_clear(arghtos_task_id_t id, arghtos_task_control_t *c)
     c->flags = 0u;
 #endif
 }
+#endif
 
 #if !ARGHTOS_TRUSTED_CONFIG
 static bool range_end(uintptr_t base, uint32_t size, uintptr_t *end)
