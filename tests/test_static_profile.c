@@ -14,7 +14,20 @@ static _Alignas(8) uint8_t stack1[256];
 static void periodic_task(void) {}
 static void async_task(void) {}
 
-#if ARGHTOS_COMPACT_DESCRIPTOR
+#if ARGHTOS_UNIFIED_SLOT
+arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
+    {
+        .context = (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)],
+        .entry = periodic_task,
+        .schedule = ARGHTOS_STATIC_PERIOD(10u)
+    },
+    {
+        .context = (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)],
+        .entry = async_task,
+        .schedule = ARGHTOS_STATIC_ASYNC(3u)
+    }
+};
+#elif ARGHTOS_COMPACT_DESCRIPTOR
 const arghtos_static_task_t arghtos_static_tasks[2] = {
     { periodic_task, &stack0[sizeof(stack0)], ARGHTOS_STATIC_PERIOD(10u) },
     { async_task,    &stack1[sizeof(stack1)], ARGHTOS_STATIC_ASYNC(3u) }
