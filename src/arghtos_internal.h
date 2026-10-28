@@ -209,6 +209,15 @@
 #error "R5t always-armed timer requires generated periodic tasks"
 #endif
 
+#ifndef ARGHTOS_R5V_UNIT_PERIOD_TIMER
+#define ARGHTOS_R5V_UNIT_PERIOD_TIMER 0
+#endif
+
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER && \
+    (!ARGHTOS_R5T_TIMER_ALWAYS_ARMED || ARGHTOS_R5O_MIN_PERIOD != 1u)
+#error "R5v unit-period timer requires accepted R5t profile with minimum period 1"
+#endif
+
 #if ARGHTOS_R5N_PROVEN_DISPATCH && !ARGHTOS_R5M_PRISTINE_INIT
 #error "R5n proven dispatch requires the trusted R5m generated profile"
 #endif
