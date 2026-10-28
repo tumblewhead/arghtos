@@ -532,3 +532,62 @@ R1 is successful as an experiment:
 * configuration generality is not the dominant remaining problem.
 
 Proceed to R2: compact runtime/descriptor representation.
+
+# Requirement revision before R2: 24 tasks and explicit priority sentinels
+
+The default capacity is now:
+
+```text
+ARGHTOS_MAX_TASKS = 24
+```
+
+The async priority representation is now explicit:
+
+```text
+0x00       reserved / no async priority
+0x01..MAX legal async priorities
+0xFF       reserved / invalid
+ARGHTOS_ASYNC_PRIORITY_MAX <= 254
+```
+
+This removes the previous ambiguity where `ARGHTOS_ASYNC_PRIORITY_LEVELS` was a count and legal values began at zero.
+
+CI run 40648432115 passed all existing gates.
+
+Measured 24-task R1b baseline:
+
+```text
+kernel code/data        2546 B
+port C                   402 B
+context assembly         188 B
+board adapter             12 B
+task descriptors         384 B
+crash record              64 B
+linker metadata           16 B
+ArghtOS-only MSP         104 B
+------------------------------
+total                   3716 B
+```
+
+Compared with 32-task R1b:
+
+```text
+4004 - 3716 = 288 B saved
+```
+
+Breakdown matches the structural expectation:
+
+```text
+8 fewer controls     8 * 20 B = 160 B
+8 fewer descriptors  8 * 16 B = 128 B
+------------------------------------
+total                              288 B
+```
+
+Remaining excess over the 1536-byte soft target:
+
+```text
+3716 - 1536 = 2180 B
+```
+
+This becomes the R2 baseline.
