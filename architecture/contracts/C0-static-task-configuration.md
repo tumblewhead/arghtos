@@ -137,7 +137,8 @@ For a periodic descriptor:
 For an async descriptor:
 
 * `period == 0`;
-* `async_priority < ARGHTOS_ASYNC_PRIORITY_LEVELS`.
+* `1 <= async_priority <= ARGHTOS_ASYNC_PRIORITY_MAX`;
+* `0x00` and `0xFF` are reserved and illegal for async tasks.
 
 # Initialization sequence
 
@@ -164,10 +165,10 @@ On success:
 
 The descriptor table is read-only by contract but is physically SRAM-resident and counts against the ArghtOS resident-footprint budget.
 
-At 32 configured tasks:
+At 24 configured tasks:
 
 ```text
-32 * 16 B = 512 B
+24 * 16 B = 384 B
 ```
 
 Application task stacks are excluded from the ArghtOS overhead target by explicit requirement, but remain part of total device SRAM consumption.
