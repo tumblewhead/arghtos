@@ -31,8 +31,11 @@ jobs:
       - name: Host current non-LTO minimum profile R4h
         run: make host-test-r4h
 
-      - name: Host live split-metadata experiment R4s
+      - name: Host accepted split-metadata profile R4s
         run: make host-test-r4s
+
+      - name: Host live ID-native metadata experiment R4t
+        run: make host-test-r4t
 
       - name: Host sanitizers
         run: make host-sanitize
@@ -46,15 +49,18 @@ jobs:
       - name: Cortex-M23 accepted minimum R4q
         run: make m23-footprint-r4q
 
-      - name: Cortex-M23 live split-metadata experiment R4s
+      - name: Cortex-M23 accepted split-metadata profile R4s
         run: make m23-footprint-r4s
+
+      - name: Cortex-M23 live ID-native metadata experiment R4t
+        run: make m23-footprint-r4t
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4q r4s; do
+          for p in r3c r4s r4t; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
           done
-          for p in r3c r4q r4s; do
+          for p in r3c r4s r4t; do
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
             echo "--- largest $p symbols ---"
@@ -69,12 +75,16 @@ jobs:
             build/footprint-r3c.json
             build/footprint-r4q.json
             build/footprint-r4s.json
+            build/footprint-r4t.json
             build/m23-r3c.map
             build/m23-r4q.map
             build/m23-r4s.map
+            build/m23-r4t.map
             build/m23-r3c-symbols.txt
             build/m23-r4q-symbols.txt
             build/m23-r4s-symbols.txt
+            build/m23-r4t-symbols.txt
             build/m23-r4q.elf
             build/m23-r4s.elf
+            build/m23-r4t.elf
             build/*.su
