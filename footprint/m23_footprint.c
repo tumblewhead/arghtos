@@ -42,13 +42,18 @@ static void task_stub(void)
 #define ARGHTOS_TIME_ENTRY_INIT .next_time = 0u,
 #define ARGHTOS_ENTRY_FIELD_INIT .entry = task_stub,
 #endif
+#if ARGHTOS_R5F_COMPRESSED_SCHEDULE
+#define ARGHTOS_SCHEDULE_SLOT_INIT(p)
+#else
+#define ARGHTOS_SCHEDULE_SLOT_INIT(p) .schedule = ARGHTOS_STATIC_PERIOD(p),
+#endif
 #define SLOT(i, p) { \
     .context = (arghtos_context_t)(uintptr_t)&app_stacks[(i)][sizeof(app_stacks[(i)])], \
     ARGHTOS_TIME_ENTRY_INIT \
     ARGHTOS_PROFILE_SLOT_INIT \
     ARGHTOS_META_SLOT_INIT \
     ARGHTOS_ENTRY_FIELD_INIT \
-    .schedule = ARGHTOS_STATIC_PERIOD(p) \
+    ARGHTOS_SCHEDULE_SLOT_INIT(p) \
 }
 
 __attribute__((section(".arghtos_cfg")))
@@ -60,6 +65,14 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
     SLOT(16, 17u), SLOT(17, 18u), SLOT(18, 19u), SLOT(19, 20u),
     SLOT(20, 21u), SLOT(21, 22u), SLOT(22, 23u), SLOT(23, 24u)
 };
+#if ARGHTOS_R5F_COMPRESSED_SCHEDULE
+__attribute__((section(".arghtos_cfg")))
+const uint8_t arghtos_static_schedule_stream[ARGHTOS_MAX_TASKS] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
+    9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u
+};
+#endif
 #if ARGHTOS_SPLIT_META
 __attribute__((section(".arghtos_cfg")))
 arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
