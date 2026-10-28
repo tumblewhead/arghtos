@@ -227,6 +227,15 @@
 #error "R5w trusted crash port requires accepted R5s and R5n profiles"
 #endif
 
+#ifndef ARGHTOS_R5Y_PROVEN_PERIODIC_STATE
+#define ARGHTOS_R5Y_PROVEN_PERIODIC_STATE 0
+#endif
+
+#if ARGHTOS_R5Y_PROVEN_PERIODIC_STATE && \
+    (!ARGHTOS_R5Q_PARTITIONED_TIME || !ARGHTOS_R5N_PROVEN_DISPATCH)
+#error "R5y periodic-state proof requires generated partitioned R5n profile"
+#endif
+
 #if ARGHTOS_R5N_PROVEN_DISPATCH && !ARGHTOS_R5M_PRISTINE_INIT
 #error "R5n proven dispatch requires the trusted R5m generated profile"
 #endif
