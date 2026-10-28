@@ -174,7 +174,7 @@ _Noreturn void arghtos_task_start_trampoline(void)
     if (task[id].period != 0u) {
         for (;;) {
             task[id].entry();       /* exactly one bounded job */
-            svc(ARGHTOS_SVC_TASK_RETURN);
+            arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u);
             /* resumes here only at a later periodic release */
         }
     }
@@ -184,7 +184,7 @@ _Noreturn void arghtos_task_start_trampoline(void)
 }
 ```
 
-For a periodic task, `ARGHTOS_SVC_TASK_RETURN` atomically marks the task DORMANT/inactive and requests dispatch. The saved PSP remains inside the trampoline. At the next periodic release, dispatch resumes the SVC return, the loop iterates, and the application entry is called again with a fresh unwound C job frame.
+For a periodic task, `ARGHTOS_SERVICE_TASK_RETURN` atomically marks the task DORMANT/inactive and requests dispatch through the selected port's service-call mechanism. The opaque saved context remains inside the trampoline. At the next periodic release, dispatch resumes the service call, the loop iterates, and the application entry is called again with a fresh unwound C job frame.
 
 This avoids rebuilding a task context every period and prevents stack growth across releases.
 
