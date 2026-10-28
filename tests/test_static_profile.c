@@ -10,6 +10,9 @@
 
 static _Alignas(8) uint8_t stack0[256];
 static _Alignas(8) uint8_t stack1[256];
+#if ARGHTOS_R5G_SCHEDULE16
+static _Alignas(8) uint8_t stack2[256];
+#endif
 
 static void periodic_task(void) {}
 static void async_task(void) {}
@@ -23,7 +26,7 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
 #else
         .entry = periodic_task,
 #endif
-#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE
+#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16
         .schedule = ARGHTOS_STATIC_PERIOD(10u)
 #endif
     },
@@ -34,10 +37,20 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
 #else
         .entry = async_task,
 #endif
-#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE
+#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16
         .schedule = ARGHTOS_STATIC_ASYNC(3u)
 #endif
     }
+#if ARGHTOS_R5G_SCHEDULE16
+    ,{
+        .context = (arghtos_context_t)(uintptr_t)&stack2[sizeof(stack2)],
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+        .entry_or_next.entry = periodic_task,
+#else
+        .entry = periodic_task,
+#endif
+    }
+#endif
 };
 #if ARGHTOS_R5F_COMPRESSED_SCHEDULE
 /*
@@ -47,6 +60,21 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
 uint8_t arghtos_static_schedule_stream[] = {
     ARGHTOS_R5F_SCHEDULE_ESCAPE, 10u, 0u, 0u, 0u,
     0x83u
+};
+#endif
+#if ARGHTOS_R5G_SCHEDULE16
+/*
+ * task 0: overflow index 0 -> exact period 10
+ * task 1: direct async priority 3
+ * task 2: direct periodic period 11
+ */
+uint16_t arghtos_static_schedule16[ARGHTOS_MAX_TASKS] = {
+    ARGHTOS_R5G_OVERFLOW_BASE | 0u,
+    ARGHTOS_R5G_ASYNC_BASE | 3u,
+    11u
+};
+uint32_t arghtos_static_schedule_overflow[ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT] = {
+    ARGHTOS_STATIC_PERIOD(10u)
 };
 #endif
 #if ARGHTOS_SPLIT_META
@@ -74,9 +102,16 @@ static void reset_all(void)
         (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)];
     arghtos_static_slots[1].context =
         (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)];
+#if ARGHTOS_R5G_SCHEDULE16
+    arghtos_static_slots[2].context =
+        (arghtos_context_t)(uintptr_t)&stack2[sizeof(stack2)];
+#endif
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
     ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[0]) = periodic_task;
     ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[1]) = async_task;
+#if ARGHTOS_R5G_SCHEDULE16
+    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[2]) = periodic_task;
+#endif
 #endif
 #endif
     arghtos_host_reset();
