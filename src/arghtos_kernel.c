@@ -343,6 +343,39 @@ static bool process_time_locked(arghtos_time_t now)
     return changed;
 }
 
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT
+#define ARGHTOS_WAKE_DISPATCH_BIT 0x08u
+#define ARGHTOS_WAKE_RESULT_MASK  0x07u
+_Static_assert(ARGHTOS_ERR_BAD_CONFIG <= ARGHTOS_WAKE_RESULT_MASK,
+               "R5c wake encoding must cover all public result codes");
+
+static uint8_t wake_locked_compact(arghtos_task_id_t id)
+{
+    switch (ARGHTOS_CTRL_STATE_ID(id)) {
+    case ARGHTOS_TASK_DORMANT:
+    case ARGHTOS_TASK_WAITING:
+        ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+        ARGHTOS_CTRL_AGE_ID(id) = 0u;
+        ARGHTOS_CTRL_CLEAR_WAKE_ID(id);
+        return ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+
+    case ARGHTOS_TASK_READY:
+        return ARGHTOS_OK;
+
+    case ARGHTOS_TASK_RUNNING:
+    case ARGHTOS_TASK_SLEEPING:
+        ARGHTOS_CTRL_SET_WAKE_ID(id);
+        return ARGHTOS_OK;
+
+    case ARGHTOS_TASK_FAULTED:
+        return ARGHTOS_ERR_BAD_STATE;
+
+    default:
+        arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+    }
+    return ARGHTOS_ERR_BAD_STATE;
+}
+#else
 static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 {
 #if !ARGHTOS_SPECIALIZED_SERVICES
@@ -385,6 +418,7 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
     }
     return false;
 }
+#endif
 
 #if !ARGHTOS_SPECIALIZED_SERVICES
 static bool current_running(arghtos_task_id_t *id)
@@ -618,8 +652,12 @@ arghtos_result_t arghtos_wake(arghtos_task_id_t task_id)
 arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 {
     arghtos_irq_key_t key;
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT
+    uint8_t wake_result;
+#else
     arghtos_result_t result;
     bool dispatch;
+#endif
 
 #if !ARGHTOS_PRODUCTION_PROFILE
     if (!arghtos_port_is_handler_context()) {
@@ -636,14 +674,24 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     }
 #endif
 
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT
+    wake_result = wake_locked_compact(task_id);
+#else
     dispatch = wake_locked(task_id, &result);
+#endif
     arghtos_port_critical_exit(key);
 
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT
+    if ((wake_result & ARGHTOS_WAKE_DISPATCH_BIT) != 0u) {
+        arghtos_port_request_dispatch();
+    }
+    return (arghtos_result_t)(wake_result & ARGHTOS_WAKE_RESULT_MASK);
+#else
     if (dispatch) {
         arghtos_port_request_dispatch();
     }
-
     return result;
+#endif
 }
 
 #if ARGHTOS_RUNTIME_PROFILING
@@ -757,7 +805,16 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
         break;
 
     case ARGHTOS_SERVICE_WAKE:
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT
+        {
+            const uint8_t wake_result =
+                wake_locked_compact((arghtos_task_id_t)arg0);
+            dispatch = (wake_result & ARGHTOS_WAKE_DISPATCH_BIT) != 0u;
+            result = (arghtos_result_t)(wake_result & ARGHTOS_WAKE_RESULT_MASK);
+        }
+#else
         dispatch = wake_locked((arghtos_task_id_t)arg0, &result);
+#endif
         break;
 
     case ARGHTOS_SERVICE_TASK_RETURN:
