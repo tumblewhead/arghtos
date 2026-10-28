@@ -135,37 +135,34 @@ R4l wake-result hoist               0 B
 R4o lld --icf=safe                  0 B
 ```
 
-## Live experiment: R4r machine outliner
+## R4r rejected result
 
-R4r adds LLVM machine outlining to accepted R4q:
+R4r forced LLVM machine outlining on accepted R4q.
 
-```text
--mllvm -enable-machine-outliner=always
-```
-
-Current CI comparison:
+Authoritative CI:
 
 ```text
-R4q accepted control
-R4r live challenger
-run 40664239986
+40664239986  success
+R4q 2410 B
+R4r 2410 B
+delta   0 B
 ```
 
-Do not accept R4r from source inspection. Measure physical footprint and
-re-audit MSP if outlining changes call/frame structure.
+Symbol sizes are identical. Reject R4r and keep the simpler R4q compiler
+command.
 
-## Dormant split-metadata work
+See [implementation/R4r-machine-outliner.md](implementation/R4r-machine-outliner.md).
 
-The branch also contains an inactive experimental switch:
+## Live experiment: R4s split task metadata
+
+R4s activates the previously dormant:
 
 ```text
-ARGHTOS_SPLIT_META
+ARGHTOS_SPLIT_META=1
 ```
 
-It was initially developed under the R4q label before R4q became the accepted
-no-jump-tables experiment. Do not call it R4q.
-
-If tested next, call it **R4s**.
+The code was initially developed while the R4q label was still free; R4q is now
+the accepted no-jump-tables profile, so the split-metadata experiment is R4s.
 
 Its hypothesis is:
 
@@ -189,23 +186,31 @@ not define that switch.
 
 ## Exact next action
 
-1. Finish R4r measurement against same-revision R4q.
-2. If R4r is smaller:
-   * inspect linked disassembly for outlined helper calls;
-   * re-audit the 80 B static MSP lower bound;
-   * accept only after MSP remains valid or is updated.
-3. If R4r is neutral/larger, reject it.
-4. Then test the dormant split-metadata experiment as **R4s** on top of the
-   accepted compiler/linker profile:
-   * full LTO;
-   * `-fomit-frame-pointer`;
-   * `-fno-jump-tables`;
-   * no unwind index;
-   * accepted size-first source switches;
-   * `ARGHTOS_SPLIT_META=1`.
-5. Keep the accepted profile as same-revision control.
-6. Accept R4s only if its 48 B metadata reduction exceeds any code-growth tax.
-7. Refresh implementation documentation and this file.
+Finish R4s measurement against same-revision accepted R4q.
+
+R4s build configuration:
+
+```text
+full LTO
+-fomit-frame-pointer
+-fno-jump-tables
+minimum linker script without .ARM.exidx/.ARM.extab
+accepted size-first source switches
+ARGHTOS_SPLIT_META=1
+```
+
+Host R4s must pass the static/unified-slot tests, including state and age-credit
+access through the parallel metadata array.
+
+Acceptance rule:
+
+```text
+raw task metadata opportunity = 48 B
+accept only if total resident footprint < 2410 B
+```
+
+If R4s wins, inspect symbol growth and verify the 80 B MSP bound remains valid.
+Then document and refresh this file before starting another experiment.
 
 ## Important architecture rules
 
