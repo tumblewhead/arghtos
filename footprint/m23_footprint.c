@@ -20,7 +20,28 @@ static void task_stub(void)
 #define DESC(i, p) { task_stub, app_stacks[(i)], (p), sizeof(app_stacks[(i)]), 0u, 0u }
 
 #if ARGHTOS_STATIC_CONFIG
-#if ARGHTOS_COMPACT_DESCRIPTOR
+#if ARGHTOS_UNIFIED_SLOT
+#define SLOT(i, p) { \
+    .context = (arghtos_context_t)(uintptr_t)&app_stacks[(i)][sizeof(app_stacks[(i)])], \
+    .next_time = 0u, \
+    .total_cpu_ticks = 0u, \
+    .max_run_ticks = 0u, \
+    .age_credit = 0u, \
+    .status = 0u, \
+    .entry = task_stub, \
+    .schedule = ARGHTOS_STATIC_PERIOD(p) \
+}
+
+__attribute__((section(".arghtos_cfg")))
+arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
+    SLOT(0, 1u), SLOT(1, 2u), SLOT(2, 3u), SLOT(3, 4u),
+    SLOT(4, 5u), SLOT(5, 6u), SLOT(6, 7u), SLOT(7, 8u),
+    SLOT(8, 9u), SLOT(9, 10u), SLOT(10, 11u), SLOT(11, 12u),
+    SLOT(12, 13u), SLOT(13, 14u), SLOT(14, 15u), SLOT(15, 16u),
+    SLOT(16, 17u), SLOT(17, 18u), SLOT(18, 19u), SLOT(19, 20u),
+    SLOT(20, 21u), SLOT(21, 22u), SLOT(22, 23u), SLOT(23, 24u)
+};
+#elif ARGHTOS_COMPACT_DESCRIPTOR
 #define CDESC(i, p) \
     { task_stub, &app_stacks[(i)][sizeof(app_stacks[(i)])], ARGHTOS_STATIC_PERIOD(p) }
 
@@ -95,7 +116,11 @@ void footprint_entry(void)
     anchor_sink = (uintptr_t)&arghtos_task_start_trampoline;
     anchor_sink = (uintptr_t)&arghtos_task_return_guard;
 #if ARGHTOS_STATIC_CONFIG
+#if ARGHTOS_UNIFIED_SLOT
+    anchor_sink = (uintptr_t)&arghtos_static_slots[0];
+#else
     anchor_sink = (uintptr_t)&arghtos_static_tasks[0];
+#endif
     anchor_sink = (uintptr_t)&arghtos_static_crash_record;
 #else
     anchor_sink = (uintptr_t)&config;
