@@ -417,3 +417,20 @@ frame and 68-byte worst-case scheduler context reserve are unchanged.
 This is a build-time realization of the existing C4 frame contract, not a new
 context ABI. PendSV save/restore, PSP ownership, exception return, and runtime
 alignment handling are unchanged.
+
+# R5n trusted dispatch-entry refinement
+
+For the trusted generated minimum-size profile, the C4 handoff protocol is a
+precondition strong enough to discharge several portable dispatcher assertions:
+
+* `arghtos_port_start()` invokes first dispatch only after STARTED is committed;
+* PendSV supplies a nonzero outgoing context only for a task that was previously
+  selected by the dispatcher;
+* the PendSV no-task/idle path supplies a zero context only while
+  `current_task` is INVALID;
+* a generated saved context token is nonzero and valid for every configured
+  task.
+
+The generic/debug profile continues to check these combinations at runtime.
+R5n may compile those redundant checks out of the minimum-size image without
+changing the context ABI or legal scheduler behavior.
