@@ -245,3 +245,24 @@ under the target.
 
 The next consistency-sensitive reduction axis is R3: production-profile
 validation/service-path specialization.
+
+# R3 production-profile update
+
+R3 starts from merged R2c and adds explicit minimum-footprint production profiles while retaining the generic/debug profiles.
+
+Measured CI results:
+
+```text
+R2c  3376 B
+R3a  3204 B   trusted call context
+R3b  3164 B   specialized service legality
+R3c  3072 B   minimal production validation
+```
+
+CI run 40653715778 passes all generic, R1, R2, R3, sanitizer, portability, and Cortex-M23 build/footprint gates.
+
+R3c does **not** remove scheduler-internal dispatch/state corruption checks. It moves selected application misuse detection to explicit generated-production preconditions documented in C0, C1, C2, and C5.
+
+The current best measured candidate remains 24 tasks and is exactly 1536 B above the 1536 B soft target.
+
+The next architecture-sensitive reduction axis is R4 API/feature specialization.
