@@ -122,7 +122,7 @@ The order is deliberately designed so invalid external input cannot cause a poin
 
 If any validation fails before port_init, no persistent scheduler state or hardware-port state is committed.
 
-If context construction fails after step 8, init must leave the scheduler non-startable and return a deterministic error/fatal according to the exact failure class.
+After descriptor and port validation succeeds, initial-context construction is required to be deterministic and infallible for those validated stacks. A zero/impossible saved PSP from the port is an internal integration fault: init must leave INITIALIZED clear and enter/report the deterministic fatal/configuration failure path rather than exposing a partially startable scheduler.
 
 # Pairwise stack overlap
 
