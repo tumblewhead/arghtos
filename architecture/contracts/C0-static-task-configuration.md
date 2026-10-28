@@ -143,13 +143,15 @@ For an async descriptor:
 Before returning `ARGHTOS_OK`:
 
 1. validate the top-level pointer/count;
-2. call `arghtos_port_init()`;
-3. validate each descriptor including `arghtos_port_stack_valid()`;
-4. perform pairwise stack-overlap checks;
+2. validate every descriptor, including the pure `arghtos_port_stack_valid()` check;
+3. perform pairwise stack-overlap checks;
+4. call `arghtos_port_init()` only after the external configuration is known valid;
 5. copy persistent configuration pointers/count into C9;
 6. initialize C8 runtime state;
 7. build every initial PSP frame through C4;
 8. leave the scheduler timer disarmed until start.
+
+This ordering prevents a bad application descriptor from causing persistent port/hardware side effects before configuration validation completes.
 
 On success:
 
