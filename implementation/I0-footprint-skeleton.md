@@ -50,7 +50,7 @@ The same `src/arghtos_kernel.c` compiles unchanged for:
 --target=arm-none-eabi -mcpu=cortex-m23 -mthumb
 ```
 
-The Cortex-M23 reference port and context assembly also compile with Clang 17.
+The Cortex-M23 reference port and context assembly also compile with Clang 17. The stabilized I0 port now includes HardFault crash capture and the corrected race-free idle sequence.
 
 # Linked footprint baseline
 
@@ -60,17 +60,17 @@ Canonical first footprint build uses `-Oz`, section GC, no libc, and all section
 
 ```json
 {
-  "kernel_code_data": 2896,
-  "port_c_code_data": 376,
-  "context_asm": 136,
+  "kernel_code_data": 2934,
+  "port_c_code_data": 396,
+  "context_asm": 164,
   "board_adapter": 12,
   "task_descriptors": 512,
   "crash_record": 64,
   "linker_resident_metadata": 16,
   "arghtos_only_msp": 0,
-  "arghtos_resident_total": 4012,
+  "arghtos_resident_total": 4098,
   "soft_target": 1536,
-  "delta_to_target": -2476,
+  "delta_to_target": -2562,
   "target_met": false
 }
 ```
@@ -80,9 +80,9 @@ This is still optimistic because `arghtos_only_msp` is zero in the current repor
 Therefore:
 
 ```text
-measured before MSP    4012 B
+measured before MSP    4098 B
 soft target            1536 B
-excess                 2476 B
+excess                 2562 B
 ```
 
 # Compiler-size sweep
@@ -90,9 +90,9 @@ excess                 2476 B
 Exploratory full-link section totals:
 
 ```text
--Os baseline .text             3176 B
--Oz .text                      2944 B
--Oz + LTO .text                2656 B
+-Os current .text              3284 B
+-Oz current .text              3032 B
+-Oz + LTO current .text        2740 B
 ```
 
 LTO helps, but not nearly enough to bridge the gap. The footprint problem is architectural/feature-representation scale, not merely an optimization-flag problem.
@@ -116,4 +116,4 @@ Still required before P2 is discharged:
 
 Implementation can continue, but no artifact may claim the 1.5 KiB target is met.
 
-Before investing heavily in further code-size polishing, the next engineering decision should explicitly address the ~2.5 KiB footprint deficit through architectural or requirement-level reduction rather than accounting changes.
+Before investing heavily in further code-size polishing, the next engineering decision should explicitly address the 2562-byte pre-MSP footprint deficit through architectural or requirement-level reduction rather than accounting changes.
