@@ -18,11 +18,21 @@
 #if ARGHTOS_UNIFIED_SLOT
 extern arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS];
 #define ARGHTOS_TASK_ENTRY(id)    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[(id)])
+#if ARGHTOS_R5F_COMPRESSED_SCHEDULE
+uint32_t arghtos_r5f_schedule_get(arghtos_task_id_t id);
+#define ARGHTOS_TASK_SCHEDULE(id) arghtos_r5f_schedule_get((id))
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_TAG) != 0u) ? \
+        0u : ARGHTOS_TASK_SCHEDULE(id))
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_MASK))
+#else
 #define ARGHTOS_TASK_PERIOD(id) \
     (((arghtos_static_slots[(id)].schedule & ARGHTOS_STATIC_ASYNC_TAG) != 0u) ? \
         0u : arghtos_static_slots[(id)].schedule)
 #define ARGHTOS_TASK_PRIORITY(id) \
     ((uint8_t)(arghtos_static_slots[(id)].schedule & ARGHTOS_STATIC_ASYNC_MASK))
+#endif
 #else
 extern const arghtos_static_task_t arghtos_static_tasks[ARGHTOS_STATIC_TASK_COUNT];
 #define ARGHTOS_TASK_ENTRY(id)    (arghtos_static_tasks[(id)].entry)
