@@ -145,3 +145,17 @@ The concrete critical-section primitive is specified by C4.
 # Boundary specification
 
 The device/driver owns hardware acknowledgment and event persistence. C2 owns only worker eligibility and the request to reconsider scheduling.
+
+# R3 minimum-footprint production profile
+
+The generic/debug profile retains BAD_CONTEXT, BAD_TASK_ID, BAD_TASK_CLASS, and pre-start BAD_STATE validation.
+
+The R3 production profile assumes:
+
+* interrupt wake is called only from a supported HANDLER context;
+* the scheduler has already started;
+* the wake ID is a generated valid async task ID.
+
+The FAULTED-state check and wake/wait handshake remain active.
+
+These assumptions are intended for generated driver integration where wake targets are compile-time constants.

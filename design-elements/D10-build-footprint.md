@@ -408,3 +408,35 @@ The `task_descriptors` key emitted by the current footprint script is a legacy
 label. For R2c, the `.arghtos_cfg` section contains the entire 576-byte mutable
 unified slot array, not a separate descriptor table. A future reporting cleanup
 should rename this field without changing the physical accounting.
+
+# Current R3c minimum-footprint profile
+
+R3 production specialization reduces the merged R2c 3376 B profile to:
+
+```text
+kernel code/data        1830 B
+Cortex-M23 port C        282 B
+context assembly         188 B
+board adapter             12 B
+unified task slots        576 B
+crash record              64 B
+linker metadata           16 B
+ArghtOS-only MSP         104 B
+------------------------------
+total                   3072 B
+```
+
+CI run: 40653715778.
+
+R3 breakdown:
+
+```text
+R2c 3376 B
+R3a 3204 B   -172 B
+R3b 3164 B    -40 B
+R3c 3072 B    -92 B
+```
+
+The target remains unmet by 1536 B.
+
+Validation specialization is no longer the dominant remaining lever; further footprint work should move to explicit API/feature specialization or port/code-structure reduction.

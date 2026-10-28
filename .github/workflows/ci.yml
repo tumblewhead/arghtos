@@ -37,6 +37,15 @@ jobs:
       - name: Host R2c unified-slot tests
         run: make host-test-r2c
 
+      - name: Host R3a production-profile tests
+        run: make host-test-r3a
+
+      - name: Host R3b specialized-service tests
+        run: make host-test-r3b
+
+      - name: Host R3c minimal-validation tests
+        run: make host-test-r3c
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -61,6 +70,15 @@ jobs:
       - name: Cortex-M23 footprint unified slot R2c
         run: make m23-footprint-r2c
 
+      - name: Cortex-M23 footprint production profile R3a
+        run: make m23-footprint-r3a
+
+      - name: Cortex-M23 footprint specialized services R3b
+        run: make m23-footprint-r3b
+
+      - name: Cortex-M23 footprint minimal validation R3c
+        run: make m23-footprint-r3c
+
       - name: Symbol-size report
         run: |
           nm -S --size-sort --radix=d build/m23.elf > build/m23-symbols.txt || true
@@ -69,6 +87,9 @@ jobs:
           nm -S --size-sort --radix=d build/m23-r2a.elf > build/m23-r2a-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-r2b.elf > build/m23-r2b-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-r2c.elf > build/m23-r2c-symbols.txt || true
+          nm -S --size-sort --radix=d build/m23-r3a.elf > build/m23-r3a-symbols.txt || true
+          nm -S --size-sort --radix=d build/m23-r3b.elf > build/m23-r3b-symbols.txt || true
+          nm -S --size-sort --radix=d build/m23-r3c.elf > build/m23-r3c-symbols.txt || true
           echo '--- baseline ---'
           cat build/footprint.json
           echo '--- compact R1a ---'
@@ -85,8 +106,14 @@ jobs:
           cat build/footprint-r2b.json
           echo '--- unified slot R2c ---'
           cat build/footprint-r2c.json
-          echo '--- largest R2c symbols ---'
-          tail -80 build/m23-r2c-symbols.txt || true
+          echo '--- production profile R3a ---'
+          cat build/footprint-r3a.json
+          echo '--- specialized services R3b ---'
+          cat build/footprint-r3b.json
+          echo '--- minimal validation R3c ---'
+          cat build/footprint-r3c.json
+          echo '--- largest R3c symbols ---'
+          tail -80 build/m23-r3c-symbols.txt || true
 
       - name: Upload footprint evidence
         uses: actions/upload-artifact@v4
@@ -99,16 +126,25 @@ jobs:
             build/footprint-r2a.json
             build/footprint-r2b.json
             build/footprint-r2c.json
+            build/footprint-r3a.json
+            build/footprint-r3b.json
+            build/footprint-r3c.json
             build/m23.map
             build/m23-compact.map
             build/m23-static.map
             build/m23-r2a.map
             build/m23-r2b.map
             build/m23-r2c.map
+            build/m23-r3a.map
+            build/m23-r3b.map
+            build/m23-r3c.map
             build/m23-symbols.txt
             build/m23-compact-symbols.txt
             build/m23-static-symbols.txt
             build/m23-r2a-symbols.txt
             build/m23-r2b-symbols.txt
             build/m23-r2c-symbols.txt
+            build/m23-r3a-symbols.txt
+            build/m23-r3b-symbols.txt
+            build/m23-r3c-symbols.txt
             build/*.su
