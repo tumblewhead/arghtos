@@ -775,9 +775,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
                 break;
             }
 #endif
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
             ARGHTOS_CTRL_NEXT(&controls[self]) = deadline;
             ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
-            ARGHTOS_CTRL_AGE_ID(self) = 0u;
             (void)process_time_locked(now);
             outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
         }
@@ -872,9 +872,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             (void)delta;
 #endif
 
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
             ARGHTOS_CTRL_NEXT(&controls[self]) = deadline;
             ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
-            ARGHTOS_CTRL_AGE_ID(self) = 0u;
             (void)process_time_locked(now);
             dispatch = true;
         }
