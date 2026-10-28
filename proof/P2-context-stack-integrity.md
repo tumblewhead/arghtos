@@ -113,3 +113,20 @@ The initial frame remains 64 B, the worst-case scheduler context reserve remains
 The R4u trampoline retains the entry pointer in R4 across periodic suspension.
 R4 is already included in the software context save/restore proof, so no new
 saved state or asymmetry is introduced.
+
+# R5l prebuilt-context refinement
+
+R5l moves initial-frame construction from runtime port code to trusted generated
+configuration but does not change the frame being proved.
+
+The proof obligation becomes an equivalence obligation: the generated frame
+must match the selected port's ordinary synthesized frame word-for-word for the
+same task entry, trampoline, and return guard, and its saved token must remain
+inside the task's configured stack interval.
+
+Because the runtime PendSV format is unchanged, the existing save/restore
+symmetry and 68-byte worst-case task scheduler-context reserve continue to
+apply.
+
+A target build should retain a static/golden-frame check or relocation audit,
+and hardware register-canary/first-dispatch testing remains required.
