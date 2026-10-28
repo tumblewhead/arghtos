@@ -182,6 +182,14 @@
 #error "R5q partitioned time scan requires accepted R5p ordering"
 #endif
 
+#ifndef ARGHTOS_R5R_ELIDE_AGE_RESETS
+#define ARGHTOS_R5R_ELIDE_AGE_RESETS 0
+#endif
+
+#if ARGHTOS_R5R_ELIDE_AGE_RESETS && !ARGHTOS_R5Q_PARTITIONED_TIME
+#error "R5r age-reset elision requires accepted R5q generated profile"
+#endif
+
 #if ARGHTOS_R5N_PROVEN_DISPATCH && !ARGHTOS_R5M_PRISTINE_INIT
 #error "R5n proven dispatch requires the trusted R5m generated profile"
 #endif
