@@ -194,8 +194,10 @@
 #define ARGHTOS_R5S_PRESEEDED_CRASH 0
 #endif
 
-#if ARGHTOS_R5S_PRESEEDED_CRASH && !ARGHTOS_R5R_ELIDE_AGE_RESETS
-#error "R5s preseeded crash record requires accepted R5r generated profile"
+#if ARGHTOS_R5S_PRESEEDED_CRASH && \
+    (!ARGHTOS_STATIC_CONFIG || !ARGHTOS_MINIMAL_VALIDATION || \
+     !ARGHTOS_R5L_PREBUILT_CONTEXT)
+#error "R5s preseeded crash record requires trusted generated static startup"
 #endif
 
 #if ARGHTOS_R5N_PROVEN_DISPATCH && !ARGHTOS_R5M_PRISTINE_INIT
