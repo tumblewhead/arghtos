@@ -591,3 +591,163 @@ Remaining excess over the 1536-byte soft target:
 ```
 
 This becomes the R2 baseline.
+
+# R2 measured results
+
+## R2a - 16-byte runtime controls
+
+R2a changes the static compact profile control record from 20 B/task to 16 B/task.
+
+Representation:
+
+```text
+context              4 B
+next_time            4 B
+total_cpu_ticks      4 B
+max_run_ticks        2 B, saturates at 65535
+age_credit           1 B
+status               1 B
+-------------------------
+total               16 B
+```
+
+The status byte packs:
+
+* task state: 3 bits;
+* wake-pending: 1 bit;
+* missed-release count: 4 bits, saturating at 15.
+
+At 24 tasks the raw state saving is:
+
+```text
+24 * (20 - 16) = 96 B
+```
+
+CI run 40649017704 passed all functional gates.
+
+Measured result in the later five-profile run:
+
+```text
+R1b  3744 B
+R2a  3702 B
+------------
+net    42 B saved
+```
+
+The packed representation saves 96 B of state but costs about 54 B of extra linked code in this implementation.
+
+R2a is therefore net-positive, but the packing logic is not free.
+
+## R2b - 12-byte generated static descriptors
+
+R2b replaces the 16-byte static descriptor with:
+
+```c
+typedef struct {
+    arghtos_task_fn_t entry;   // 4
+    void             *stack_top; // 4, init-only
+    uint32_t          schedule;  // 4
+} arghtos_static_task_t;
+```
+
+The schedule word encodes:
+
+* periodic task: high bit clear, remaining 31 bits are the legal period;
+* async task: high bit set, low byte is async priority.
+
+Because v1 periods are already constrained below 2^31, the high bit is available as the async tag without reducing the periodic range.
+
+The generated static profile uses stack-top directly, so stack size is no longer stored in the resident descriptor.
+
+At 24 tasks:
+
+```text
+old descriptor table  24 * 16 = 384 B
+new descriptor table  24 * 12 = 288 B
+raw saving                        96 B
+```
+
+CI run 40649497778 passed all gates.
+
+Measured result:
+
+```text
+R2a  3702 B
+R2b  3592 B
+------------
+net   110 B saved
+```
+
+R2b saves slightly more than the raw 96 B descriptor reduction because the R2b profile also dead-strips the generic base+size context builder path and retains the smaller stack-top construction path.
+
+## R2b current breakdown
+
+```text
+kernel code/data        2580 B
+port C                   340 B
+context assembly         188 B
+board adapter             12 B
+task descriptors         288 B
+crash record              64 B
+linker metadata           16 B
+ArghtOS-only MSP         104 B
+------------------------------
+total                   3592 B
+```
+
+Remaining excess:
+
+```text
+3592 - 1536 = 2056 B
+```
+
+Largest retained R2b symbols include:
+
+```text
+controls                    384 B
+arghtos_static_tasks        288 B
+arghtos_kernel_service      332 B
+process_time_locked         292 B
+arghtos_select_next         260 B
+arghtos_kernel_dispatch     220 B
+arghtos_fatal               180 B
+arghtos_start               164 B
+wake_locked                 144 B
+PendSV_Handler              130 B
+arghtos_init                124 B
+```
+
+## R2c hypothesis - unified generated task slot
+
+R2b still retains separate 16-byte control and 12-byte descriptor arrays:
+
+```text
+16 + 12 = 28 B/task
+```
+
+The descriptor's stack-top is needed only during initialization.
+
+R2c will test a single 24-byte generated slot:
+
+```text
+context_or_initial_stack_top  4 B
+next_time                     4 B
+total_cpu_ticks               4 B
+max_run_ticks                 2 B
+age_credit                    1 B
+status                        1 B
+entry                         4 B
+schedule                      4 B
+---------------------------------
+total                         24 B/task
+```
+
+Initialization consumes the generated stack-top stored in the context field, then overwrites that field with the built target context token.
+
+Expected raw saving relative to R2b:
+
+```text
+24 tasks * (28 - 24) = 96 B
+```
+
+R2c will be accepted only if the linked total improves after code changes.
