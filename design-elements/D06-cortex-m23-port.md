@@ -474,3 +474,26 @@ and 68-byte worst-case scheduler context reserve remain unchanged.
 
 The generic/debug and ordinary production profiles do not depend on this
 specialization.
+
+# R5l generated-context specialization
+
+For the trusted generated minimum-size profile, the Cortex-M23 initial frame
+may be emitted by the generated target configuration instead of built by
+`arghtos_port_build_initial_context_top_arg()` at runtime.
+
+The generator must use the same D06 frame layout and relocations as the runtime
+builder. In particular:
+
+* the saved token addresses R4;
+* stacked R0 contains the Thumb task-entry function pointer;
+* stacked LR contains the Thumb return-guard pointer;
+* stacked PC contains the trampoline execution address with bit 0 cleared;
+* stacked xPSR sets T;
+* all other initial registers are zero.
+
+The reference footprint fixture emits the frame in target assembly so function
+address relocations preserve Cortex-M Thumb semantics without introducing
+target-specific expressions into portable C.
+
+The application stack remains application-owned RAM. R5l changes its load-image
+initialization, not its SRAM allocation.
