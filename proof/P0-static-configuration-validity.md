@@ -143,3 +143,51 @@ F_arghtos >= 4106 + 104 = 4226 B
 ```
 
 before any physical-system MSP growth due to application/device handler nesting.
+
+# Current 24-task I1 compact candidate
+
+The 32-task I0 result above is retained as historical implementation evidence.
+
+The current requirement default on the I1 experiment branch is now:
+
+```text
+ARGHTOS_MAX_TASKS = 24
+```
+
+The active minimum-footprint implementation candidate is R2c.
+
+R2c uses generated unified task slots rather than a separate generic C0
+descriptor array plus C8 control array.
+
+For the R2c profile:
+
+```text
+24 unified task slots    24 * 24 B = 576 B
+static C9                              12 B
+required crash record                  64 B
+linker metadata                        16 B
+ArghtOS-only MSP                      104 B
+-------------------------------------------
+resident state/metadata + MSP         772 B
+```
+
+The complete measured Cortex-M23 resident footprint is:
+
+```text
+F_arghtos_R2c(24) = 3376 B
+soft target        = 1536 B
+excess             = 1840 B
+```
+
+Evidence:
+
+* CI run 40649991293;
+* [I1 footprint reduction](../implementation/I1-footprint-reduction.md).
+
+Therefore P0 continues to prove static boundedness, while the current 24-task
+R2c candidate still does not satisfy the quantitative soft target.
+
+The generic formula based on separate C0/C8 structures remains valid for the
+compatibility profile. The generated R2c profile is a specialized
+implementation of the same static-resource principle and has its own linked
+measurement above.
