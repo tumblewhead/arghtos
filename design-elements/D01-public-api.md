@@ -84,7 +84,7 @@ arghtos_result_t arghtos_profile_get(
 
 Declarations live in `arghtos.h`.
 
-Implementations live in `arghtos_kernel.c`, except where a tiny Cortex-specific SVC instruction wrapper is demonstrably smaller in the port.
+Public API implementations live in portable `arghtos_kernel.c`. Ownership-changing task APIs call the architecture-neutral `arghtos_port_service_call(service_id,arg0)` interface. The target-specific trap/SVC instruction lives entirely in the selected port.
 
 The default design is:
 
@@ -92,7 +92,7 @@ The default design is:
 flowchart LR
   APP["application"] --> H["arghtos.h declarations"]
   H --> K["arghtos_kernel.c public functions"]
-  K --> SVC["D03 SVC request path"]
+  K --> CALL["abstract port service call"]
   K --> INIT["D02 init/start"]
   K --> PROF["D07 profile snapshot"]
 ```
@@ -173,7 +173,7 @@ These assertions belong in kernel/private build code as well as being documented
 
 # Dangerous code sections and tester guidance
 
-## 1. Public inline SVC wrappers duplicate code at every call site
+## 1. Target trap/SVC code leaks into the public header or portable kernel
 
 **Bad implementation:**
 
@@ -185,16 +185,14 @@ static inline arghtos_result_t arghtos_yield(void)
 }
 ```
 
-included in twenty application files.
-
-Even if each expansion is tiny, the total resident application image may contain repeated ArghtOS-induced sequences.
+This couples the supposedly portable API to Cortex-M and may duplicate target instructions at application call sites.
 
 **Tester should:**
 
-* compile one call site, then 2, 4, 8, and 16 call sites;
-* compare linked section sizes, not object sizes;
-* verify code size does not grow linearly merely because the header was included;
-* use symbol/disassembly inspection to determine whether wrappers were outlined or duplicated.
+* compile `src/arghtos_kernel.c` for the host fake port and require zero target assembly;
+* grep/preprocess portable sources for Cortex register names and `svc`, `wfi`, `mrs`, `msr`, `cpsid`, `cpsie`;
+* include `arghtos.h` from multiple application translation units and verify target-specific code is not emitted by the header;
+* verify all task system-call mechanism code comes from the selected `port/<target>/` object.
 
 ## 2. Struct packing differs between application and kernel builds
 
