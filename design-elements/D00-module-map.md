@@ -20,18 +20,22 @@ The initial minimum-footprint implementation should physically use:
 include/
 └── arghtos/
     ├── arghtos.h
-    └── arghtos_port.h
+    └── arghtos_port.h      # architecture-neutral port interface
 
 src/
     ├── arghtos_internal.h
-    └── arghtos_kernel.c
+    └── arghtos_kernel.c    # portable C11 only
 
-port/cortex_m23/
-    ├── arghtos_port.c
-    └── arghtos_context.S
+port/
+├── host/
+│   └── arghtos_port.c      # verification/fake port
+└── cortex_m23/
+    ├── arghtos_port.c      # all Cortex-M23-specific C
+    ├── arghtos_context.S   # Cortex-M23 exception/context assembly
+    └── arghtos_port_private.h
 ```
 
-Most portable kernel logic is deliberately co-located in `arghtos_kernel.c`.
+`arghtos_kernel.c` contains **only portable scheduler logic**. It must compile unchanged for the host verification port and for every supported MCU/CPU port.
 
 Reason:
 
@@ -112,9 +116,22 @@ Must not contain scheduler state definitions, SVC numbers, or nontrivial inline 
 
 ## `include/arghtos/arghtos_port.h`
 
-Owns the platform implementation contract.
+Owns the **architecture-neutral port contract** seen by the portable kernel.
 
-May expose Cortex-port functions needed by `arghtos_kernel.c`, but no application should need to include it except board/port glue.
+It declares abstract operations such as:
+
+* time read / timer arm-disarm;
+* scheduler serialization enter/exit;
+* task/handler context predicates;
+* dispatch request;
+* first start;
+* idle wait;
+* initial saved-context construction;
+* terminal fault handoff.
+
+It must contain no Cortex register names, CMSIS/vendor headers, NVIC constants, PRIMASK/BASEPRI terminology, or target-specific frame layout.
+
+Application code normally does not include this header.
 
 ## `src/arghtos_internal.h`
 
@@ -130,19 +147,36 @@ It must not be included by application code.
 
 ## `src/arghtos_kernel.c`
 
-Contains logical modules D02, D03, D04, D05, D07, D08, and the portable side of D09.
+Contains D02, D03, D04, D05, D07, D08, and D09.
 
-Functions that are not called by the port or public API should be `static`.
+This file is fully portable C11.
+
+It must not:
+
+* include CMSIS or vendor device headers;
+* use inline assembly;
+* read/write CPU special registers;
+* know what PSP/MSP, SVC, PendSV, PRIMASK, NVIC, WFI, or a Cortex exception frame is;
+* access timer peripheral registers;
+* encode target exception priorities.
+
+Functions that are not called by the abstract port or public API should be `static`.
 
 ## `port/cortex_m23/arghtos_port.c`
 
-Contains Cortex-M23 C glue:
+Contains **all nonportable Cortex-M23 C**:
 
+* special-register and execution-context queries;
+* serialization/masking implementation;
+* PendSV/SVC priority/configuration;
 * timer/time adaptation;
-* context queries;
-* critical-section helpers when best expressed in C/intrinsics;
+* race-free idle/WFI implementation;
+* initial-frame realization support;
 * startup integration;
-* fatal terminal default or board hook adapter.
+* terminal fault handoff;
+* any CMSIS/vendor includes required by the port.
+
+No scheduler policy or lifecycle semantics live here.
 
 ## `port/cortex_m23/arghtos_context.S`
 
@@ -262,3 +296,24 @@ Why dangerous:
 # Boundary specification
 
 D00 defines module ownership and physical layout only. It does not redefine behavior owned by C0-C10.
+
+# Portability rule
+
+The portable kernel may depend only on:
+
+1. ISO C11;
+2. public ArghtOS scalar/struct contracts; and
+3. the abstract functions declared in `arghtos_port.h`.
+
+A new CPU/MCU port must not require edits to `arghtos_kernel.c`.
+
+If a proposed port requires a kernel edit, that is treated as evidence that the abstract port contract is incomplete; update the port contract/design first rather than adding target conditionals such as `#ifdef __ARM_ARCH...` to portable code.
+
+# Portability acceptance check
+
+CI should compile the same `src/arghtos_kernel.c` against at least:
+
+* `port/host/arghtos_port.c`; and
+* `port/cortex_m23/arghtos_port.c`.
+
+The portable source must contain zero target preprocessor branches.
