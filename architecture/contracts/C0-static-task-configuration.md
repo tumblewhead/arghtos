@@ -216,3 +216,17 @@ and is overwritten by the target context token during initialization.
 
 This specialization does not change task IDs, RMS ordering, async priority
 semantics, or lifecycle behavior.
+
+# R3c minimum-footprint production profile
+
+The generic API above retains runtime lifecycle misuse checks.
+
+The R3c minimum-footprint production profile instead treats these as build/application preconditions:
+
+* `arghtos_init()` is called exactly once;
+* `arghtos_start()` is called exactly once after successful init;
+* generated task configuration and stack layout are valid by construction.
+
+R3c still checks port initialization failure and initial-context construction failure.
+
+This specialization does not change behavior for valid startup sequences.
