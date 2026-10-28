@@ -25,6 +25,9 @@ jobs:
       - name: Host compact-profile tests
         run: make host-test-compact
 
+      - name: Host linked-static-profile tests
+        run: make host-test-static
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -37,16 +40,22 @@ jobs:
       - name: Cortex-M23 footprint compact R1a
         run: make m23-footprint-compact
 
+      - name: Cortex-M23 footprint static R1b
+        run: make m23-footprint-static
+
       - name: Symbol-size report
         run: |
           nm -S --size-sort --radix=d build/m23.elf > build/m23-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-compact.elf > build/m23-compact-symbols.txt || true
+          nm -S --size-sort --radix=d build/m23-static.elf > build/m23-static-symbols.txt || true
           echo '--- baseline ---'
           cat build/footprint.json
           echo '--- compact R1a ---'
           cat build/footprint-compact.json
-          echo '--- largest compact symbols ---'
-          tail -80 build/m23-compact-symbols.txt || true
+          echo '--- static R1b ---'
+          cat build/footprint-static.json
+          echo '--- largest R1b symbols ---'
+          tail -80 build/m23-static-symbols.txt || true
 
       - name: Upload footprint evidence
         uses: actions/upload-artifact@v4
@@ -55,8 +64,11 @@ jobs:
           path: |
             build/footprint.json
             build/footprint-compact.json
+            build/footprint-static.json
             build/m23.map
             build/m23-compact.map
+            build/m23-static.map
             build/m23-symbols.txt
             build/m23-compact-symbols.txt
+            build/m23-static-symbols.txt
             build/*.su
