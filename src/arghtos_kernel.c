@@ -1374,7 +1374,9 @@ ARGHTOS_NORETURN void arghtos_fatal(
     const void *port_fault_context)
 {
     arghtos_crash_record_t *r;
+#if !ARGHTOS_R5S_PRESEEDED_CRASH
     uint8_t i;
+#endif
 
     if ((kernel.flags & ARGHTOS_KF_FAULT_ACTIVE) != 0u) {
         arghtos_port_fault_terminal();
@@ -1388,6 +1390,32 @@ ARGHTOS_NORETURN void arghtos_fatal(
     }
 
     r = ARGHTOS_CRASH_RECORD;
+#if ARGHTOS_R5S_PRESEEDED_CRASH
+    /*
+     * The trusted generated startup image already supplies the invariant
+     * header, invalid task ID, zero flags/port payload, and invalid commit.
+     * Fatal is non-returning and recursive fatal terminates before recapture.
+     */
+    r->commit_magic = 0u;
+    r->reason = reason;
+    r->timestamp = arghtos_port_time_now();
+
+    if (task_id_valid(kernel.current_task)) {
+        r->task_id = kernel.current_task;
+        r->flags = ARGHTOS_CRASH_F_TASK_VALID;
+    }
+
+    arghtos_port_crash_fill(r, port_fault_context);
+    if (r->port_words > 10u) {
+        r->port_words = 10u;
+    }
+    if (r->port_words != 0u) {
+        r->flags |= ARGHTOS_CRASH_F_PORT_STATE_VALID;
+    }
+
+    atomic_thread_fence(memory_order_release);
+    r->commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC;
+#else
     if (r != NULL) {
         r->commit_magic = 0u;
         r->magic = ARGHTOS_CRASH_MAGIC;
@@ -1401,7 +1429,6 @@ ARGHTOS_NORETURN void arghtos_fatal(
         r->port_words = 0u;
         r->reserved = 0u;
 
-
         if (task_id_valid(kernel.current_task)) {
             r->task_id = kernel.current_task;
             r->flags |= ARGHTOS_CRASH_F_TASK_VALID;
@@ -1410,7 +1437,6 @@ ARGHTOS_NORETURN void arghtos_fatal(
         for (i = 0u; i < 10u; ++i) {
             r->port_state[i] = 0u;
         }
-
 
         arghtos_port_crash_fill(r, port_fault_context);
         if (r->port_words > 10u) {
@@ -1423,6 +1449,7 @@ ARGHTOS_NORETURN void arghtos_fatal(
         atomic_thread_fence(memory_order_release);
         r->commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC;
     }
+#endif
 
     arghtos_port_fault_terminal();
 }
