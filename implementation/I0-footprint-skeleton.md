@@ -61,16 +61,16 @@ Canonical first footprint build uses `-Oz`, section GC, no libc, and all section
 ```json
 {
   "kernel_code_data": 2934,
-  "port_c_code_data": 396,
+  "port_c_code_data": 408,
   "context_asm": 172,
   "board_adapter": 12,
   "task_descriptors": 512,
   "crash_record": 64,
   "linker_resident_metadata": 16,
   "arghtos_only_msp": 104,
-  "arghtos_resident_total": 4210,
+  "arghtos_resident_total": 4222,
   "soft_target": 1536,
-  "delta_to_target": -2674,
+  "delta_to_target": -2686,
   "target_met": false
 }
 ```
@@ -90,12 +90,12 @@ The first-dispatch port also now reclaims the startup MSP hardware frame before 
 Therefore:
 
 ```text
-linked before MSP      4106 B
+linked before MSP      4118 B
 static ArghtOS MSP      104 B
 -----------------------------
-reported lower bound   4210 B
+reported lower bound   4222 B
 soft target            1536 B
-excess                 2674 B
+excess                 2686 B
 ```
 
 # Compiler-size sweep
@@ -103,9 +103,9 @@ excess                 2674 B
 Exploratory full-link section totals:
 
 ```text
--Os current .text              3292 B
--Oz current .text              3040 B
--Oz + LTO current .text        2748 B
+-Os current .text              3304 B
+-Oz current .text              3052 B
+-Oz + LTO current .text        2760 B
 ```
 
 LTO helps, but not nearly enough to bridge the gap. The footprint problem is architectural/feature-representation scale, not merely an optimization-flag problem.
@@ -137,12 +137,12 @@ Before investing heavily in further code-size polishing, the next engineering de
 Applying the current 104-byte ArghtOS-only MSP estimate:
 
 ```text
-linked before MSP       4106 B
+linked before MSP       4118 B
 static ArghtOS MSP       104 B
 -----------------------------
-current lower bound     4210 B
+current lower bound     4222 B
 soft target             1536 B
-excess                  2674 B
+excess                  2686 B
 ```
 
 This is still not a hardware high-water proof; device-handler nesting can increase the physical MSP reservation.
