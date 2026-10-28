@@ -713,6 +713,9 @@ ARGHTOS_NORETURN void arghtos_start(void)
 #elif ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
     arghtos_time_t earliest = 0u;
     uint32_t earliest_delta = UINT32_MAX;
+#elif ARGHTOS_RECOMPUTE_TIMER_DELTA
+    bool have_timer = false;
+    arghtos_time_t earliest = 0u;
 #else
     bool have_timer = false;
     arghtos_time_t earliest = 0u;
@@ -750,6 +753,9 @@ ARGHTOS_NORETURN void arghtos_start(void)
 #if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
             timer_consider(start, ARGHTOS_CTRL_NEXT(&controls[id]),
                            &earliest, &earliest_delta);
+#elif ARGHTOS_RECOMPUTE_TIMER_DELTA
+            timer_consider(start, ARGHTOS_CTRL_NEXT(&controls[id]),
+                           &have_timer, &earliest);
 #else
             timer_consider(start, ARGHTOS_CTRL_NEXT(&controls[id]),
                            &have_timer, &earliest, &earliest_delta);
