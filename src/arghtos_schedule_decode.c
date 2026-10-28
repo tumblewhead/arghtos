@@ -1,6 +1,6 @@
 #include "arghtos_internal.h"
 
-extern const uint8_t arghtos_static_schedule_stream[];
+extern uint8_t arghtos_static_schedule_stream[];
 
 uint32_t arghtos_r5f_schedule_get(arghtos_task_id_t id)
 {
