@@ -279,6 +279,41 @@ static void test_sleep_wraparound(void)
     assert(arghtos_host_timer_deadline() == 0x00000010u);
 }
 
+static void test_mixed_timer_selection_prefers_earliest_deadline(void)
+{
+    arghtos_task_config_t tasks[2] = {
+        {task0, stack0, 100u, sizeof(stack0), 0u, 0u},
+        {task1, stack1, 0u, sizeof(stack1), 1u, 0u}
+    };
+    arghtos_config_t cfg = make_config(tasks, 2u);
+    arghtos_context_t ctx;
+
+    reset_all();
+    arghtos_host_set_time(1000u);
+    assert(arghtos_init(&cfg) == ARGHTOS_OK);
+    start_and_escape();
+    assert(arghtos_host_timer_deadline() == 1100u);
+
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
+    ctx = arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE);
+    assert(arghtos_test_kernel()->current_task == 0u);
+
+    arghtos_host_set_mode(ARGHTOS_HOST_TASK);
+    assert(arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
+    ctx = arghtos_kernel_dispatch(ctx);
+    assert(arghtos_test_kernel()->current_task == 1u);
+
+    assert(arghtos_sleep_for(50u) == ARGHTOS_OK);
+    assert(arghtos_host_timer_deadline() == 1050u);
+    assert(arghtos_kernel_dispatch(ctx) == ARGHTOS_CONTEXT_NONE);
+
+    arghtos_host_set_time(1050u);
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    arghtos_timer_interrupt();
+    assert(arghtos_host_timer_deadline() == 1100u);
+}
+
 static void test_periodic_delayed_release_catchup(void)
 {
     arghtos_task_config_t task = {
@@ -524,6 +559,7 @@ int main(void)
     test_wake_wait_handshake();
     test_sleep_is_timer_only_and_preserves_pending_wake();
     test_sleep_wraparound();
+    test_mixed_timer_selection_prefers_earliest_deadline();
     test_periodic_delayed_release_catchup();
     test_periodic_active_counts_all_missed_releases();
     test_equal_period_tie_uses_lowest_id();
