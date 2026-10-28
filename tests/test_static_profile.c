@@ -138,7 +138,16 @@ const arghtos_task_config_t arghtos_static_tasks[2] = {
 };
 #endif
 
+#if ARGHTOS_R5S_PRESEEDED_CRASH
+arghtos_crash_record_t arghtos_static_crash_record = {
+    .magic = ARGHTOS_CRASH_MAGIC,
+    .version = ARGHTOS_CRASH_VERSION,
+    .size = (uint16_t)sizeof(arghtos_crash_record_t),
+    .task_id = ARGHTOS_TASK_ID_INVALID
+};
+#else
 arghtos_crash_record_t arghtos_static_crash_record;
+#endif
 
 static void reset_all(void)
 {
@@ -178,7 +187,15 @@ static void reset_all(void)
 #endif
 #endif
     arghtos_host_reset();
+#if ARGHTOS_R5S_PRESEEDED_CRASH
     memset(&arghtos_static_crash_record, 0, sizeof(arghtos_static_crash_record));
+    arghtos_static_crash_record.magic = ARGHTOS_CRASH_MAGIC;
+    arghtos_static_crash_record.version = ARGHTOS_CRASH_VERSION;
+    arghtos_static_crash_record.size = (uint16_t)sizeof(arghtos_crash_record_t);
+    arghtos_static_crash_record.task_id = ARGHTOS_TASK_ID_INVALID;
+#else
+    memset(&arghtos_static_crash_record, 0, sizeof(arghtos_static_crash_record));
+#endif
 }
 
 static void start_and_escape(void)
