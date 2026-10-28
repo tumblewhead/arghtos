@@ -55,7 +55,7 @@
 #endif
 
 #if !ARGHTOS_RUNTIME_PROFILING && !ARGHTOS_MINIMAL_VALIDATION
-#error "profiling may be disabled only in the R4a-on-R3c experimental profile"
+#error "profiling may be disabled only in the minimum-size production profile"
 #endif
 
 #if ARGHTOS_STATIC_CONFIG
