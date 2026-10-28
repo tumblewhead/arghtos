@@ -21,7 +21,7 @@ It protects synchronous compile-time RMS tasks and schedules asynchronous event 
 * Use MSP for kernel/handler execution and PSP for tasks.
 * No dynamic allocation.
 * Thin hardware handlers activate predeclared async workers.
-* Keep Cortex-specific mechanism separate from scheduling policy.
+* Keep the portable kernel architecture-neutral: every CPU/MCU-specific mechanism lives behind the abstract port interface.
 * Preserve traceability to P0-P7.
 
 # Concrete v1 baseline
@@ -67,7 +67,7 @@ flowchart LR
   STATE["Runtime state"]
   POLICY["RMS + async policy"]
   PEND["PendSV"]
-  PORT["Cortex-M23 port"]
+  PORT["Selected target port<br/>Cortex-M23 reference"]
   TIMER["Timer handler"]
   DEV["Device handler"]
   DIAG["Crash/profile"]
@@ -171,3 +171,25 @@ stateDiagram-v2
 ArghtOS owns scheduling semantics, task execution ownership, scheduler metadata, profiling, and crash capture.
 
 Device semantics, application event storage, application task bodies/stacks, WCET evidence, and total system SRAM integration remain outside the kernel, but are reported by S0.
+
+# Portability architecture
+
+The kernel/port split is now a hard architecture boundary:
+
+```mermaid
+flowchart LR
+  APP["Application"] --> API["arghtos.h"]
+  API --> K["Portable C11 kernel"]
+  K --> PI["arghtos_port.h<br/>abstract port ABI"]
+
+  PI --> H["Host verification port"]
+  PI --> M23["Cortex-M23 reference port"]
+  PI --> FUT["Future CPU/MCU port"]
+
+  M23 --> ASM["target context assembly"]
+  M23 --> HW["timer / exception / low-power hardware"]
+```
+
+`src/arghtos_kernel.c` must compile unchanged against every port.
+
+Target selection occurs by choosing one `port/<target>/` implementation at build time, never by target `#ifdef` branches in portable scheduler code.
