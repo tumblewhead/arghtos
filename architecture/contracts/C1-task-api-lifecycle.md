@@ -207,3 +207,28 @@ The initial frame LR points to a separate fatal return guard so an impossible re
 # Boundary specification
 
 C1 changes scheduler lifecycle state only. It does not define device-event storage, task selection policy, timer hardware, or CPU context mechanics.
+
+# R3 minimum-footprint production profile
+
+The generic/debug profile retains the documented context, class, and sleep-range error returns.
+
+For the R3 production profile, valid-use semantics are unchanged, but selected misuse checks become preconditions:
+
+## R3a
+
+* task APIs are called only from TASK context.
+
+## R3b
+
+* WAIT and SLEEP are called only by async tasks;
+* TASK_RETURN is generated only for periodic tasks;
+* task wake IDs identify configured async tasks.
+
+## R3c
+
+* `sleep_for(dt)` receives `dt < ARGHTOS_TIME_HALF_RANGE`;
+* future `sleep_until(t)` deadlines lie within the legal half-range horizon.
+
+Violating these preconditions in the R3c production profile is outside the supported runtime contract. The generic/debug profile remains the verification surface for those misuse cases.
+
+Wake/wait race semantics, sleep timer-only behavior, and all valid lifecycle transitions are unchanged.
