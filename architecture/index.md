@@ -24,3 +24,7 @@ flowchart TB
 ```
 
 Architecture may refine implementation detail, but it must not silently weaken a proof or contract.
+
+## Next-stage implementation design
+
+* [Code-module design elements](../design-elements/) - D00-D11 implementation-module designs derived from the audited architecture and contracts.
