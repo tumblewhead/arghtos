@@ -490,7 +490,9 @@ ARGHTOS_NORETURN void arghtos_start(void)
 {
     arghtos_time_t start;
     arghtos_irq_key_t key;
-#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+#if ARGHTOS_SIZE_FIRST_START_TIMER
+    uint32_t earliest_period = UINT32_MAX;
+#elif ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
     arghtos_time_t earliest = 0u;
     uint32_t earliest_delta = UINT32_MAX;
 #else
@@ -512,6 +514,16 @@ ARGHTOS_NORETURN void arghtos_start(void)
     kernel.start_time = start;
 
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
+#if ARGHTOS_SIZE_FIRST_START_TIMER
+        const uint32_t period = ARGHTOS_TASK_PERIOD(id);
+        if (period != 0u) {
+            ARGHTOS_CTRL_SET_STATE(&controls[id], ARGHTOS_TASK_READY);
+            controls[id].next_time = start + period;
+            if (period < earliest_period) {
+                earliest_period = period;
+            }
+        }
+#else
         if (task_is_periodic(id)) {
             ARGHTOS_CTRL_SET_STATE(&controls[id], ARGHTOS_TASK_READY);
             controls[id].next_time = start + ARGHTOS_TASK_PERIOD(id);
@@ -523,16 +535,21 @@ ARGHTOS_NORETURN void arghtos_start(void)
                            &have_timer, &earliest, &earliest_delta);
 #endif
         }
+#endif
     }
 
     kernel.flags |= ARGHTOS_KF_STARTED;
 
-#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+#if ARGHTOS_SIZE_FIRST_START_TIMER
+    if (earliest_period != UINT32_MAX) {
+        arghtos_port_timer_arm(start + earliest_period);
+#elif ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
     if (earliest_delta != UINT32_MAX) {
+        arghtos_port_timer_arm(earliest);
 #else
     if (have_timer) {
-#endif
         arghtos_port_timer_arm(earliest);
+#endif
     } else {
         arghtos_port_timer_disarm();
     }
