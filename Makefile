@@ -4,6 +4,7 @@ PYTHON ?= python3
 BUILD ?= build
 M23_ARGHTOS_MSP ?= 104
 M23_ARGHTOS_MSP_LTO ?= 88
+M23_ARGHTOS_MSP_OMIT_FP ?= 80
 
 HOST_CFLAGS := -std=c11 -Wall -Wextra -Werror -O2 -DARGHTOS_TEST \
 	-Iinclude -Isrc -Iport/host
@@ -981,7 +982,7 @@ m23-footprint-r4n: | $(BUILD)
 		$(BUILD)/m23_footprint_r4n.o
 	size -A $(BUILD)/m23-r4n.elf
 	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r4n.map \
-		--msp $(M23_ARGHTOS_MSP_LTO) --json \
+		--msp $(M23_ARGHTOS_MSP_OMIT_FP) --json \
 		> $(BUILD)/footprint-r4n.json
 	cat $(BUILD)/footprint-r4n.json
 
