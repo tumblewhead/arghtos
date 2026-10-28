@@ -220,3 +220,31 @@ A long-duration target test must prove periodic stack high water does not grow w
 # Boundary specification
 
 D08 owns task-entry wrapping and return semantics only. It does not determine release time, scheduling winner, or context-save instructions.
+
+# R4u minimum-size trampoline argument
+
+In the minimum-size R4u profile the private trampoline signature becomes:
+
+```c
+_Noreturn void arghtos_task_start_trampoline(arghtos_task_fn_t entry);
+```
+
+The Cortex-M23 initial frame supplies `entry` in R0.
+
+For periodic tasks, the trampoline retains this function pointer as ordinary C
+state while it repeatedly:
+
+```text
+call entry
+TASK_RETURN service
+suspend until next release
+resume
+call entry again
+```
+
+The generated Cortex-M23 code keeps the entry pointer in R4. R4 is already
+preserved by the normal task context save/restore, so R4u introduces no extra
+persistent task-stack storage and does not enlarge the scheduler context frame.
+
+Async return behavior is unchanged: one entry call is made, and return enters
+`ARGHTOS_FAULT_ASYNC_RETURNED`.
