@@ -343,7 +343,7 @@ static bool process_time_locked(arghtos_time_t now)
     return changed;
 }
 
-#if ARGHTOS_R5C_COMPACT_WAKE_RESULT
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
 #define ARGHTOS_WAKE_DISPATCH_BIT 0x08u
 #define ARGHTOS_WAKE_RESULT_MASK  0x07u
 _Static_assert(ARGHTOS_ERR_BAD_CONFIG <= ARGHTOS_WAKE_RESULT_MASK,
@@ -652,7 +652,7 @@ arghtos_result_t arghtos_wake(arghtos_task_id_t task_id)
 arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 {
     arghtos_irq_key_t key;
-#if ARGHTOS_R5C_COMPACT_WAKE_RESULT
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     uint8_t wake_result;
 #else
     arghtos_result_t result;
@@ -674,14 +674,14 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     }
 #endif
 
-#if ARGHTOS_R5C_COMPACT_WAKE_RESULT
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     wake_result = wake_locked_compact(task_id);
 #else
     dispatch = wake_locked(task_id, &result);
 #endif
     arghtos_port_critical_exit(key);
 
-#if ARGHTOS_R5C_COMPACT_WAKE_RESULT
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     if ((wake_result & ARGHTOS_WAKE_DISPATCH_BIT) != 0u) {
         arghtos_port_request_dispatch();
     }
@@ -730,6 +730,82 @@ arghtos_result_t arghtos_profile_get(
 }
 #endif
 
+#if ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
+{
+    arghtos_irq_key_t key;
+    const arghtos_task_id_t self = kernel.current_task;
+    uint8_t outcome = ARGHTOS_OK;
+
+    key = arghtos_port_critical_enter();
+
+    switch (service_id) {
+    case ARGHTOS_SERVICE_YIELD:
+        ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_READY);
+        if (task_is_async(self)) {
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
+        }
+        outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+        break;
+
+    case ARGHTOS_SERVICE_WAIT:
+        if (ARGHTOS_CTRL_WAKE_PENDING_ID(self)) {
+            ARGHTOS_CTRL_CLEAR_WAKE_ID(self);
+        } else {
+            ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_WAITING);
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
+            outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+        }
+        break;
+
+    case ARGHTOS_SERVICE_SLEEP_UNTIL:
+        {
+            const arghtos_time_t now = arghtos_port_time_now();
+            const arghtos_time_t deadline = (arghtos_time_t)arg0;
+#if !ARGHTOS_MINIMAL_VALIDATION
+            const uint32_t delta = deadline - now;
+#endif
+
+            if (time_due(now, deadline)) {
+                break;
+            }
+#if !ARGHTOS_MINIMAL_VALIDATION
+            if (!duration_valid(delta)) {
+                outcome = ARGHTOS_ERR_BAD_TIME;
+                break;
+            }
+#endif
+            ARGHTOS_CTRL_NEXT(&controls[self]) = deadline;
+            ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
+            (void)process_time_locked(now);
+            outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+        }
+        break;
+
+    case ARGHTOS_SERVICE_WAKE:
+        outcome = wake_locked_compact((arghtos_task_id_t)arg0);
+        break;
+
+    case ARGHTOS_SERVICE_TASK_RETURN:
+        ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_DORMANT);
+        outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+        break;
+
+    default:
+        arghtos_port_critical_exit(key);
+        arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+    }
+
+    arghtos_port_critical_exit(key);
+
+    if ((outcome & ARGHTOS_WAKE_DISPATCH_BIT) != 0u) {
+        arghtos_port_request_dispatch();
+    }
+
+    return (arghtos_result_t)(outcome & ARGHTOS_WAKE_RESULT_MASK);
+}
+#else
 arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 {
     arghtos_irq_key_t key;
@@ -805,7 +881,7 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
         break;
 
     case ARGHTOS_SERVICE_WAKE:
-#if ARGHTOS_R5C_COMPACT_WAKE_RESULT
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
         {
             const uint8_t wake_result =
                 wake_locked_compact((arghtos_task_id_t)arg0);
@@ -841,6 +917,8 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 
     return result;
 }
+
+#endif
 
 arghtos_task_id_t arghtos_select_next(void)
 {
