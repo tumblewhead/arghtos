@@ -56,6 +56,37 @@ static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
 #endif
 static arghtos_kernel_state_t kernel;
 
+#if ARGHTOS_ID_NATIVE_META
+#define ARGHTOS_CTRL_AGE_ID(id)    (arghtos_static_meta[(id)].age_credit)
+#define ARGHTOS_CTRL_STATUS_ID(id) (arghtos_static_meta[(id)].status)
+#else
+#define ARGHTOS_CTRL_AGE_ID(id)    ARGHTOS_CTRL_AGE(&controls[(id)])
+#define ARGHTOS_CTRL_STATUS_ID(id) ARGHTOS_CTRL_STATUS(&controls[(id)])
+#endif
+
+#define ARGHTOS_CTRL_STATE_ID(id) \
+    ((uint8_t)(ARGHTOS_CTRL_STATUS_ID(id) & ARGHTOS_CTRL_STATE_MASK))
+
+#define ARGHTOS_CTRL_SET_STATE_ID(id, v) do { \
+    ARGHTOS_CTRL_STATUS_ID(id) = (uint8_t)( \
+        (ARGHTOS_CTRL_STATUS_ID(id) & (uint8_t)~ARGHTOS_CTRL_STATE_MASK) | \
+        ((uint8_t)(v) & ARGHTOS_CTRL_STATE_MASK)); \
+} while (0)
+
+#define ARGHTOS_CTRL_WAKE_PENDING_ID(id) \
+    ((ARGHTOS_CTRL_STATUS_ID(id) & ARGHTOS_CTRL_WAKE_MASK) != 0u)
+#define ARGHTOS_CTRL_SET_WAKE_ID(id) \
+    (ARGHTOS_CTRL_STATUS_ID(id) |= ARGHTOS_CTRL_WAKE_MASK)
+#define ARGHTOS_CTRL_CLEAR_WAKE_ID(id) \
+    (ARGHTOS_CTRL_STATUS_ID(id) &= (uint8_t)~ARGHTOS_CTRL_WAKE_MASK)
+#define ARGHTOS_CTRL_MISSED_ID(id) \
+    ((uint8_t)(ARGHTOS_CTRL_STATUS_ID(id) >> ARGHTOS_CTRL_MISSED_SHIFT))
+#define ARGHTOS_CTRL_SET_MISSED_ID(id, v) do { \
+    ARGHTOS_CTRL_STATUS_ID(id) = (uint8_t)( \
+        (ARGHTOS_CTRL_STATUS_ID(id) & 0x0Fu) | \
+        (((uint8_t)(v) & ARGHTOS_CTRL_MISSED_MAX) << ARGHTOS_CTRL_MISSED_SHIFT)); \
+} while (0)
+
 static bool time_due(arghtos_time_t now, arghtos_time_t t)
 {
     return (int32_t)(now - t) >= 0;
@@ -85,7 +116,7 @@ static bool task_is_async(arghtos_task_id_t id)
     return ARGHTOS_TASK_PERIOD(id) == 0u;
 }
 
-static void control_clear(arghtos_task_control_t *c)
+static void control_clear(arghtos_task_id_t id, arghtos_task_control_t *c)
 {
     c->context = ARGHTOS_CONTEXT_NONE;
     c->next_time = 0u;
@@ -96,10 +127,11 @@ static void control_clear(arghtos_task_control_t *c)
 #if ARGHTOS_RUNTIME_PROFILING
     c->max_run_ticks = 0u;
 #endif
-    ARGHTOS_CTRL_AGE(c) = 0u;
-    ARGHTOS_CTRL_STATUS(c) = 0u;
-    ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_DORMANT);
+    ARGHTOS_CTRL_AGE_ID(id) = 0u;
+    ARGHTOS_CTRL_STATUS_ID(id) = 0u;
+    ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_DORMANT);
 #else
+    (void)id;
     c->max_run_ticks = 0u;
     c->missed_release_count = 0u;
     ARGHTOS_CTRL_AGE(c) = 0u;
@@ -553,19 +585,19 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
     for (id = 0u; id < init_count; ++id) {
 #if ARGHTOS_UNIFIED_SLOT
         void *const stack_top = (void *)(uintptr_t)controls[id].context;
-        control_clear(&controls[id]);
+        control_clear(id, &controls[id]);
         controls[id].context = arghtos_port_build_initial_context_top(
             stack_top,
             arghtos_task_start_trampoline,
             arghtos_task_return_guard);
 #elif ARGHTOS_COMPACT_DESCRIPTOR
-        control_clear(&controls[id]);
+        control_clear(id, &controls[id]);
         controls[id].context = arghtos_port_build_initial_context_top(
             arghtos_static_tasks[id].stack_top,
             arghtos_task_start_trampoline,
             arghtos_task_return_guard);
 #else
-        control_clear(&controls[id]);
+        control_clear(id, &controls[id]);
         controls[id].context = arghtos_port_build_initial_context(
             init_tasks[id].stack_base,
             init_tasks[id].stack_size,
@@ -579,7 +611,7 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
     }
 
     for (; id < ARGHTOS_MAX_TASKS; ++id) {
-        control_clear(&controls[id]);
+        control_clear(id, &controls[id]);
     }
 
 #if !ARGHTOS_STATIC_CONFIG
@@ -1336,7 +1368,7 @@ void arghtos_test_reset(void)
     uint8_t id;
 
     for (id = 0u; id < ARGHTOS_MAX_TASKS; ++id) {
-        control_clear(&controls[id]);
+        control_clear(id, &controls[id]);
     }
 
 #if !ARGHTOS_SIZE_FIRST_NO_START_TIME
