@@ -2789,7 +2789,7 @@ m23-footprint-r5s: | $(BUILD)
 		-o $(BUILD)/m23_board_stub_r5s.o
 	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -c footprint/m23_prebuilt_stacks.S \
 		-o $(BUILD)/m23_prebuilt_stacks_r5s.o
-	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables \
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables -DARGHTOS_TRUSTED_CONFIG=1 \
 		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
 		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
 		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
