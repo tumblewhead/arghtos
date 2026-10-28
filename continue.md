@@ -28,10 +28,11 @@ Final R4 control:
 ```text
 R4y frozen control             = 2294 B
 R5a accepted minimum            = 2290 B
-linked before MSP               = 2210 B
+R5b accepted minimum            = 2286 B
+linked before MSP               = 2206 B
 ArghtOS-only MSP                =   80 B
 soft target                     = 1536 B
-remaining gap                   =  754 B
+remaining gap                   =  750 B
 ```
 
 The final same-revision profiling-enabled R3c reference on the frozen R4 source
@@ -95,63 +96,69 @@ unchanged and the 80 B MSP bound remains valid.
 See
 [implementation/R5a-compact-pendsv-tail.md](implementation/R5a-compact-pendsv-tail.md).
 
-## Exact next action: R5b compact EXC_RETURN bit tests
+## R5b accepted result
 
-Keep R5a as same-revision control.
+Authoritative CI:
 
-R5b should add one assembly-only define on top of R5a.
+```text
+40670635274  success
 
-Current PendSV entry test:
-
-```asm
-mov  r3, lr
-movs r2, #4
-tst  r3, r2
-beq  1f
+R5a 2290 B
+R5b 2286 B
+saved   4 B
 ```
 
-R5b candidate:
+PendSV shrank 104 -> 102 B and HardFault 28 -> 26 B. MSP remains 80 B.
 
-```asm
-mov  r3, lr
-lsrs r3, r3, #3
-bcc  1f
+See
+[implementation/R5b-compact-exc-checks.md](implementation/R5b-compact-exc-checks.md).
+
+## R5c rejected result
+
+```text
+R5b 2286 B
+R5c 2286 B
+delta   0 B
 ```
 
-LSR #3 places original EXC_RETURN bit 2 in carry. Carry clear means bit 2 was
-zero, selecting the MSP/first-dispatch path. R3 is scratch after the test.
+Compact wake encoding shrank the wake helper by 12 B but enlarged
+`arghtos_kernel_service` by 12 B because the encoded value was immediately
+decoded back into separate result/dispatch locals.
 
-Current HardFault stack-selection test:
+See
+[implementation/R5c-compact-wake-result.md](implementation/R5c-compact-wake-result.md).
 
-```asm
-mov  r0, lr
-mrs  r2, msp
-mrs  r3, psp
-movs r1, #4
-tst  r0, r1
-beq  1f
+## Exact next action: R5d compact service outcome
+
+Keep R5b as accepted control.
+
+R5d should use one internal byte throughout the specialized minimum-profile
+`arghtos_kernel_service()`:
+
+```text
+bits 0..2  public result
+bit 3      request dispatch
 ```
 
-R5b candidate:
+Yield, wait, sleep, wake, and task-return should write this one byte directly.
 
-```asm
-mov  r0, lr
-mrs  r2, msp
-mrs  r3, psp
-lsrs r1, r0, #3
-bcc  1f
+The wake path should reuse the R5c compact wake helper, but **must not decode it
+back into separate locals inside the service switch**.
+
+After the critical section:
+
+```text
+if dispatch bit set -> request PendSV
+return low three result bits
 ```
-
-R0 retains the original EXC_RETURN value passed to the C hard-fault bridge.
 
 Acceptance:
 
-1. R5a remains control.
-2. R5b includes accepted R5a compaction plus only these bit-test changes.
-3. Run frozen host/sanitizer/portability gates.
-4. Link R5a/R5b same revision.
-5. Inspect PendSV/HardFault disassembly.
-6. Verify stack-selection semantics and MSP bound.
-7. Accept only if physical total <2290 B.
-8. Record result and refresh this file.
-
+1. Preserve R5b same-revision control.
+2. Add dedicated R5d host profile and Cortex-M23 target.
+3. Retain all public results and wake/state semantics.
+4. Run frozen host/sanitizer/portability gates.
+5. Compare service, wake helper, wake interrupt wrapper, and total linked size.
+6. Re-audit MSP if call frames change.
+7. Accept only if total <2286 B.
+8. Record and refresh this file.
