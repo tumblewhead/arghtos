@@ -124,6 +124,26 @@ void arghtos_timer_interrupt(void);
 
 for invocation by the selected timer vector/adapter.
 
+# Private kernel-to-port callback header: arghtos_kernel_port.h
+
+This header is architecture-neutral and may be included by a selected port implementation. It declares only callbacks from the port into the portable kernel:
+
+```c
+arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context);
+
+arghtos_result_t arghtos_kernel_service(
+    uint8_t service_id,
+    uint32_t arg0);
+
+void arghtos_timer_interrupt(void);
+
+_Noreturn void arghtos_fatal(
+    arghtos_fault_reason_t reason,
+    const void *port_fault_context);
+```
+
+`port_fault_context` is opaque to portable code. The selected port owns its layout.
+
 # Kernel-private header: arghtos_internal.h
 
 This header may contain:
@@ -148,23 +168,20 @@ Representative required internal symbols:
 
 ```c
 arghtos_task_id_t arghtos_select_next(void);
-uintptr_t arghtos_kernel_dispatch(uintptr_t outgoing_saved_psp);
+
 
 arghtos_result_t arghtos_kernel_service(
     uint8_t service_id,
     uint32_t arg0);
 
-_Noreturn void arghtos_fatal(
-    arghtos_fault_reason_t reason,
-    const arghtos_exception_frame_t *exception_frame,
-    uint32_t exc_return);
+
 ```
 
 # Visibility rule
 
 Application translation units may include `arghtos.h`.
 
-Port translation units may include both `arghtos.h` and `arghtos_port.h`, plus target-private headers under `port/<target>/`.
+Port translation units may include `arghtos.h`, `arghtos_port.h`, `arghtos_kernel_port.h`, and target-private headers under `port/<target>/`.
 
 Portable kernel translation units may include `arghtos_internal.h` and the architecture-neutral `arghtos_port.h`, but no target-private header.
 
