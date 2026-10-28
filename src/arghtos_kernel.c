@@ -56,6 +56,7 @@ static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
 #endif
 static arghtos_kernel_state_t kernel;
 
+#if ARGHTOS_COMPACT_RUNTIME
 #if ARGHTOS_ID_NATIVE_META
 #define ARGHTOS_CTRL_AGE_ID(id)    (arghtos_static_meta[(id)].age_credit)
 #define ARGHTOS_CTRL_STATUS_ID(id) (arghtos_static_meta[(id)].status)
@@ -66,13 +67,11 @@ static arghtos_kernel_state_t kernel;
 
 #define ARGHTOS_CTRL_STATE_ID(id) \
     ((uint8_t)(ARGHTOS_CTRL_STATUS_ID(id) & ARGHTOS_CTRL_STATE_MASK))
-
 #define ARGHTOS_CTRL_SET_STATE_ID(id, v) do { \
     ARGHTOS_CTRL_STATUS_ID(id) = (uint8_t)( \
         (ARGHTOS_CTRL_STATUS_ID(id) & (uint8_t)~ARGHTOS_CTRL_STATE_MASK) | \
         ((uint8_t)(v) & ARGHTOS_CTRL_STATE_MASK)); \
 } while (0)
-
 #define ARGHTOS_CTRL_WAKE_PENDING_ID(id) \
     ((ARGHTOS_CTRL_STATUS_ID(id) & ARGHTOS_CTRL_WAKE_MASK) != 0u)
 #define ARGHTOS_CTRL_SET_WAKE_ID(id) \
@@ -86,6 +85,21 @@ static arghtos_kernel_state_t kernel;
         (ARGHTOS_CTRL_STATUS_ID(id) & 0x0Fu) | \
         (((uint8_t)(v) & ARGHTOS_CTRL_MISSED_MAX) << ARGHTOS_CTRL_MISSED_SHIFT)); \
 } while (0)
+#else
+#define ARGHTOS_CTRL_AGE_ID(id)    (controls[(id)].age_credit)
+#define ARGHTOS_CTRL_STATE_ID(id)  (controls[(id)].state)
+#define ARGHTOS_CTRL_SET_STATE_ID(id, v) \
+    (controls[(id)].state = (uint8_t)(v))
+#define ARGHTOS_CTRL_WAKE_PENDING_ID(id) \
+    ((controls[(id)].flags & ARGHTOS_TCF_WAKE_PENDING) != 0u)
+#define ARGHTOS_CTRL_SET_WAKE_ID(id) \
+    (controls[(id)].flags |= ARGHTOS_TCF_WAKE_PENDING)
+#define ARGHTOS_CTRL_CLEAR_WAKE_ID(id) \
+    (controls[(id)].flags &= (uint8_t)~ARGHTOS_TCF_WAKE_PENDING)
+#define ARGHTOS_CTRL_MISSED_ID(id) (controls[(id)].missed_release_count)
+#define ARGHTOS_CTRL_SET_MISSED_ID(id, v) \
+    (controls[(id)].missed_release_count = (uint8_t)(v))
+#endif
 
 static bool time_due(arghtos_time_t now, arghtos_time_t t)
 {
@@ -444,8 +458,6 @@ static bool process_time_locked(arghtos_time_t now)
 #if ARGHTOS_SIZE_FIRST_WAKE_RESULT_HOIST
 static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 {
-    arghtos_task_control_t *c;
-
 #if !ARGHTOS_SPECIALIZED_SERVICES
     if (!task_id_valid(id)) {
         *result = ARGHTOS_ERR_BAD_TASK_ID;
@@ -484,12 +496,11 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
     default:
         arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
     }
+    return false;
 }
 #else
 static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 {
-    arghtos_task_control_t *c;
-
 #if !ARGHTOS_SPECIALIZED_SERVICES
     if (!task_id_valid(id)) {
         *result = ARGHTOS_ERR_BAD_TASK_ID;
@@ -501,8 +512,6 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
         return false;
     }
 #endif
-
-    c = &controls[id];
 
     switch (ARGHTOS_CTRL_STATE_ID(id)) {
     case ARGHTOS_TASK_DORMANT:
@@ -530,6 +539,7 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
     default:
         arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
     }
+    return false;
 }
 #endif
 
