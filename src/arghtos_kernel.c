@@ -730,6 +730,65 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 
 arghtos_task_id_t arghtos_select_next(void)
 {
+#if ARGHTOS_SIZE_FIRST_SELECTOR
+    arghtos_task_id_t best = ARGHTOS_TASK_ID_INVALID;
+    uint32_t best_period = UINT32_MAX;
+    uint8_t id;
+
+    /* Ascending ID order supplies the equal-period tie break for free. */
+    for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
+        const uint32_t period = ARGHTOS_TASK_PERIOD(id);
+
+        if ((period != 0u) &&
+            (ARGHTOS_CTRL_STATE(&controls[id]) == ARGHTOS_TASK_READY) &&
+            (period < best_period)) {
+            best = id;
+            best_period = period;
+        }
+    }
+
+    if (best != ARGHTOS_TASK_ID_INVALID) {
+        return best;
+    }
+
+    {
+        uint8_t best_effective = 0u;
+        uint8_t best_age = 0u;
+
+        /*
+         * Cache the incumbent score instead of recomputing it for every
+         * challenger. Equal score/age keeps the first (lowest-ID) task.
+         */
+        for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
+            if (task_is_async(id) &&
+                (ARGHTOS_CTRL_STATE(&controls[id]) == ARGHTOS_TASK_READY)) {
+                uint8_t age = controls[id].age_credit;
+                const uint8_t ceiling =
+                    (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX;
+                uint16_t raised;
+                uint8_t effective;
+
+                if (age != UINT8_MAX) {
+                    ++age;
+                    controls[id].age_credit = age;
+                }
+
+                raised = (uint16_t)ARGHTOS_TASK_PRIORITY(id) +
+                         (uint16_t)age;
+                effective = (raised > ceiling) ? ceiling : (uint8_t)raised;
+
+                if ((effective > best_effective) ||
+                    ((effective == best_effective) && (age > best_age))) {
+                    best = id;
+                    best_effective = effective;
+                    best_age = age;
+                }
+            }
+        }
+    }
+
+    return best;
+#else
     arghtos_task_id_t best = ARGHTOS_TASK_ID_INVALID;
     uint8_t id;
 
@@ -790,6 +849,7 @@ arghtos_task_id_t arghtos_select_next(void)
     }
 
     return best;
+#endif
 }
 
 arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
