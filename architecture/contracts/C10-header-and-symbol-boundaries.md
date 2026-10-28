@@ -134,6 +134,10 @@ Representative required internal symbols:
 arghtos_task_id_t arghtos_select_next(void);
 uintptr_t arghtos_kernel_dispatch(uintptr_t outgoing_saved_psp);
 
+arghtos_result_t arghtos_kernel_service(
+    uint8_t service_id,
+    uint32_t arg0);
+
 _Noreturn void arghtos_fatal(
     arghtos_fault_reason_t reason,
     const arghtos_exception_frame_t *exception_frame,
