@@ -255,3 +255,43 @@ saving                   227 B
 ```
 
 The option is a footprint configuration, not a change to scheduler semantics.
+
+# R5s generated crash-record preseed refinement
+
+The trusted generated minimum-size profile may materialize the required
+64-byte crash record with invariant fields already initialized before
+`arghtos_init()`:
+
+```text
+magic        = ARGHTOS_CRASH_MAGIC
+version      = ARGHTOS_CRASH_VERSION
+size         = sizeof(arghtos_crash_record_t)
+task_id      = ARGHTOS_TASK_ID_INVALID
+flags        = 0
+port_format  = 0
+port_words   = 0
+reserved     = 0
+port_state[] = 0
+commit_magic = 0
+```
+
+The record remains writable ArghtOS-resident storage and still counts in full
+against the resident-footprint budget.
+
+This refinement is permitted only when the generated startup mechanism
+materializes that image before scheduler initialization. The fatal path still:
+
+1. clears `commit_magic` before dynamic capture;
+2. writes dynamic reason, timestamp, task attribution, and port payload;
+3. bounds/marks the port payload exactly as the ordinary path does;
+4. executes the release fence;
+5. writes `ARGHTOS_CRASH_COMMIT_MAGIC` last.
+
+A successful fatal capture never returns. A recursive fatal reaches the
+terminal hook before beginning another capture. Therefore one runtime does not
+perform a second successful capture that would require re-zeroing the preseeded
+payload or invariant fields.
+
+Generic/debug and non-preseeded profiles retain explicit full record
+initialization in `arghtos_fatal()`. Post-reset export/persistence policy
+remains outside C5.
