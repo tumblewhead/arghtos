@@ -230,3 +230,29 @@ The R3c minimum-footprint production profile instead treats these as build/appli
 R3c still checks port initialization failure and initial-context construction failure.
 
 This specialization does not change behavior for valid startup sequences.
+
+# R5l generated prebuilt-context refinement
+
+The trusted generated minimum-size profile may supply each configured task with
+an already-built initial opaque target context instead of asking the portable
+kernel to construct that context at runtime.
+
+This refinement is allowed only when build/generator evidence establishes:
+
+* the task stack region and alignment satisfy the selected port contract;
+* the saved context token points inside that task's own stack;
+* the prebuilt frame is byte-equivalent to the frame that the selected port's
+  ordinary initial-context builder would produce for the same trampoline,
+  return guard, and task entry;
+* all mutable scheduler-owned runtime fields begin in their documented
+  initialization state;
+* unused generated slots, if any, begin zero/inactive;
+* the application startup mechanism materializes the prebuilt frame before
+  `arghtos_init()` executes.
+
+For Cortex-M23 R5l, the application-owned stack RAM size is unchanged. The
+trade is that the generated initial frame is load-initialized rather than
+`NOLOAD`, increasing load-image/startup initialization bytes.
+
+The public runtime-config ABI and generic/debug initialization path are
+unchanged.
