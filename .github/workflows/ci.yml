@@ -19,132 +19,50 @@ jobs:
       - name: Portable-source boundary
         run: make portability-check
 
-      - name: Host kernel tests
+      - name: Host generic kernel tests
         run: make host-test
 
-      - name: Host compact-profile tests
-        run: make host-test-compact
+      - name: Host accepted size-first selector tests
+        run: make host-test-size-selector
 
-      - name: Host linked-static-profile tests
-        run: make host-test-static
-
-      - name: Host R2a compact-runtime tests
-        run: make host-test-r2a
-
-      - name: Host R2b compact-descriptor tests
-        run: make host-test-r2b
-
-      - name: Host R2c unified-slot tests
-        run: make host-test-r2c
-
-      - name: Host R3a production-profile tests
-        run: make host-test-r3a
-
-      - name: Host R3b specialized-service tests
-        run: make host-test-r3b
-
-      - name: Host R3c minimal-validation tests
+      - name: Host profiling-enabled R3c reference
         run: make host-test-r3c
+
+      - name: Host accepted minimum-source profile R4u
+        run: make host-test-r4u
 
       - name: Host sanitizers
         run: make host-sanitize
 
-      - name: Cortex-M23 compile
+      - name: Cortex-M23 generic compile
         run: make m23-compile
 
-      - name: Cortex-M23 footprint baseline
-        run: make m23-footprint
-
-      - name: Cortex-M23 footprint compact R1a
-        run: make m23-footprint-compact
-
-      - name: Cortex-M23 footprint static R1b
-        run: make m23-footprint-static
-
-      - name: Cortex-M23 footprint compact runtime R2a
-        run: make m23-footprint-r2a
-
-      - name: Cortex-M23 footprint compact descriptor R2b
-        run: make m23-footprint-r2b
-
-      - name: Cortex-M23 footprint unified slot R2c
-        run: make m23-footprint-r2c
-
-      - name: Cortex-M23 footprint production profile R3a
-        run: make m23-footprint-r3a
-
-      - name: Cortex-M23 footprint specialized services R3b
-        run: make m23-footprint-r3b
-
-      - name: Cortex-M23 footprint minimal validation R3c
+      - name: Cortex-M23 profiling-enabled reference R3c
         run: make m23-footprint-r3c
+
+      - name: Cortex-M23 accepted minimum R4y
+        run: make m23-footprint-r4y
 
       - name: Symbol-size report
         run: |
-          nm -S --size-sort --radix=d build/m23.elf > build/m23-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-compact.elf > build/m23-compact-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-static.elf > build/m23-static-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r2a.elf > build/m23-r2a-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r2b.elf > build/m23-r2b-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r2c.elf > build/m23-r2c-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r3a.elf > build/m23-r3a-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r3b.elf > build/m23-r3b-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r3c.elf > build/m23-r3c-symbols.txt || true
-          echo '--- baseline ---'
-          cat build/footprint.json
-          echo '--- compact R1a ---'
-          cat build/footprint-compact.json
-          echo '--- static R1b ---'
-          cat build/footprint-static.json
-          echo '--- compact runtime R2a ---'
-          cat build/footprint-r2a.json
-          echo '--- compact runtime R2a ---'
-          cat build/footprint-r2a.json
-          echo '--- compact descriptor R2b ---'
-          cat build/footprint-r2b.json
-          echo '--- compact descriptor R2b ---'
-          cat build/footprint-r2b.json
-          echo '--- unified slot R2c ---'
-          cat build/footprint-r2c.json
-          echo '--- production profile R3a ---'
-          cat build/footprint-r3a.json
-          echo '--- specialized services R3b ---'
-          cat build/footprint-r3b.json
-          echo '--- minimal validation R3c ---'
-          cat build/footprint-r3c.json
-          echo '--- largest R3c symbols ---'
-          tail -80 build/m23-r3c-symbols.txt || true
+          for p in r3c r4y; do
+            nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
+            echo "--- $p footprint ---"
+            cat "build/footprint-$p.json"
+            echo "--- largest $p symbols ---"
+            tail -100 "build/m23-$p-symbols.txt" || true
+          done
 
-      - name: Upload footprint evidence
+      - name: Upload frozen R4 footprint evidence
         uses: actions/upload-artifact@v4
         with:
-          name: arghtos-i1-footprint
+          name: arghtos-r4-frozen-footprint
           path: |
-            build/footprint.json
-            build/footprint-compact.json
-            build/footprint-static.json
-            build/footprint-r2a.json
-            build/footprint-r2b.json
-            build/footprint-r2c.json
-            build/footprint-r3a.json
-            build/footprint-r3b.json
             build/footprint-r3c.json
-            build/m23.map
-            build/m23-compact.map
-            build/m23-static.map
-            build/m23-r2a.map
-            build/m23-r2b.map
-            build/m23-r2c.map
-            build/m23-r3a.map
-            build/m23-r3b.map
+            build/footprint-r4y.json
             build/m23-r3c.map
-            build/m23-symbols.txt
-            build/m23-compact-symbols.txt
-            build/m23-static-symbols.txt
-            build/m23-r2a-symbols.txt
-            build/m23-r2b-symbols.txt
-            build/m23-r2c-symbols.txt
-            build/m23-r3a-symbols.txt
-            build/m23-r3b-symbols.txt
+            build/m23-r4y.map
             build/m23-r3c-symbols.txt
+            build/m23-r4y-symbols.txt
+            build/m23-r4y.elf
             build/*.su

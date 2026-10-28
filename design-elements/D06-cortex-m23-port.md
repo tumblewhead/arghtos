@@ -456,3 +456,21 @@ A source audit should fail if any of those identifiers appear in `src/arghtos_ke
 # Boundary specification
 
 D06 owns the complete Cortex-M23 realization of the generic port ABI. It never decides scheduling policy, lifecycle semantics, or device event meaning.
+
+# R4u minimum-size initial R0 seeding
+
+The minimum-size R4u profile reuses one task-slot word for generated entry and
+runtime `next_time`.
+
+The Cortex-M23 port therefore seeds the entry pointer through the ordinary
+initial hardware frame:
+
+```text
+saved context word 8 = stacked R0 = application entry pointer
+```
+
+No new frame word is allocated. The existing 64-byte synthesized initial frame
+and 68-byte worst-case scheduler context reserve remain unchanged.
+
+The generic/debug and ordinary production profiles do not depend on this
+specialization.

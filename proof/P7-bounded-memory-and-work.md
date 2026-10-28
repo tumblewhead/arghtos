@@ -177,3 +177,23 @@ Evidence: CI run 40649991293 and
 
 The quantitative 1.5 KiB target still fails, but the failure is now dominated
 by executable code rather than by the static metadata lower bound.
+# R4a minimum-size profiling evidence
+
+Runtime profiling may now be omitted in the minimum-size production build.
+
+This changes the fixed build-time resident set but does not change P7's
+boundedness argument: both configurations remain statically bounded, contain no
+dynamic allocation, and retain the same bounded scheduler loops.
+
+Measured 24-task evidence:
+
+```text
+R3c profiling enabled   3072 B
+R4a profiling disabled  2845 B
+soft target             1536 B
+remaining excess        1309 B
+```
+
+R4a removes profiling-only counters, `run_start`, snapshot code, and execution
+accounting. It does not remove crash state, missed-release evidence, or async
+age credit.

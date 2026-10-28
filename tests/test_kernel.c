@@ -279,6 +279,41 @@ static void test_sleep_wraparound(void)
     assert(arghtos_host_timer_deadline() == 0x00000010u);
 }
 
+static void test_mixed_timer_selection_prefers_earliest_deadline(void)
+{
+    arghtos_task_config_t tasks[2] = {
+        {task0, stack0, 100u, sizeof(stack0), 0u, 0u},
+        {task1, stack1, 0u, sizeof(stack1), 1u, 0u}
+    };
+    arghtos_config_t cfg = make_config(tasks, 2u);
+    arghtos_context_t ctx;
+
+    reset_all();
+    arghtos_host_set_time(1000u);
+    assert(arghtos_init(&cfg) == ARGHTOS_OK);
+    start_and_escape();
+    assert(arghtos_host_timer_deadline() == 1100u);
+
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
+    ctx = arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE);
+    assert(arghtos_test_kernel()->current_task == 0u);
+
+    arghtos_host_set_mode(ARGHTOS_HOST_TASK);
+    assert(arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
+    ctx = arghtos_kernel_dispatch(ctx);
+    assert(arghtos_test_kernel()->current_task == 1u);
+
+    assert(arghtos_sleep_for(50u) == ARGHTOS_OK);
+    assert(arghtos_host_timer_deadline() == 1050u);
+    assert(arghtos_kernel_dispatch(ctx) == ARGHTOS_CONTEXT_NONE);
+
+    arghtos_host_set_time(1050u);
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    arghtos_timer_interrupt();
+    assert(arghtos_host_timer_deadline() == 1100u);
+}
+
 static void test_periodic_delayed_release_catchup(void)
 {
     arghtos_task_config_t task = {
@@ -329,6 +364,44 @@ static void test_periodic_active_counts_all_missed_releases(void)
     assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
     assert(c[0].next_time == 140u);
     assert(ARGHTOS_CTRL_MISSED(&c[0]) == 3u);
+}
+
+static void test_equal_period_tie_uses_lowest_id(void)
+{
+    arghtos_task_config_t tasks[2] = {
+        {task0, stack0, 10u, sizeof(stack0), 0u, 0u},
+        {task1, stack1, 10u, sizeof(stack1), 0u, 0u}
+    };
+    arghtos_config_t cfg = make_config(tasks, 2u);
+
+    reset_all();
+    assert(arghtos_init(&cfg) == ARGHTOS_OK);
+    start_and_escape();
+    assert(arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE) != ARGHTOS_CONTEXT_NONE);
+    assert(arghtos_test_kernel()->current_task == 0u);
+}
+
+static void test_equal_async_score_tie_uses_lowest_id(void)
+{
+    arghtos_task_config_t tasks[2] = {
+        {task0, stack0, 0u, sizeof(stack0), 2u, 0u},
+        {task1, stack1, 0u, sizeof(stack1), 2u, 0u}
+    };
+    arghtos_config_t cfg = make_config(tasks, 2u);
+    const arghtos_task_control_t *c;
+
+    reset_all();
+    assert(arghtos_init(&cfg) == ARGHTOS_OK);
+    start_and_escape();
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    assert(arghtos_wake_from_interrupt(0u) == ARGHTOS_OK);
+    assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
+
+    assert(arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE) != ARGHTOS_CONTEXT_NONE);
+    c = arghtos_test_controls();
+    assert(arghtos_test_kernel()->current_task == 0u);
+    assert(c[0].age_credit == 0u);
+    assert(c[1].age_credit == 1u);
 }
 
 static void test_async_aging_eventually_beats_high_base_peer(void)
@@ -421,6 +494,33 @@ static void test_invalid_wake_id_does_not_mutate(void)
     assert(c[0].age_credit == before.age_credit);
 }
 
+static void assert_fault_attribution(
+    arghtos_fault_reason_t reason,
+    bool expected_faulted)
+{
+    jmp_buf env;
+
+    setup_one_async();
+    arghtos_host_set_fault_jmp(&env);
+    if (setjmp(env) == 0) {
+        arghtos_fatal(reason, NULL);
+        assert(!"fatal returned");
+    }
+    arghtos_host_set_fault_jmp(NULL);
+
+    assert((ARGHTOS_CTRL_STATE(&arghtos_test_controls()[0]) ==
+            ARGHTOS_TASK_FAULTED) == expected_faulted);
+}
+
+static void test_task_fault_attribution_set(void)
+{
+    assert_fault_attribution(ARGHTOS_FAULT_CONTEXT_CORRUPT, true);
+    assert_fault_attribution(ARGHTOS_FAULT_ASYNC_RETURNED, true);
+    assert_fault_attribution(ARGHTOS_FAULT_STACK_RANGE, true);
+    assert_fault_attribution(ARGHTOS_FAULT_CPU_EXCEPTION, true);
+    assert_fault_attribution(ARGHTOS_FAULT_BAD_SERVICE, false);
+}
+
 static void test_fatal_commits_generic_crash_record(void)
 {
     jmp_buf env;
@@ -459,12 +559,16 @@ int main(void)
     test_wake_wait_handshake();
     test_sleep_is_timer_only_and_preserves_pending_wake();
     test_sleep_wraparound();
+    test_mixed_timer_selection_prefers_earliest_deadline();
     test_periodic_delayed_release_catchup();
     test_periodic_active_counts_all_missed_releases();
+    test_equal_period_tie_uses_lowest_id();
+    test_equal_async_score_tie_uses_lowest_id();
     test_async_aging_eventually_beats_high_base_peer();
     test_periodic_selection_does_not_age_async();
     test_profile_snapshot_is_committed_only();
     test_invalid_wake_id_does_not_mutate();
+    test_task_fault_attribution_set();
     test_fatal_commits_generic_crash_record();
 
     puts("arghtos host kernel tests: PASS");

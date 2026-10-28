@@ -18,15 +18,26 @@ static void async_task(void) {}
 arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
     {
         .context = (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)],
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+        .entry_or_next.entry = periodic_task,
+#else
         .entry = periodic_task,
+#endif
         .schedule = ARGHTOS_STATIC_PERIOD(10u)
     },
     {
         .context = (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)],
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+        .entry_or_next.entry = async_task,
+#else
         .entry = async_task,
+#endif
         .schedule = ARGHTOS_STATIC_ASYNC(3u)
     }
 };
+#if ARGHTOS_SPLIT_META
+arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
+#endif
 #elif ARGHTOS_COMPACT_DESCRIPTOR
 const arghtos_static_task_t arghtos_static_tasks[2] = {
     { periodic_task, &stack0[sizeof(stack0)], ARGHTOS_STATIC_PERIOD(10u) },
@@ -49,6 +60,10 @@ static void reset_all(void)
         (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)];
     arghtos_static_slots[1].context =
         (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)];
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[0]) = periodic_task;
+    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[1]) = async_task;
+#endif
 #endif
     arghtos_host_reset();
     memset(&arghtos_static_crash_record, 0, sizeof(arghtos_static_crash_record));
@@ -74,11 +89,14 @@ static void test_static_init_ignores_runtime_config(void)
     arghtos_host_set_time(100u);
 
     assert(arghtos_init(NULL) == ARGHTOS_OK);
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+    assert(arghtos_host_initial_arg() == (uintptr_t)async_task);
+#endif
     start_and_escape();
 
     c = arghtos_test_controls();
     assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
-    assert(c[0].next_time == 110u);
+    assert(ARGHTOS_CTRL_NEXT(&c[0]) == 110u);
     assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_DORMANT);
     assert(arghtos_host_timer_is_armed());
     assert(arghtos_host_timer_deadline() == 110u);
@@ -101,6 +119,7 @@ static void test_static_dispatch_and_async_wake(void)
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
     assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_AGE(&c[1]) == 0u);
 
     arghtos_host_set_mode(ARGHTOS_HOST_TASK);
     assert(arghtos_port_service_call(
@@ -109,6 +128,7 @@ static void test_static_dispatch_and_async_wake(void)
 
     assert(arghtos_kernel_dispatch(periodic_context) == c[1].context);
     assert(arghtos_test_kernel()->current_task == 1u);
+    assert(ARGHTOS_CTRL_AGE(&c[1]) == 0u);
 }
 
 static void test_static_crash_record_symbol_is_used(void)
@@ -137,7 +157,9 @@ static void test_static_crash_record_symbol_is_used(void)
 static void test_compact_runtime_saturation(void)
 {
     const arghtos_task_control_t *ctrl;
+#if ARGHTOS_RUNTIME_PROFILING
     arghtos_task_profile_t p;
+#endif
     arghtos_context_t ctx;
 
     reset_all();
@@ -153,9 +175,11 @@ static void test_compact_runtime_saturation(void)
     ctx = arghtos_kernel_dispatch(ctx);
     assert(ctx == ctrl[0].context);
 
+#if ARGHTOS_RUNTIME_PROFILING
     arghtos_host_set_mode(ARGHTOS_HOST_TASK);
     assert(arghtos_profile_get(0u, &p) == ARGHTOS_OK);
     assert(p.max_run_ticks == UINT16_MAX);
+#endif
 
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     arghtos_host_set_time(1000u);

@@ -215,3 +215,43 @@ The R3 production profile assumes:
 The atomic snapshot operation and returned field semantics are unchanged for valid calls.
 
 Fatal-path integrity checks are not removed by R3.
+# Minimum-size production profiling option
+
+Runtime profiling is **optional** in the minimum-size production profile.
+
+The generic/debug profile and ordinary production profiles retain the public
+profiling ABI and accounting described above. A minimum-size production build
+may define:
+
+```c
+ARGHTOS_RUNTIME_PROFILING=0
+```
+
+In that profile only:
+
+* `arghtos_profile_get()` is not part of the linked public surface;
+* `total_cpu_ticks` and `max_run_ticks` are not retained per task;
+* the global profiling `run_start` timestamp is not retained;
+* dispatch does not perform execution-time accounting.
+
+This option does **not** remove or weaken:
+
+* the required 64-byte crash record;
+* fatal-path capture;
+* periodic missed-release evidence;
+* async age credit;
+* scheduler timing or release behavior.
+
+Applications selecting the minimum-size profile must not reference
+`arghtos_profile_get()`. The public header gates that declaration with
+`ARGHTOS_RUNTIME_PROFILING`.
+
+Measured R4a evidence at 24 tasks:
+
+```text
+profiling enabled R3c   3072 B
+profiling disabled R4a  2845 B
+saving                   227 B
+```
+
+The option is a footprint configuration, not a change to scheduler semantics.

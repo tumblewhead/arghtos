@@ -199,3 +199,72 @@ This replaces both the separate generic control array and the separate static
 descriptor array in the R2c profile.
 
 CI run 40649991293 validates the host and Cortex-M23 builds for this profile.
+# Minimum-size production no-profile slot
+
+When `ARGHTOS_RUNTIME_PROFILING=0` in the minimum-size unified-slot profile,
+the profiling-only fields are omitted.
+
+The retained slot is:
+
+```text
+context_or_initial_stack_top   4 B
+next_time                      4 B
+age_credit                     1 B
+status                         1 B
+alignment padding              2 B
+entry                          4 B
+schedule                       4 B
+---------------------------------
+total                         20 B/task
+```
+
+At 24 tasks:
+
+```text
+24 * 20 B = 480 B
+```
+
+The raw removal is six source-level bytes per task, but the physical saving is
+four bytes per task because `entry` and `schedule` retain 32-bit alignment.
+
+This representation is legal only for the minimum-size production profile.
+Missed-release count remains encoded in `status`; age credit remains scheduler
+state and is not optional.
+
+# Minimum-size R4u lifetime overlay
+
+The minimum-size R4u representation exploits non-overlapping lifetimes of
+generated task entry and runtime timing state.
+
+Per task:
+
+```text
+context_or_initial_stack_top   4 B
+entry_or_next_time             4 B
+schedule                       4 B
+----------------------------------
+core                          12 B
+
+age_credit                     1 B
+packed status                  1 B
+----------------------------------
+total                         14 B/task
+```
+
+At the 24-task default:
+
+```text
+14 * 24 = 336 B
+```
+
+Before initialization, the overlaid word contains the immutable application
+entry pointer. During initialization, the port copies that entry into the
+initial task context. The kernel then reuses the same resident word as
+`next_time`.
+
+The scheduler must never read the entry member after the overlay has transitioned
+to runtime timing state. The trampoline retains the entry value in task
+execution context instead.
+
+All 32-bit core fields remain naturally aligned. The two-byte age/status
+metadata remains in the separate R4s metadata array.

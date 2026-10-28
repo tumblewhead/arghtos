@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Report ArghtOS SRAM-resident footprint from an LLD map used by the M23 harness."""
+"""Report complete ArghtOS SRAM-resident footprint from an LLD map."""
 
 from __future__ import annotations
 
@@ -14,6 +14,25 @@ LINE_RE = re.compile(
 OUT_RE = re.compile(
     r"^(?P<vma>[0-9a-f]+)\s+[0-9a-f]+\s+(?P<size>[0-9a-f]+)\s+\d+\s+(?P<section>\.[A-Za-z0-9_.]+)$"
 )
+
+RESIDENT_OUTPUT_PREFIXES = (
+    ".text",
+    ".rodata",
+    ".data",
+    ".bss",
+    ".noinit",
+    ".arghtos_cfg",
+    ".arghtos_crash",
+    ".ARM.exidx",
+)
+
+APP_INPUT_PREFIXES = (
+    ".app_text",
+    ".app_rodata",
+    ".app_data",
+    ".app_bss",
+)
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -34,6 +53,7 @@ def main() -> int:
     output_sections: dict[str, int] = {}
     cfg = 0
     crash = 0
+    app_owned_inside_resident_outputs = 0
 
     for raw in lines:
         line = raw.strip()
@@ -53,14 +73,34 @@ def main() -> int:
         elif sec == ".arghtos_crash":
             crash += size
 
-        if sec.startswith((".text", ".rodata", ".data", ".bss")):
+        if sec.startswith(APP_INPUT_PREFIXES):
+            app_owned_inside_resident_outputs += size
+
+        if sec.startswith((".text", ".rodata", ".data", ".bss", ".noinit")):
             for bucket, needle in needles.items():
                 if needle in obj:
                     totals[bucket] += size
                     break
 
     linker_meta = output_sections.get(".ARM.exidx", 0)
-    core = sum(totals.values()) + cfg + crash + linker_meta + args.msp
+
+    # Authority for the total is physical output-section occupancy, not the sum
+    # of input symbols. This includes linker alignment/fill bytes and remains
+    # valid when LTO merges kernel/port objects into a synthetic lto.o.
+    resident_output_bytes = sum(
+        size
+        for section, size in output_sections.items()
+        if section.startswith(RESIDENT_OUTPUT_PREFIXES)
+    )
+    linked_arghtos_bytes = (
+        resident_output_bytes - app_owned_inside_resident_outputs
+    )
+    core = linked_arghtos_bytes + args.msp
+
+    attributed_without_msp = (
+        sum(totals.values()) + cfg + crash + linker_meta
+    )
+    unattributed_or_alignment = linked_arghtos_bytes - attributed_without_msp
 
     result = {
         "kernel_code_data": totals["kernel"],
@@ -70,6 +110,9 @@ def main() -> int:
         "task_descriptors": cfg,
         "crash_record": crash,
         "linker_resident_metadata": linker_meta,
+        "app_owned_excluded": app_owned_inside_resident_outputs,
+        "linked_arghtos_before_msp": linked_arghtos_bytes,
+        "unattributed_or_alignment": unattributed_or_alignment,
         "arghtos_only_msp": args.msp,
         "arghtos_resident_total": core,
         "soft_target": args.soft_target,
@@ -83,6 +126,7 @@ def main() -> int:
         for key, value in result.items():
             print(f"{key:28s} {value}")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

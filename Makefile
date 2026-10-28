@@ -3,6 +3,8 @@ CLANG ?= clang
 PYTHON ?= python3
 BUILD ?= build
 M23_ARGHTOS_MSP ?= 104
+M23_ARGHTOS_MSP_LTO ?= 88
+M23_ARGHTOS_MSP_OMIT_FP ?= 80
 
 HOST_CFLAGS := -std=c11 -Wall -Wextra -Werror -O2 -DARGHTOS_TEST \
 	-Iinclude -Isrc -Iport/host
@@ -13,7 +15,11 @@ M23_COMMON := --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -std=c11 \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -fstack-usage -Oz \
 	-Wall -Wextra -Werror -Iinclude -Isrc -Iport/cortex_m23
 
-.PHONY: all portability-check host-test host-test-compact host-test-static host-test-r2a host-test-r2b host-test-r2c host-test-r3a host-test-r3b host-test-r3c host-sanitize m23-compile m23-footprint m23-footprint-compact m23-footprint-static m23-footprint-r2a m23-footprint-r2b m23-footprint-r2c m23-footprint-r3a m23-footprint-r3b m23-footprint-r3c footprint-report clean
+
+
+.PHONY: all portability-check host-test host-test-size-selector host-test-r3c host-test-r4u host-sanitize m23-compile m23-footprint m23-footprint-r3c m23-footprint-r4y footprint-report clean
+
+
 
 all: portability-check host-test m23-compile
 
@@ -27,61 +33,10 @@ host-test: | $(BUILD)
 	$(HOST_CC) $(HOST_CFLAGS) $(HOST_SRCS) -o $(BUILD)/host-tests
 	$(BUILD)/host-tests
 
-host-test-compact: | $(BUILD)
-	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 $(HOST_SRCS) \
-		-o $(BUILD)/host-tests-compact
-	$(BUILD)/host-tests-compact
-
-host-test-static: | $(BUILD)
-	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=2 \
-		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
-		-o $(BUILD)/host-tests-static
-	$(BUILD)/host-tests-static
-
-host-test-r2a: | $(BUILD)
-	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=2 \
-		-DARGHTOS_COMPACT_RUNTIME=1 \
-		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
-		-o $(BUILD)/host-tests-r2a
-	$(BUILD)/host-tests-r2a
-
-host-test-r2b: | $(BUILD)
-	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=2 \
-		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
-		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
-		-o $(BUILD)/host-tests-r2b
-	$(BUILD)/host-tests-r2b
-
-host-test-r2c: | $(BUILD)
-	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=2 \
-		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
-		-DARGHTOS_UNIFIED_SLOT=1 \
-		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
-		-o $(BUILD)/host-tests-r2c
-	$(BUILD)/host-tests-r2c
-
-host-test-r3a: | $(BUILD)
-	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=2 \
-		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
-		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
-		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
-		-o $(BUILD)/host-tests-r3a
-	$(BUILD)/host-tests-r3a
-
-host-test-r3b: | $(BUILD)
-	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=2 \
-		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
-		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
-		-DARGHTOS_SPECIALIZED_SERVICES=1 \
-		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
-		-o $(BUILD)/host-tests-r3b
-	$(BUILD)/host-tests-r3b
+host-test-size-selector: | $(BUILD)
+	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_SIZE_FIRST_SELECTOR=1 $(HOST_SRCS) \
+		-o $(BUILD)/host-tests-size-selector
+	$(BUILD)/host-tests-size-selector
 
 host-test-r3c: | $(BUILD)
 	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
@@ -92,6 +47,19 @@ host-test-r3c: | $(BUILD)
 		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
 		-o $(BUILD)/host-tests-r3c
 	$(BUILD)/host-tests-r3c
+
+host-test-r4u: | $(BUILD)
+	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
+		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=2 \
+		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
+		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
+		-DARGHTOS_SPECIALIZED_SERVICES=1 -DARGHTOS_MINIMAL_VALIDATION=1 \
+		-DARGHTOS_RUNTIME_PROFILING=0 -DARGHTOS_SIZE_FIRST_SELECTOR=1 \
+		-DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 -DARGHTOS_SIZE_FIRST_NO_START_TIME=1 \
+		-DARGHTOS_SPLIT_META=1 -DARGHTOS_ENTRY_NEXT_OVERLAY=1 \
+		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
+		-o $(BUILD)/host-tests-r4u
+	$(BUILD)/host-tests-r4u
 
 host-sanitize: | $(BUILD)
 	$(HOST_CC) -std=c11 -Wall -Wextra -Werror -O1 -g \
@@ -121,223 +89,6 @@ m23-footprint: m23-compile
 		--msp $(M23_ARGHTOS_MSP) --json \
 		> $(BUILD)/footprint.json
 	cat $(BUILD)/footprint.json
-
-
-m23-footprint-compact: | $(BUILD)
-	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 -c src/arghtos_kernel.c \
-		-o $(BUILD)/arghtos_kernel_m23_compact.o
-	$(CLANG) $(M23_COMMON) -c port/cortex_m23/arghtos_port.c \
-		-o $(BUILD)/arghtos_port_m23_compact.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
-		-ffunction-sections -c port/cortex_m23/arghtos_context.S \
-		-o $(BUILD)/arghtos_context_m23_compact.o
-	$(CLANG) $(M23_COMMON) -c footprint/m23_board_stub.c \
-		-o $(BUILD)/m23_board_stub_compact.o
-	$(CLANG) $(M23_COMMON) -c footprint/m23_footprint.c \
-		-o $(BUILD)/m23_footprint_compact.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib \
-		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-compact.map \
-		-Wl,-T,footprint/m23.ld -o $(BUILD)/m23-compact.elf \
-		$(BUILD)/arghtos_kernel_m23_compact.o \
-		$(BUILD)/arghtos_port_m23_compact.o \
-		$(BUILD)/arghtos_context_m23_compact.o \
-		$(BUILD)/m23_board_stub_compact.o \
-		$(BUILD)/m23_footprint_compact.o
-	size -A $(BUILD)/m23-compact.elf
-	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-compact.map \
-		--msp $(M23_ARGHTOS_MSP) --json \
-		> $(BUILD)/footprint-compact.json
-	cat $(BUILD)/footprint-compact.json
-
-
-m23-footprint-static: | $(BUILD)
-	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
-		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_static.o
-	$(CLANG) $(M23_COMMON) -c port/cortex_m23/arghtos_port.c \
-		-o $(BUILD)/arghtos_port_m23_static.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
-		-ffunction-sections -c port/cortex_m23/arghtos_context.S \
-		-o $(BUILD)/arghtos_context_m23_static.o
-	$(CLANG) $(M23_COMMON) -c footprint/m23_board_stub.c \
-		-o $(BUILD)/m23_board_stub_static.o
-	$(CLANG) $(M23_COMMON) -DARGHTOS_STATIC_CONFIG=1 \
-		-DARGHTOS_STATIC_TASK_COUNT=24 \
-		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_static.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib \
-		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-static.map \
-		-Wl,-T,footprint/m23.ld -o $(BUILD)/m23-static.elf \
-		$(BUILD)/arghtos_kernel_m23_static.o \
-		$(BUILD)/arghtos_port_m23_static.o \
-		$(BUILD)/arghtos_context_m23_static.o \
-		$(BUILD)/m23_board_stub_static.o \
-		$(BUILD)/m23_footprint_static.o
-	size -A $(BUILD)/m23-static.elf
-	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-static.map \
-		--msp $(M23_ARGHTOS_MSP) --json \
-		> $(BUILD)/footprint-static.json
-	cat $(BUILD)/footprint-static.json
-
-
-m23-footprint-r2a: | $(BUILD)
-	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
-		-DARGHTOS_COMPACT_RUNTIME=1 \
-		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_r2a.o
-	$(CLANG) $(M23_COMMON) -c port/cortex_m23/arghtos_port.c \
-		-o $(BUILD)/arghtos_port_m23_r2a.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
-		-ffunction-sections -c port/cortex_m23/arghtos_context.S \
-		-o $(BUILD)/arghtos_context_m23_r2a.o
-	$(CLANG) $(M23_COMMON) -c footprint/m23_board_stub.c \
-		-o $(BUILD)/m23_board_stub_r2a.o
-	$(CLANG) $(M23_COMMON) -DARGHTOS_STATIC_CONFIG=1 \
-		-DARGHTOS_STATIC_TASK_COUNT=24 -DARGHTOS_COMPACT_RUNTIME=1 \
-		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_r2a.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib \
-		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-r2a.map \
-		-Wl,-T,footprint/m23.ld -o $(BUILD)/m23-r2a.elf \
-		$(BUILD)/arghtos_kernel_m23_r2a.o \
-		$(BUILD)/arghtos_port_m23_r2a.o \
-		$(BUILD)/arghtos_context_m23_r2a.o \
-		$(BUILD)/m23_board_stub_r2a.o \
-		$(BUILD)/m23_footprint_r2a.o
-	size -A $(BUILD)/m23-r2a.elf
-	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r2a.map \
-		--msp $(M23_ARGHTOS_MSP) --json \
-		> $(BUILD)/footprint-r2a.json
-	cat $(BUILD)/footprint-r2a.json
-
-
-m23-footprint-r2b: | $(BUILD)
-	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
-		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
-		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_r2b.o
-	$(CLANG) $(M23_COMMON) -c port/cortex_m23/arghtos_port.c \
-		-o $(BUILD)/arghtos_port_m23_r2b.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
-		-ffunction-sections -c port/cortex_m23/arghtos_context.S \
-		-o $(BUILD)/arghtos_context_m23_r2b.o
-	$(CLANG) $(M23_COMMON) -c footprint/m23_board_stub.c \
-		-o $(BUILD)/m23_board_stub_r2b.o
-	$(CLANG) $(M23_COMMON) -DARGHTOS_STATIC_CONFIG=1 \
-		-DARGHTOS_STATIC_TASK_COUNT=24 -DARGHTOS_COMPACT_RUNTIME=1 \
-		-DARGHTOS_COMPACT_DESCRIPTOR=1 \
-		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_r2b.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib \
-		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-r2b.map \
-		-Wl,-T,footprint/m23.ld -o $(BUILD)/m23-r2b.elf \
-		$(BUILD)/arghtos_kernel_m23_r2b.o \
-		$(BUILD)/arghtos_port_m23_r2b.o \
-		$(BUILD)/arghtos_context_m23_r2b.o \
-		$(BUILD)/m23_board_stub_r2b.o \
-		$(BUILD)/m23_footprint_r2b.o
-	size -A $(BUILD)/m23-r2b.elf
-	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r2b.map \
-		--msp $(M23_ARGHTOS_MSP) --json \
-		> $(BUILD)/footprint-r2b.json
-	cat $(BUILD)/footprint-r2b.json
-
-
-m23-footprint-r2c: | $(BUILD)
-	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
-		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
-		-DARGHTOS_UNIFIED_SLOT=1 \
-		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_r2c.o
-	$(CLANG) $(M23_COMMON) -c port/cortex_m23/arghtos_port.c \
-		-o $(BUILD)/arghtos_port_m23_r2c.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
-		-ffunction-sections -c port/cortex_m23/arghtos_context.S \
-		-o $(BUILD)/arghtos_context_m23_r2c.o
-	$(CLANG) $(M23_COMMON) -c footprint/m23_board_stub.c \
-		-o $(BUILD)/m23_board_stub_r2c.o
-	$(CLANG) $(M23_COMMON) -DARGHTOS_STATIC_CONFIG=1 \
-		-DARGHTOS_STATIC_TASK_COUNT=24 -DARGHTOS_COMPACT_RUNTIME=1 \
-		-DARGHTOS_COMPACT_DESCRIPTOR=1 -DARGHTOS_UNIFIED_SLOT=1 \
-		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_r2c.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib \
-		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-r2c.map \
-		-Wl,-T,footprint/m23.ld -o $(BUILD)/m23-r2c.elf \
-		$(BUILD)/arghtos_kernel_m23_r2c.o \
-		$(BUILD)/arghtos_port_m23_r2c.o \
-		$(BUILD)/arghtos_context_m23_r2c.o \
-		$(BUILD)/m23_board_stub_r2c.o \
-		$(BUILD)/m23_footprint_r2c.o
-	size -A $(BUILD)/m23-r2c.elf
-	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r2c.map \
-		--msp $(M23_ARGHTOS_MSP) --json \
-		> $(BUILD)/footprint-r2c.json
-	cat $(BUILD)/footprint-r2c.json
-
-
-m23-footprint-r3a: | $(BUILD)
-	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
-		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
-		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
-		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_r3a.o
-	$(CLANG) $(M23_COMMON) -c port/cortex_m23/arghtos_port.c \
-		-o $(BUILD)/arghtos_port_m23_r3a.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
-		-ffunction-sections -c port/cortex_m23/arghtos_context.S \
-		-o $(BUILD)/arghtos_context_m23_r3a.o
-	$(CLANG) $(M23_COMMON) -c footprint/m23_board_stub.c \
-		-o $(BUILD)/m23_board_stub_r3a.o
-	$(CLANG) $(M23_COMMON) -DARGHTOS_STATIC_CONFIG=1 \
-		-DARGHTOS_STATIC_TASK_COUNT=24 -DARGHTOS_COMPACT_RUNTIME=1 \
-		-DARGHTOS_COMPACT_DESCRIPTOR=1 -DARGHTOS_UNIFIED_SLOT=1 \
-		-DARGHTOS_PRODUCTION_PROFILE=1 \
-		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_r3a.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib \
-		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-r3a.map \
-		-Wl,-T,footprint/m23.ld -o $(BUILD)/m23-r3a.elf \
-		$(BUILD)/arghtos_kernel_m23_r3a.o \
-		$(BUILD)/arghtos_port_m23_r3a.o \
-		$(BUILD)/arghtos_context_m23_r3a.o \
-		$(BUILD)/m23_board_stub_r3a.o \
-		$(BUILD)/m23_footprint_r3a.o
-	size -A $(BUILD)/m23-r3a.elf
-	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r3a.map \
-		--msp $(M23_ARGHTOS_MSP) --json \
-		> $(BUILD)/footprint-r3a.json
-	cat $(BUILD)/footprint-r3a.json
-
-
-m23-footprint-r3b: | $(BUILD)
-	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
-		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
-		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
-		-DARGHTOS_SPECIALIZED_SERVICES=1 \
-		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_r3b.o
-	$(CLANG) $(M23_COMMON) -c port/cortex_m23/arghtos_port.c \
-		-o $(BUILD)/arghtos_port_m23_r3b.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
-		-ffunction-sections -c port/cortex_m23/arghtos_context.S \
-		-o $(BUILD)/arghtos_context_m23_r3b.o
-	$(CLANG) $(M23_COMMON) -c footprint/m23_board_stub.c \
-		-o $(BUILD)/m23_board_stub_r3b.o
-	$(CLANG) $(M23_COMMON) -DARGHTOS_STATIC_CONFIG=1 \
-		-DARGHTOS_STATIC_TASK_COUNT=24 -DARGHTOS_COMPACT_RUNTIME=1 \
-		-DARGHTOS_COMPACT_DESCRIPTOR=1 -DARGHTOS_UNIFIED_SLOT=1 \
-		-DARGHTOS_PRODUCTION_PROFILE=1 -DARGHTOS_SPECIALIZED_SERVICES=1 \
-		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_r3b.o
-	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib \
-		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-r3b.map \
-		-Wl,-T,footprint/m23.ld -o $(BUILD)/m23-r3b.elf \
-		$(BUILD)/arghtos_kernel_m23_r3b.o \
-		$(BUILD)/arghtos_port_m23_r3b.o \
-		$(BUILD)/arghtos_context_m23_r3b.o \
-		$(BUILD)/m23_board_stub_r3b.o \
-		$(BUILD)/m23_footprint_r3b.o
-	size -A $(BUILD)/m23-r3b.elf
-	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r3b.map \
-		--msp $(M23_ARGHTOS_MSP) --json \
-		> $(BUILD)/footprint-r3b.json
-	cat $(BUILD)/footprint-r3b.json
-
 
 m23-footprint-r3c: | $(BUILD)
 	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 \
@@ -372,6 +123,47 @@ m23-footprint-r3c: | $(BUILD)
 		--msp $(M23_ARGHTOS_MSP) --json \
 		> $(BUILD)/footprint-r3c.json
 	cat $(BUILD)/footprint-r3c.json
+
+m23-footprint-r4y: | $(BUILD)
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables -DARGHTOS_TRUSTED_CONFIG=1 \
+		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
+		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
+		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
+		-DARGHTOS_SPECIALIZED_SERVICES=1 -DARGHTOS_MINIMAL_VALIDATION=1 \
+		-DARGHTOS_RUNTIME_PROFILING=0 -DARGHTOS_SIZE_FIRST_SELECTOR=1 \
+		-DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 -DARGHTOS_SIZE_FIRST_NO_START_TIME=1 \
+		-DARGHTOS_SPLIT_META=1 -DARGHTOS_ENTRY_NEXT_OVERLAY=1 \
+		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_r4y.o
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables \
+		-DARGHTOS_ENTRY_NEXT_OVERLAY=1 -c port/cortex_m23/arghtos_port.c \
+		-o $(BUILD)/arghtos_port_m23_r4y.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
+		-DARGHTOS_COMPACT_PENDSV=1 -DARGHTOS_COMPACT_SVC_RETURN=1 -ffunction-sections -c port/cortex_m23/arghtos_context.S \
+		-o $(BUILD)/arghtos_context_m23_r4y.o
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables -c footprint/m23_board_stub.c \
+		-o $(BUILD)/m23_board_stub_r4y.o
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables \
+		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
+		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
+		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
+		-DARGHTOS_SPECIALIZED_SERVICES=1 -DARGHTOS_MINIMAL_VALIDATION=1 \
+		-DARGHTOS_RUNTIME_PROFILING=0 -DARGHTOS_SIZE_FIRST_SELECTOR=1 \
+		-DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 -DARGHTOS_SIZE_FIRST_NO_START_TIME=1 \
+		-DARGHTOS_SPLIT_META=1 -DARGHTOS_ENTRY_NEXT_OVERLAY=1 \
+		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_r4y.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib -flto -fomit-frame-pointer -fno-jump-tables \
+		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-r4y.map \
+		-Wl,-T,footprint/m23_min_no_exidx.ld -o $(BUILD)/m23-r4y.elf \
+		$(BUILD)/arghtos_kernel_m23_r4y.o \
+		$(BUILD)/arghtos_port_m23_r4y.o \
+		$(BUILD)/arghtos_context_m23_r4y.o \
+		$(BUILD)/m23_board_stub_r4y.o \
+		$(BUILD)/m23_footprint_r4y.o
+	size -A $(BUILD)/m23-r4y.elf
+	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r4y.map \
+		--msp $(M23_ARGHTOS_MSP_OMIT_FP) --json \
+		> $(BUILD)/footprint-r4y.json
+	cat $(BUILD)/footprint-r4y.json
 
 footprint-report: m23-footprint
 

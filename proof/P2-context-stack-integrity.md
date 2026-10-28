@@ -94,3 +94,22 @@ Confirmed statically:
 * the current normal-path ArghtOS-only MSP static lower bound is approximately 104 B.
 
 P2 remains conditional on target register-canary, alignment, PSP/MSP ownership, and high-water tests.
+
+# R4u initial-argument refinement
+
+R4u does not change the size or symmetry of the Cortex-M23 saved task frame.
+
+The only refinement is the value placed in initial stacked R0:
+
+```text
+ordinary profile: R0 = 0
+R4u minimum profile: R0 = private task-entry pointer
+```
+
+R0 is part of the architecture-defined hardware frame already covered by P2.
+The initial frame remains 64 B, the worst-case scheduler context reserve remains
+68 B, and ordinary preemption still preserves R4-R11 plus the hardware frame.
+
+The R4u trampoline retains the entry pointer in R4 across periodic suspension.
+R4 is already included in the software context save/restore proof, so no new
+saved state or asymmetry is introduced.

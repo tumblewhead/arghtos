@@ -20,6 +20,10 @@ extern "C" {
 #define ARGHTOS_ASYNC_PRIORITY_MAX 8u
 #endif
 
+#ifndef ARGHTOS_RUNTIME_PROFILING
+#define ARGHTOS_RUNTIME_PROFILING 1
+#endif
+
 #if ARGHTOS_MAX_TASKS < 1u || ARGHTOS_MAX_TASKS > 254u
 #error "ARGHTOS_MAX_TASKS must be in [1,254]"
 #endif
@@ -130,9 +134,11 @@ arghtos_result_t arghtos_sleep_until(arghtos_time_t absolute_time);
 arghtos_result_t arghtos_sleep_for(arghtos_duration_t duration);
 arghtos_result_t arghtos_wake(arghtos_task_id_t task_id);
 arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id);
+#if ARGHTOS_RUNTIME_PROFILING
 arghtos_result_t arghtos_profile_get(
     arghtos_task_id_t task_id,
     arghtos_task_profile_t *out);
+#endif
 
 #ifdef __cplusplus
 }
