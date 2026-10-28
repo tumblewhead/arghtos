@@ -13,6 +13,14 @@
 #error "ARGHTOS_STATIC_CONFIG requires ARGHTOS_TRUSTED_CONFIG=1"
 #endif
 
+#ifndef ARGHTOS_EXTERNAL_TIME_DUE
+#define ARGHTOS_EXTERNAL_TIME_DUE 0
+#endif
+
+#ifndef ARGHTOS_EXTERNAL_ASYNC_PREDICATE
+#define ARGHTOS_EXTERNAL_ASYNC_PREDICATE 0
+#endif
+
 #if ARGHTOS_STATIC_CONFIG
 #if ARGHTOS_COMPACT_DESCRIPTOR
 #if ARGHTOS_UNIFIED_SLOT
@@ -101,10 +109,15 @@ static arghtos_kernel_state_t kernel;
     (controls[(id)].missed_release_count = (uint8_t)(v))
 #endif
 
+#if ARGHTOS_EXTERNAL_TIME_DUE
+bool arghtos_time_due_external(arghtos_time_t now, arghtos_time_t t);
+#define time_due arghtos_time_due_external
+#else
 static bool time_due(arghtos_time_t now, arghtos_time_t t)
 {
     return (int32_t)(now - t) >= 0;
 }
+#endif
 
 #if !ARGHTOS_MINIMAL_VALIDATION || !ARGHTOS_TRUSTED_CONFIG
 static bool duration_valid(arghtos_duration_t dt)
@@ -125,10 +138,15 @@ static bool task_is_periodic(arghtos_task_id_t id)
 }
 #endif
 
+#if ARGHTOS_EXTERNAL_ASYNC_PREDICATE
+bool arghtos_task_is_async_external(arghtos_task_id_t id);
+#define task_is_async arghtos_task_is_async_external
+#else
 static bool task_is_async(arghtos_task_id_t id)
 {
     return ARGHTOS_TASK_PERIOD(id) == 0u;
 }
+#endif
 
 static void control_clear(arghtos_task_id_t id, arghtos_task_control_t *c)
 {
