@@ -51,9 +51,9 @@ static void test_static_init_ignores_runtime_config(void)
     start_and_escape();
 
     c = arghtos_test_controls();
-    assert(c[0].state == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
     assert(c[0].next_time == 110u);
-    assert(c[1].state == ARGHTOS_TASK_DORMANT);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_DORMANT);
     assert(arghtos_host_timer_is_armed());
     assert(arghtos_host_timer_deadline() == 110u);
 }
@@ -74,12 +74,12 @@ static void test_static_dispatch_and_async_wake(void)
 
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
-    assert(c[1].state == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_READY);
 
     arghtos_host_set_mode(ARGHTOS_HOST_TASK);
     assert(arghtos_port_service_call(
         ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
-    assert(c[0].state == ARGHTOS_TASK_DORMANT);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_DORMANT);
 
     assert(arghtos_kernel_dispatch(periodic_context) == c[1].context);
     assert(arghtos_test_kernel()->current_task == 1u);
