@@ -27,6 +27,9 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
         .schedule = ARGHTOS_STATIC_ASYNC(3u)
     }
 };
+#if ARGHTOS_SPLIT_META
+arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
+#endif
 #elif ARGHTOS_COMPACT_DESCRIPTOR
 const arghtos_static_task_t arghtos_static_tasks[2] = {
     { periodic_task, &stack0[sizeof(stack0)], ARGHTOS_STATIC_PERIOD(10u) },
@@ -101,6 +104,7 @@ static void test_static_dispatch_and_async_wake(void)
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
     assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_AGE(&c[1]) == 0u);
 
     arghtos_host_set_mode(ARGHTOS_HOST_TASK);
     assert(arghtos_port_service_call(
@@ -109,6 +113,7 @@ static void test_static_dispatch_and_async_wake(void)
 
     assert(arghtos_kernel_dispatch(periodic_context) == c[1].context);
     assert(arghtos_test_kernel()->current_task == 1u);
+    assert(ARGHTOS_CTRL_AGE(&c[1]) == 0u);
 }
 
 static void test_static_crash_record_symbol_is_used(void)
