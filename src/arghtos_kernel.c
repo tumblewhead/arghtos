@@ -974,6 +974,22 @@ ARGHTOS_NORETURN void arghtos_fatal(
     r = ARGHTOS_CRASH_RECORD;
     if (r != NULL) {
         r->commit_magic = 0u;
+#if ARGHTOS_SIZE_FIRST_CRASH_CLEAR
+        {
+            unsigned char *p = (unsigned char *)r;
+            size_t i;
+
+            for (i = 0u; i < offsetof(arghtos_crash_record_t, commit_magic); ++i) {
+                p[i] = 0u;
+            }
+        }
+        r->magic = ARGHTOS_CRASH_MAGIC;
+        r->version = ARGHTOS_CRASH_VERSION;
+        r->size = (uint16_t)sizeof(*r);
+        r->reason = reason;
+        r->task_id = ARGHTOS_TASK_ID_INVALID;
+        r->timestamp = arghtos_port_time_now();
+#else
         r->magic = ARGHTOS_CRASH_MAGIC;
         r->version = ARGHTOS_CRASH_VERSION;
         r->size = (uint16_t)sizeof(*r);
@@ -984,15 +1000,20 @@ ARGHTOS_NORETURN void arghtos_fatal(
         r->port_format = 0u;
         r->port_words = 0u;
         r->reserved = 0u;
+#endif
 
         if (task_id_valid(kernel.current_task)) {
             r->task_id = kernel.current_task;
             r->flags |= ARGHTOS_CRASH_F_TASK_VALID;
         }
 
+#if !ARGHTOS_SIZE_FIRST_CRASH_CLEAR
         for (i = 0u; i < 10u; ++i) {
             r->port_state[i] = 0u;
         }
+#else
+        (void)i;
+#endif
 
         arghtos_port_crash_fill(r, port_fault_context);
         if (r->port_words > 10u) {
