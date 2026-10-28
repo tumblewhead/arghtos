@@ -65,7 +65,7 @@ WAKE
 TASK_RETURN
 ```
 
-`sleep_for()` may be implemented as a task-side wrapper that obtains `now` and converts to absolute time before invoking SLEEP_UNTIL, or as a distinct private service if measurement proves smaller. The public semantics must remain unchanged.
+`sleep_for()` uses the existing SLEEP_UNTIL service rather than adding another SVC number. It validates the half-range duration, reads the bounded/read-only D06/C3 clock, forms `deadline = now + dt`, and invokes the same `arghtos_sleep_until()` path. The ownership-changing state mutation still occurs only after SVC entry.
 
 # Core private helpers
 
