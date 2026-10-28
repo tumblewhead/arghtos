@@ -139,17 +139,40 @@ flowchart TD
   IDLE --> KD
 ```
 
-# Idle wait
+# Race-free idle wait
 
-`arghtos_port_idle_wait()`:
+The no-READY decision and entry to WFI must form one race-free protocol.
 
-* executes only with no READY task selected;
-* uses no task stack;
-* performs no scheduler-state mutation;
-* returns after a scheduler-relevant interrupt/event gives the kernel reason to re-evaluate readiness;
-* should use the lowest-cost architecture-supported wait mechanism, normally WFI.
+PendSV SHALL:
 
-The exact low-power policy remains a port decision.
+1. disable maskable interrupts with PRIMASK before the serialized call to `arghtos_kernel_dispatch()`;
+2. if a task is returned, restore the normal interrupt mask state before exception return;
+3. if zero is returned, keep PRIMASK set while entering `arghtos_port_idle_wait()`.
+
+`arghtos_port_idle_wait()` therefore has the precondition:
+
+```text
+called from the PendSV idle loop
+PRIMASK = 1
+the immediately preceding selector observed no READY task
+without unmasking interrupts in between
+```
+
+The Cortex-M23 idle protocol is:
+
+```text
+WFI while PRIMASK=1
+restore/enable normal mask state so any pending higher-priority handler runs
+after that handler returns, mask again
+return to the PendSV loop
+kernel_dispatch(0) re-checks readiness while masked
+```
+
+Armv8-M WFI wakeup recognition ignores PRIMASK for an asynchronous exception that would otherwise preempt the active exception. Therefore an interrupt that becomes pending in the masked check-to-WFI window wakes/prevents sleep; it is serviced when the port restores the normal mask state.
+
+The WFI must remain inside a loop because WFI may complete for reasons that do not create READY work.
+
+This protocol eliminates the check-then-sleep race without allocating an idle task or idle PSP stack.
 
 # SVC ABI
 
@@ -243,11 +266,15 @@ The `return_guard` is a fatal kernel guard that must never return.
 * invokes `arghtos_kernel_dispatch(0)`;
 * never returns during normal operation.
 
-# Privilege model
+# Privilege model and trusted-task restriction
 
 All v1 tasks run privileged in Thread mode.
 
 ArghtOS v1 does not depend on an MPU, MMU, or TrustZone security state separation. Unprivileged task execution is outside the v1 contract.
+
+Because tasks are privileged, correctness depends on a trusted-application rule: scheduled task code must not directly modify scheduler-owned processor control state, including PRIMASK, PSP/MSP selection, PendSV/SVC configuration, or scheduler exception priorities. Device-driver interrupt configuration is allowed only when it preserves the integration priority and masking rules.
+
+A task that directly changes these registers is outside the supported scheduler contract; ArghtOS cannot contain that misuse without privilege isolation.
 
 # PSP/MSP ownership
 
