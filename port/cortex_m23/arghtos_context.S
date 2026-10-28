@@ -20,8 +20,12 @@ SVC_Handler:
     bl arghtos_kernel_service
     pop {r2, r3}
     str r0, [r2, #0]
+#if ARGHTOS_COMPACT_SVC_RETURN
+    bx r3
+#else
     mov lr, r3
     bx lr
+#endif
 .size SVC_Handler, .-SVC_Handler
 
 .global PendSV_Handler
