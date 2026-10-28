@@ -295,3 +295,41 @@ payload or invariant fields.
 Generic/debug and non-preseeded profiles retain explicit full record
 initialization in `arghtos_fatal()`. Post-reset export/persistence policy
 remains outside C5.
+
+
+# R5w trusted generated crash-port refinement
+
+The trusted generated minimum-size profile may further specialize C5 when the
+selected port contract proves that every successful
+`arghtos_port_crash_fill()` invocation writes a valid nonzero payload count:
+
+```text
+1 <= port_words <= 10
+```
+
+The reference host and Cortex-M23 ports satisfy this premise.
+
+When combined with R5s generated crash preseed and R5n current-task invariants,
+the generated startup image may preseed:
+
+```text
+flags = ARGHTOS_CRASH_F_PORT_STATE_VALID
+commit_magic = 0
+```
+
+For this profile only:
+
+* the first fatal capture need not clear `commit_magic` again because the
+  startup image guarantees it is already invalid and recursive fatal exits
+  before recapture;
+* the portable fatal path need not clamp `port_words` or test it for zero;
+* task attribution adds `ARGHTOS_CRASH_F_TASK_VALID` without clearing the
+  preseeded port-state-valid bit;
+* `current_task` may be tested against `ARGHTOS_TASK_ID_INVALID` rather than
+  range-validated because R5n/P1 prove it is either INVALID or configured.
+
+The required 64-byte record, dynamic reason/timestamp/task ID, port payload,
+release fence, and commit-last protocol are unchanged.
+
+Generic/debug and non-R5w profiles retain the defensive clamp, zero-payload
+handling, and full task-ID validation.
