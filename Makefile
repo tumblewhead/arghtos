@@ -5,6 +5,7 @@ BUILD ?= build
 M23_ARGHTOS_MSP ?= 104
 M23_ARGHTOS_MSP_LTO ?= 88
 M23_ARGHTOS_MSP_OMIT_FP ?= 80
+M23_ARGHTOS_MSP_R5 ?= 72
 
 HOST_CFLAGS := -std=c11 -Wall -Wextra -Werror -O2 -DARGHTOS_TEST \
 	-Iinclude -Isrc -Iport/host
@@ -17,7 +18,7 @@ M23_COMMON := --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -std=c11 \
 
 
 
-.PHONY: all portability-check host-test host-test-size-selector host-test-r3c host-test-r4u host-test-r5c host-test-r5d host-test-r5e host-test-r5f host-test-r5g host-test-r5h host-test-r5i host-sanitize m23-compile m23-footprint m23-footprint-r3c m23-footprint-r4y m23-footprint-r5a m23-footprint-r5b m23-footprint-r5c m23-footprint-r5d m23-footprint-r5e m23-footprint-r5f m23-footprint-r5g m23-footprint-r5h m23-footprint-r5i footprint-report clean
+.PHONY: all portability-check host-test host-test-size-selector host-test-r3c host-test-r4u host-test-r5c host-test-r5d host-test-r5e host-test-r5f host-test-r5g host-test-r5h host-test-r5i host-sanitize m23-compile m23-footprint m23-footprint-r3c m23-footprint-r4y m23-footprint-r5a m23-footprint-r5b m23-footprint-r5c m23-footprint-r5d m23-footprint-r5e m23-footprint-r5f m23-footprint-r5g m23-footprint-r5h m23-footprint-r5i m23-footprint-r5j footprint-report clean
 
 
 
@@ -909,6 +910,13 @@ m23-footprint-r5c: | $(BUILD)
 		--msp $(M23_ARGHTOS_MSP_OMIT_FP) --json \
 		> $(BUILD)/footprint-r5c.json
 	cat $(BUILD)/footprint-r5c.json
+
+m23-footprint-r5j: m23-footprint-r5i
+	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r5i.map \
+		--msp $(M23_ARGHTOS_MSP_R5) --json \
+		> $(BUILD)/footprint-r5j.json
+	cat $(BUILD)/footprint-r5j.json
+
 
 footprint-report: m23-footprint
 
