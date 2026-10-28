@@ -107,11 +107,45 @@ static void test_static_crash_record_symbol_is_used(void)
            ARGHTOS_CRASH_COMMIT_MAGIC);
 }
 
+#if ARGHTOS_COMPACT_RUNTIME
+static void test_compact_runtime_saturation(void)
+{
+    const arghtos_task_control_t *ctrl;
+    arghtos_task_profile_t p;
+    arghtos_context_t ctx;
+
+    reset_all();
+    arghtos_host_set_time(0u);
+    assert(arghtos_init(NULL) == ARGHTOS_OK);
+    start_and_escape();
+
+    ctrl = arghtos_test_controls();
+    ctx = arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE);
+    assert(ctx == ctrl[0].context);
+
+    arghtos_host_set_time(70000u);
+    ctx = arghtos_kernel_dispatch(ctx);
+    assert(ctx == ctrl[0].context);
+
+    arghtos_host_set_mode(ARGHTOS_HOST_TASK);
+    assert(arghtos_profile_get(0u, &p) == ARGHTOS_OK);
+    assert(p.max_run_ticks == UINT16_MAX);
+
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    arghtos_host_set_time(1000u);
+    arghtos_timer_interrupt();
+    assert(ARGHTOS_CTRL_MISSED(&ctrl[0]) == ARGHTOS_CTRL_MISSED_MAX);
+}
+#endif
+
 int main(void)
 {
     test_static_init_ignores_runtime_config();
     test_static_dispatch_and_async_wake();
     test_static_crash_record_symbol_is_used();
+#if ARGHTOS_COMPACT_RUNTIME
+    test_compact_runtime_saturation();
+#endif
 
     puts("arghtos static-profile host tests: PASS");
     return 0;
