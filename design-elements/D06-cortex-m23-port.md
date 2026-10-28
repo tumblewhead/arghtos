@@ -239,7 +239,7 @@ call kernel_dispatch(0)
 repeat while no task is READY
 ```
 
-This uses the Armv8-M rule that WFI wakeup determination ignores PRIMASK for an asynchronous exception that would otherwise preempt the active exception. A wake arriving before WFI therefore cannot disappear into the check-to-sleep gap. citeturn200754search23
+This uses the Armv8-M rule that WFI wakeup determination ignores PRIMASK for an asynchronous exception that would otherwise preempt the active exception. A wake arriving before WFI therefore cannot disappear into the check-to-sleep gap.
 
 No fake idle task and no idle PSP stack is allocated.
 
@@ -396,7 +396,7 @@ if winner == none:
 
 An interrupt can run after the selection, make work READY, return, and then the kernel executes WFI with no pending wake source.
 
-**Required design:** the no-winner selection occurs with PRIMASK set, WFI executes while PRIMASK remains set, and only after WFI completes does the port restore normal masking so the pending handler can run before readiness is checked again. Armv8-M defines qualifying asynchronous exceptions as WFI wakeup events while ignoring PRIMASK. citeturn200754search23
+**Required design:** the no-winner selection occurs with PRIMASK set, WFI executes while PRIMASK remains set, and only after WFI completes does the port restore normal masking so the pending handler can run before readiness is checked again. Armv8-M defines qualifying asynchronous exceptions as WFI wakeup events while ignoring PRIMASK.
 
 **Tester should:**
 
