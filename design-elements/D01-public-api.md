@@ -260,3 +260,14 @@ A host build must include `arghtos.h` exactly as application code does and verif
 # Boundary specification
 
 D01 owns the public representation and callable surface only. State transitions are owned by D02/D03/D05/D06/D07.
+# Minimum-size production API specialization
+
+Runtime profiling remains available by default.
+
+For the minimum-size production configuration,
+`ARGHTOS_RUNTIME_PROFILING=0` removes the declaration and implementation of
+`arghtos_profile_get()`. Code built for that configuration must not depend on
+the profiling API.
+
+This is an explicit build-surface specialization. It must not silently change
+the ABI of a build that leaves runtime profiling enabled.
