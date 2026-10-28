@@ -27,22 +27,32 @@ static void async_task(void) {}
 #if ARGHTOS_UNIFIED_SLOT
 arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
     {
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+        .context = (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0) - 64u],
+        .entry_or_next.next_time = 0u,
+#else
         .context = (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)],
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
         .entry_or_next.entry = periodic_task,
 #else
         .entry = periodic_task,
 #endif
+#endif
 #if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5I_SCHEDULE8
         .schedule = ARGHTOS_STATIC_PERIOD(10u)
 #endif
     },
     {
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+        .context = (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1) - 64u],
+        .entry_or_next.next_time = 0u,
+#else
         .context = (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)],
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
         .entry_or_next.entry = async_task,
 #else
         .entry = async_task,
+#endif
 #endif
 #if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5I_SCHEDULE8
         .schedule = ARGHTOS_STATIC_ASYNC(3u)
@@ -50,11 +60,16 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
     }
 #if ARGHTOS_TEST_THREE_TASKS
     ,{
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+        .context = (arghtos_context_t)(uintptr_t)&stack2[sizeof(stack2) - 64u],
+        .entry_or_next.next_time = 0u,
+#else
         .context = (arghtos_context_t)(uintptr_t)&stack2[sizeof(stack2)],
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
         .entry_or_next.entry = periodic_task,
 #else
         .entry = periodic_task,
+#endif
 #endif
     }
 #endif
@@ -129,15 +144,27 @@ static void reset_all(void)
 {
     arghtos_test_reset();
 #if ARGHTOS_UNIFIED_SLOT
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+    arghtos_static_slots[0].context =
+        (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0) - 64u];
+    arghtos_static_slots[1].context =
+        (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1) - 64u];
+#else
     arghtos_static_slots[0].context =
         (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)];
     arghtos_static_slots[1].context =
         (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)];
+#endif
 #if ARGHTOS_TEST_THREE_TASKS
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+    arghtos_static_slots[2].context =
+        (arghtos_context_t)(uintptr_t)&stack2[sizeof(stack2) - 64u];
+#else
     arghtos_static_slots[2].context =
         (arghtos_context_t)(uintptr_t)&stack2[sizeof(stack2)];
 #endif
-#if ARGHTOS_ENTRY_NEXT_OVERLAY
+#endif
+#if ARGHTOS_ENTRY_NEXT_OVERLAY && !ARGHTOS_R5L_PREBUILT_CONTEXT
     ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[0]) = periodic_task;
     ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[1]) = async_task;
 #if ARGHTOS_TEST_THREE_TASKS
@@ -169,7 +196,7 @@ static void test_static_init_ignores_runtime_config(void)
     arghtos_host_set_time(100u);
 
     assert(arghtos_init(NULL) == ARGHTOS_OK);
-#if ARGHTOS_ENTRY_NEXT_OVERLAY
+#if ARGHTOS_ENTRY_NEXT_OVERLAY && !ARGHTOS_R5L_PREBUILT_CONTEXT
 #if ARGHTOS_TEST_THREE_TASKS
     assert(arghtos_host_initial_arg() == (uintptr_t)periodic_task);
 #else
