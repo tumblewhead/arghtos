@@ -17,7 +17,7 @@ status: draft
 
 ```c
 typedef struct {
-    uintptr_t          saved_psp;       /* 4 B */
+    arghtos_context_t   context;         /* 4 B on Cortex-M23 reference port */
     arghtos_time_t     next_time;       /* 4 B: periodic release or sleep deadline */
     uint32_t           total_cpu_ticks; /* 4 B: modulo-2^32 */
     uint32_t           max_run_ticks;   /* 4 B: observed maximum contiguous run */
@@ -28,8 +28,9 @@ typedef struct {
     uint8_t            flags;
 } arghtos_task_control_t;
 
-_Static_assert(sizeof(uintptr_t) == 4u,
-               "Cortex-M23 requires 32-bit uintptr_t");
+/* Cortex-M23 footprint profile */
+_Static_assert(sizeof(arghtos_context_t) == 4u,
+               "Cortex-M23 reference context token must be 32-bit");
 _Static_assert(sizeof(arghtos_task_control_t) == 20u,
                "task control resident-footprint contract changed");
 ```
@@ -67,7 +68,7 @@ The wake bit is the one-bit handshake required by P3. It is not an event counter
 
 | Field | Meaning |
 |---|---|
-| `saved_psp` | task continuation |
+| `context` | task continuation |
 | `next_time` | periodic next release, or async sleep deadline |
 | `total_cpu_ticks` | cumulative CPU execution time, modulo 2^32 |
 | `max_run_ticks` | largest observed contiguous RUNNING interval |
@@ -131,7 +132,9 @@ Credit above the number needed to reach the priority ceiling remains useful as a
 
 # Continuation semantics
 
-`saved_psp` is the sole scheduler continuation pointer.
+`context` is the sole scheduler continuation token.
+
+The portable kernel stores and compares it only against `ARGHTOS_CONTEXT_NONE`; it never interprets the token. Cortex-M23 represents it with a saved PSP value inside the port. Other targets may use another representation compatible with `arghtos_context_t`.
 
 Application continuations/state machines are application data.
 
@@ -139,7 +142,7 @@ Application continuations/state machines are application data.
 
 Updates that change a task's state and its related wake/age fields are one serialized scheduler transaction.
 
-Saving `saved_psp` and relinquishing CPU ownership is one serialized dispatch transaction.
+Saving `context` and relinquishing CPU ownership is one serialized dispatch transaction.
 
 # Dependencies
 
@@ -150,7 +153,7 @@ Saving `saved_psp` and relinquishing CPU ownership is one serialized dispatch tr
 * Treating age credit as elapsed time.
 * Resetting age credit on an idempotent READY wake.
 * Adding per-task profiling counters without rechecking the resident-footprint budget.
-* More than one code path owning `saved_psp`.
+* More than one code path owning `context`.
 
 # Boundary specification
 
