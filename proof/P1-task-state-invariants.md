@@ -109,3 +109,42 @@ not change the P1 transition system for supported execution.
 The minimum profile no longer claims runtime diagnostic detection for these
 proof-impossible combinations if a trusted premise or arbitrary memory
 integrity is violated. Generic/debug builds retain that diagnostic coverage.
+
+
+# R5y trusted periodic release-state refinement
+
+For the trusted generated minimum-size profile, the periodic release engine may
+omit the defensive impossible-state branch after the following P1 facts are
+combined:
+
+* periodic tasks never enter WAITING or SLEEPING;
+* a configured periodic task is DORMANT before/after jobs, READY while pending,
+  or RUNNING while executing;
+* fatal transition to FAULTED is terminal and normal scheduler execution does
+  not resume afterward.
+
+Therefore, on a normal call to the periodic release engine, a periodic task
+whose release becomes due is either:
+
+```text
+DORMANT  -> READY, current release is not missed
+READY    -> remains active, current release is missed
+RUNNING  -> remains active, current release is missed
+```
+
+The generated R5y profile may encode this as:
+
+```text
+if state == DORMANT:
+    state = READY
+    changed = true
+    missed = releases - 1
+else:
+    missed = releases
+```
+
+without a runtime READY/RUNNING membership check.
+
+This refinement is valid only for the trusted generated profile that already
+adopts the R5n proof-discharged scheduler invariants. Generic/debug profiles
+retain the explicit impossible-state fault check.
