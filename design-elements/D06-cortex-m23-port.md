@@ -215,14 +215,31 @@ outgoing_saved_psp = 0
 
 The first task should not use a separate bespoke restore algorithm if the normal restore path can be reused.
 
-# Idle path
+# Serialized dispatch and race-free idle path
 
-When `arghtos_kernel_dispatch()` returns 0:
+PendSV masks normal scheduler-relevant interrupts before calling the portable dispatch transaction.
 
-* no task is READY;
-* port remains on MSP;
-* it performs `arghtos_port_idle_wait()`;
-* after a scheduler-relevant interrupt it calls dispatch again with outgoing_saved_psp=0.
+The mask remains set across the "no READY task" decision.
+
+If dispatch returns a task:
+
+1. restore the normal PRIMASK state;
+2. restore the selected PSP context;
+3. exception-return to Thread mode.
+
+If dispatch returns 0:
+
+```text
+PRIMASK remains 1
+DSB as required by the selected low-power sequence
+WFI
+restore normal PRIMASK so a pending higher-priority interrupt can run
+after handler return, mask again
+call kernel_dispatch(0)
+repeat while no task is READY
+```
+
+This uses the Armv8-M rule that WFI wakeup determination ignores PRIMASK for an asynchronous exception that would otherwise preempt the active exception. A wake arriving before WFI therefore cannot disappear into the check-to-sleep gap. citeturn200754search23
 
 No fake idle task and no idle PSP stack is allocated.
 
@@ -368,22 +385,25 @@ A corrupted stacked PC could cause the decoder to read an invalid instruction ad
 
 ## 8. Idle WFI race
 
-Classic race:
+**Bad implementation:**
 
 ```text
-kernel sees no READY task
-interrupt makes work READY
-interrupt returns
-kernel executes WFI after event has passed
+enable interrupts
+winner = select()
+if winner == none:
+    WFI
 ```
 
-Depending on architecture/event state, the CPU may sleep with work READY.
+An interrupt can run after the selection, make work READY, return, and then the kernel executes WFI with no pending wake source.
+
+**Required design:** the no-winner selection occurs with PRIMASK set, WFI executes while PRIMASK remains set, and only after WFI completes does the port restore normal masking so the pending handler can run before readiness is checked again. Armv8-M defines qualifying asynchronous exceptions as WFI wakeup events while ignoring PRIMASK. citeturn200754search23
 
 **Tester should:**
 
-* inject wake at every point between "no winner" and WFI;
-* use a target stress test with rapid timer/device events;
-* verify idle protocol follows an interrupt-safe WFI pattern appropriate to Cortex-M23, not a naive check-then-sleep sequence.
+* inject a wake immediately before no-winner return, after no-winner return, immediately before WFI, and while in WFI;
+* verify WFI never leaves the system asleep while READY work exists;
+* inspect PRIMASK at selector entry, WFI, handler execution, and the subsequent recheck;
+* use rapid timer/device stress for millions of idle transitions.
 
 ## 9. Port C code silently allocates stack-heavy locals on MSP
 
@@ -403,6 +423,12 @@ Three levels:
 1. **Host frame-builder tests** for memory layout.
 2. **QEMU/emulator tests** for exception transitions where reliable.
 3. **Target hardware tests** for register canaries, priority nesting, PSP/MSP high water, and timer/interrupt behavior.
+
+# Trusted privileged-task boundary
+
+Because v1 tasks are privileged, test/application code must not directly write PRIMASK, CONTROL stack-selection bits, PSP/MSP, PendSV/SVC configuration, or scheduler exception priorities. Such writes bypass D06 and invalidate the scheduler model.
+
+Testers should include one negative integration test documenting that this is a trust assumption rather than a contained fault.
 
 # Boundary specification
 
