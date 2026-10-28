@@ -46,7 +46,6 @@ typedef uint8_t  arghtos_task_id_t;
 typedef uint8_t  arghtos_priority_t;
 typedef uint32_t arghtos_time_t;
 typedef uint32_t arghtos_duration_t;
-typedef uint32_t arghtos_irq_key_t;
 
 #define ARGHTOS_TASK_ID_INVALID ((arghtos_task_id_t)UINT8_MAX)
 #define ARGHTOS_TIME_HALF_RANGE ((arghtos_duration_t)0x80000000u)
@@ -151,7 +150,8 @@ NMI and fatal-fault context may call only fatal diagnostics.
 * C11 or newer.
 * 32-bit `uintptr_t`.
 * no reliance on short-enum compiler options;
-* architecture-specific assembly isolated behind C4.
+* architecture-specific context and critical-section token types live in the architecture-neutral port ABI (C4/C10), not in the public application ABI;
+* architecture-specific assembly isolated behind the selected port.
 
 # Resident-memory rule
 
