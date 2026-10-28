@@ -202,3 +202,103 @@ Artifacts should retain:
 * linker map;
 * symbol-size report;
 * stack-usage files.
+
+# Current I1 branch state
+
+Branch:
+
+```text
+implementation/i1-footprint-reduction-001
+```
+
+Draft PR:
+
+```text
+#1 I1: footprint reduction experiments
+```
+
+Implemented so far:
+
+* PR-scoped CI workflow for portability, host tests, sanitizers, Cortex-M23 compile, baseline footprint, compact footprint, symbol-size evidence, and stack-usage artifacts;
+* R1a `ARGHTOS_TRUSTED_CONFIG=1` compact profile;
+* generic I0 runtime-validation profile retained unchanged as the comparison baseline;
+* host suite can build in both generic and trusted-config modes;
+* dedicated compact Cortex-M23 footprint target;
+* fixed malformed/racy Cortex-M23 idle assembly;
+* fixed first-dispatch MSP-frame reclamation, including xPSR alignment padding.
+
+# R1a definition
+
+R1a removes runtime external-configuration validation from the compact profile only.
+
+Removed from compact linked kernel when dead stripping succeeds:
+
+* descriptor scalar validation;
+* per-task port stack validation;
+* pairwise stack overlap validation;
+* pointer-range helper code used only by those checks.
+
+Still retained:
+
+* initialization;
+* context construction;
+* runtime scheduler invariants;
+* public lifecycle/state validation;
+* crash logging;
+* profiling;
+* periodic/async scheduling semantics.
+
+Configuration validity becomes build/generator evidence in this profile.
+
+# Correctness fixes discovered while resuming I0
+
+## Cortex-M23 idle path
+
+The checked-in I0 source contained a malformed inline-assembly string in `arghtos_port_idle_wait()`.
+
+More importantly, the intended sequence contained:
+
+```text
+WFI
+enable interrupts
+...
+WFI
+disable interrupts
+```
+
+The second WFI can execute after a pending handler has already made work READY, putting the processor back to sleep while runnable work exists.
+
+I1 replaces this with:
+
+```text
+PRIMASK already set by PendSV
+DSB
+WFI
+CPSIE i
+ISB
+CPSID i
+return to masked readiness check
+```
+
+No second WFI occurs after the pending handler gets a chance to run.
+
+## First-dispatch MSP reclamation
+
+I0 documentation stated that the startup MSP hardware frame was reclaimed before the first PSP task ran, but the assembly computed the adjusted MSP and never wrote it back.
+
+I1 now restores:
+
+```text
+MSP = stacked_frame + 32 + optional_alignment_pad
+```
+
+where the optional four-byte pad is derived from stacked xPSR bit 9.
+
+# Measurement status
+
+The branch contains the executable comparison targets, but the connector has not surfaced a GitHub Actions run for the draft PR yet.
+
+Therefore no R1a footprint delta is recorded here yet.
+
+Do not infer a size improvement until the compact linker map exists.
+
