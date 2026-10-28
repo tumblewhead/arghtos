@@ -140,7 +140,16 @@ const arghtos_task_config_t arghtos_static_tasks[24] = {
 #endif
 
 __attribute__((section(".arghtos_crash"), aligned(4)))
+#if ARGHTOS_R5S_PRESEEDED_CRASH
+arghtos_crash_record_t arghtos_static_crash_record = {
+    .magic = ARGHTOS_CRASH_MAGIC,
+    .version = ARGHTOS_CRASH_VERSION,
+    .size = (uint16_t)sizeof(arghtos_crash_record_t),
+    .task_id = ARGHTOS_TASK_ID_INVALID
+};
+#else
 arghtos_crash_record_t arghtos_static_crash_record;
+#endif
 #else
 __attribute__((section(".arghtos_cfg")))
 static const arghtos_task_config_t task_cfg[24] = {
