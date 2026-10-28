@@ -361,9 +361,11 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
     arghtos_crash_record_t *init_crash;
     uint8_t init_count;
 
+#if !ARGHTOS_MINIMAL_VALIDATION
     if ((kernel.flags & ARGHTOS_KF_INITIALIZED) != 0u) {
         return ARGHTOS_ERR_BAD_STATE;
     }
+#endif
 
 #if ARGHTOS_STATIC_CONFIG
     (void)config;
@@ -452,10 +454,12 @@ ARGHTOS_NORETURN void arghtos_start(void)
     uint32_t earliest_delta = 0u;
     uint8_t id;
 
+#if !ARGHTOS_MINIMAL_VALIDATION
     if (((kernel.flags & ARGHTOS_KF_INITIALIZED) == 0u) ||
         ((kernel.flags & ARGHTOS_KF_STARTED) != 0u)) {
         arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
     }
+#endif
 
     key = arghtos_port_critical_enter();
     start = arghtos_port_time_now();
@@ -522,9 +526,11 @@ arghtos_result_t arghtos_sleep_for(arghtos_duration_t duration)
         return ARGHTOS_ERR_BAD_CONTEXT;
     }
 #endif
+#if !ARGHTOS_MINIMAL_VALIDATION
     if (!duration_valid(duration)) {
         return ARGHTOS_ERR_BAD_TIME;
     }
+#endif
     if (duration == 0u) {
         return ARGHTOS_OK;
     }
@@ -558,10 +564,12 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 
     key = arghtos_port_critical_enter();
 
+#if !ARGHTOS_MINIMAL_VALIDATION
     if ((kernel.flags & ARGHTOS_KF_STARTED) == 0u) {
         arghtos_port_critical_exit(key);
         return ARGHTOS_ERR_BAD_STATE;
     }
+#endif
 
     dispatch = wake_locked(task_id, &result);
     arghtos_port_critical_exit(key);
@@ -585,12 +593,14 @@ arghtos_result_t arghtos_profile_get(
         return ARGHTOS_ERR_BAD_CONTEXT;
     }
 #endif
+#if !ARGHTOS_MINIMAL_VALIDATION
     if (out == NULL) {
         return ARGHTOS_ERR_BAD_ARGUMENT;
     }
     if (!task_id_valid(task_id)) {
         return ARGHTOS_ERR_BAD_TASK_ID;
     }
+#endif
 
     key = arghtos_port_critical_enter();
     c = &controls[task_id];
@@ -662,10 +672,14 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             if (time_due(now, deadline)) {
                 break;
             }
+#if !ARGHTOS_MINIMAL_VALIDATION
             if (!duration_valid(delta)) {
                 result = ARGHTOS_ERR_BAD_TIME;
                 break;
             }
+#else
+            (void)delta;
+#endif
 
             controls[self].next_time = deadline;
             ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_SLEEPING);
