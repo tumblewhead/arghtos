@@ -34,10 +34,11 @@ R5e accepted minimum            = 2202 B
 R5h accepted minimum            = 1970 B
 R5i accepted minimum            = 1914 B
 R5j accepted minimum            = 1906 B
-linked before MSP               = 1834 B
+R5l accepted minimum            = 1822 B
+linked before MSP               = 1750 B
 ArghtOS-only MSP                =   72 B
 soft target                     = 1536 B
-remaining gap                   =  370 B
+remaining gap                   =  286 B
 ```
 
 The final same-revision profiling-enabled R3c reference on the frozen R4 source
@@ -263,40 +264,95 @@ total                          72 B
 
 See [implementation/R5j-msp-72.md](implementation/R5j-msp-72.md).
 
-## Exact next action: R5k compact Cortex-M23 crash fill
+## R5k rejected result
 
-Keep R5j as accepted control at 1906 B.
+```text
+CI 40719949754  success
 
-R5k should replace only the Cortex-M23 implementation of
-`arghtos_port_crash_fill()` in the minimum-size target build.
+R5j 1906 B
+R5k 1918 B
+delta +12 B
+```
 
-Current C/LTO code copies a fixed target context into the required 64-byte
-architecture-neutral crash record using scalar loads/stores.
+Moving Cortex-M23 crash payload extraction into a leaf Thumb helper shrank
+`arghtos_fatal` 228 -> 160 B, but the new helper cost 78 B. Reject the exact
+split.
 
-R5k hypothesis:
+See
+[implementation/R5k-asm-crash-fill.md](implementation/R5k-asm-crash-fill.md).
 
-* keep the portable kernel and C5 crash protocol unchanged;
-* keep `arghtos_m23_fault_context_t` unchanged;
-* implement the port payload copy as a leaf Thumb-1 assembly function;
-* use paired `LDMIA/STMIA` transfers for MSP/PSP and hardware-frame words;
-* allocate no MSP stack in the helper;
-* keep NULL-context capture of live MSP/PSP;
-* preserve exactly:
-  * `port_format = 0x4D23`;
-  * `port_words = 2, 3, or 10`;
-  * state word ordering;
-  * skipped hardware R12 slot;
-  * generic zero-before-fill and commit-last protocol.
+## R5l accepted result
+
+```text
+CI 40721286853  success
+
+R5j 1906 B
+R5l 1822 B
+saved  84 B
+```
+
+R5l moves initial Cortex-M23 task-frame construction into the trusted generated
+application stack image.
+
+```text
+arghtos_init 156 -> 72 B
+```
+
+Task-stack SRAM is unchanged and remains application-owned. The trade is that
+the generated initial frame is load-initialized instead of `NOLOAD`, increasing
+load-image/startup initialization bytes.
+
+C0, C4, D06, and P2 now record the generated-frame equivalence obligation.
+
+See
+[implementation/R5l-prebuilt-context.md](implementation/R5l-prebuilt-context.md).
+
+## Exact next action: R5m pristine generated init
+
+Keep R5l as accepted control at 1822 B.
+
+R5l still runs a bounded per-task initialization loop that writes:
+
+* `next_time = 0`;
+* packed status = 0;
+* then verifies each prebuilt context token is nonzero.
+
+For the trusted generated profile these are already build/startup invariants:
+
+* `arghtos_init()` is called exactly once;
+* active context tokens are valid by generator evidence;
+* mutable task fields are emitted in their required zero state;
+* unused slots are zero/inactive;
+* the startup image is materialized before `arghtos_init()`.
+
+C4 also guarantees successful `arghtos_port_init()` leaves the scheduler timer
+disarmed, so the final portable `arghtos_port_timer_disarm()` is redundant in
+this profile.
+
+R5m should specialize only the trusted generated prebuilt-context profile so
+`arghtos_init()` performs:
+
+```text
+port_init()
+if failure: return it
+current_task = INVALID
+flags = INITIALIZED
+return OK
+```
+
+Generic/debug and non-R5m initialization remain unchanged.
 
 Acceptance:
 
-1. Keep R5i linked code / R5j 72 B MSP accounting as control.
-2. Gate the assembly helper behind an R5k-only port build define.
-3. Exclude only the Cortex-M23 C crash-fill definition in R5k.
-4. Run frozen host/sanitizer/portability gates.
-5. Link R5k with 72 B MSP.
-6. Inspect `arghtos_fatal` + crash-fill symbol sizes and disassembly.
-7. Confirm the helper is leaf/no-stack and the 72 B MSP bound remains valid.
-8. Accept only if total <1906 B.
-9. Refresh this handoff.
+1. Preserve R5l same-revision control.
+2. Add an R5m-only switch requiring R5l + trusted/minimal static config.
+3. Host tests must prove valid generated startup semantics and existing
+   post-init states.
+4. Keep port-init failure propagation.
+5. Do not change `arghtos_start()` or scheduler semantics.
+6. Run host/sanitizer/portability + Cortex-M23 comparison.
+7. Re-audit MSP only if call/frame structure changes.
+8. Accept only if total <1822 B.
+9. Promote the pristine-startup invariant into C0 if accepted.
+10. Refresh this handoff.
 
