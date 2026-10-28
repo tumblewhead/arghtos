@@ -516,6 +516,19 @@ static bool current_running(arghtos_task_id_t *id)
 
 arghtos_result_t arghtos_init(const arghtos_config_t *config)
 {
+#if ARGHTOS_R5M_PRISTINE_INIT
+    arghtos_result_t r;
+
+    (void)config;
+    r = arghtos_port_init();
+    if (r != ARGHTOS_OK) {
+        return r;
+    }
+
+    kernel.current_task = ARGHTOS_TASK_ID_INVALID;
+    kernel.flags = ARGHTOS_KF_INITIALIZED;
+    return ARGHTOS_OK;
+#else
     arghtos_result_t r;
     uint8_t id;
 #if !ARGHTOS_COMPACT_DESCRIPTOR
@@ -630,6 +643,7 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 
     arghtos_port_timer_disarm();
     return ARGHTOS_OK;
+#endif
 }
 
 ARGHTOS_NORETURN void arghtos_start(void)
