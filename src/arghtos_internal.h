@@ -122,6 +122,16 @@
 #error "R5h direct schedule16 requires R5g with zero overflow entries"
 #endif
 
+#ifndef ARGHTOS_R5L_PREBUILT_CONTEXT
+#define ARGHTOS_R5L_PREBUILT_CONTEXT 0
+#endif
+
+#if ARGHTOS_R5L_PREBUILT_CONTEXT && \
+    (!ARGHTOS_STATIC_CONFIG || !ARGHTOS_UNIFIED_SLOT || \
+     !ARGHTOS_ENTRY_NEXT_OVERLAY || !ARGHTOS_MINIMAL_VALIDATION)
+#error "R5l prebuilt context requires trusted static unified minimum profile"
+#endif
+
 #ifndef ARGHTOS_R5I_SCHEDULE8
 #define ARGHTOS_R5I_SCHEDULE8 0
 #endif
