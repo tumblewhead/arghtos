@@ -122,6 +122,32 @@
 #error "R5h direct schedule16 requires R5g with zero overflow entries"
 #endif
 
+#ifndef ARGHTOS_R5I_SCHEDULE8
+#define ARGHTOS_R5I_SCHEDULE8 0
+#endif
+
+#ifndef ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT
+#define ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT 0u
+#endif
+
+#if ARGHTOS_R5I_SCHEDULE8 && \
+    (!ARGHTOS_UNIFIED_SLOT || !ARGHTOS_R5E_AGE_NEXT_OVERLAY)
+#error "R5i schedule8 requires the accepted R5e unified profile"
+#endif
+
+#if ARGHTOS_R5I_SCHEDULE8 && \
+    (ARGHTOS_R5F_COMPRESSED_SCHEDULE || ARGHTOS_R5G_SCHEDULE16)
+#error "R5i schedule8 is mutually exclusive with earlier schedule encodings"
+#endif
+
+#if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT > ARGHTOS_MAX_TASKS
+#error "R5i schedule overflow count exceeds task capacity"
+#endif
+
+#define ARGHTOS_R5I_OVERFLOW_BASE 0x60u
+#define ARGHTOS_R5I_OVERFLOW_LAST 0x77u
+#define ARGHTOS_R5I_ASYNC_BASE    0x80u
+
 #if ARGHTOS_COMPACT_DESCRIPTOR && !ARGHTOS_STATIC_CONFIG
 #error "ARGHTOS_COMPACT_DESCRIPTOR requires ARGHTOS_STATIC_CONFIG=1"
 #endif
@@ -219,7 +245,7 @@ typedef struct {
 #if !ARGHTOS_ENTRY_NEXT_OVERLAY
     arghtos_task_fn_t entry;
 #endif
-#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16
+#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5I_SCHEDULE8
     uint32_t          schedule;
 #endif
 #endif
@@ -362,6 +388,9 @@ _Static_assert(sizeof(arghtos_crash_record_t) == 64u, "crash record ABI changed"
 #if ARGHTOS_UNIFIED_SLOT
 #if ARGHTOS_RUNTIME_PROFILING
 _Static_assert(sizeof(arghtos_task_control_t) == 24u, "32-bit unified task slot ABI changed");
+#elif ARGHTOS_R5I_SCHEDULE8
+_Static_assert(sizeof(arghtos_task_control_t) == 8u, "32-bit R5i core slot ABI changed");
+_Static_assert(sizeof(arghtos_task_meta_t) == 1u, "R5i metadata ABI changed");
 #elif ARGHTOS_R5G_SCHEDULE16
 _Static_assert(sizeof(arghtos_task_control_t) == 8u, "32-bit R5g core slot ABI changed");
 _Static_assert(sizeof(arghtos_task_meta_t) == 1u, "R5g metadata ABI changed");
