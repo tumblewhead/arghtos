@@ -13,7 +13,7 @@ M23_COMMON := --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -std=c11 \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -fstack-usage -Oz \
 	-Wall -Wextra -Werror -Iinclude -Isrc -Iport/cortex_m23
 
-.PHONY: all portability-check host-test host-test-size-selector host-test-size-crash-clear host-test-size-timer-sentinel host-test-size-start-timer host-test-size-service-ifchain host-test-compact host-test-static host-test-r2a host-test-r2b host-test-r2c host-test-r3a host-test-r3b host-test-r3c host-test-r4a host-test-r4b host-test-r4g host-test-r4h host-sanitize m23-compile m23-footprint m23-footprint-compact m23-footprint-static m23-footprint-r2a m23-footprint-r2b m23-footprint-r2c m23-footprint-r3a m23-footprint-r3b m23-footprint-r3c m23-footprint-r4a m23-footprint-r4b m23-footprint-r4c m23-footprint-r4d m23-footprint-r4e m23-footprint-r4f m23-footprint-r4g m23-footprint-r4h m23-footprint-r4i footprint-report clean
+.PHONY: all portability-check host-test host-test-size-selector host-test-size-crash-clear host-test-size-timer-sentinel host-test-size-start-timer host-test-size-service-ifchain host-test-size-fault-range host-test-compact host-test-static host-test-r2a host-test-r2b host-test-r2c host-test-r3a host-test-r3b host-test-r3c host-test-r4a host-test-r4b host-test-r4g host-test-r4h host-sanitize m23-compile m23-footprint m23-footprint-compact m23-footprint-static m23-footprint-r2a m23-footprint-r2b m23-footprint-r2c m23-footprint-r3a m23-footprint-r3b m23-footprint-r3c m23-footprint-r4a m23-footprint-r4b m23-footprint-r4c m23-footprint-r4d m23-footprint-r4e m23-footprint-r4f m23-footprint-r4g m23-footprint-r4h m23-footprint-r4i m23-footprint-r4j footprint-report clean
 
 all: portability-check host-test m23-compile
 
@@ -51,6 +51,11 @@ host-test-size-service-ifchain: | $(BUILD)
 	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_SIZE_FIRST_SERVICE_IF_CHAIN=1 $(HOST_SRCS) \
 		-o $(BUILD)/host-tests-size-service-ifchain
 	$(BUILD)/host-tests-size-service-ifchain
+
+host-test-size-fault-range: | $(BUILD)
+	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_SIZE_FIRST_FAULT_RANGE=1 $(HOST_SRCS) \
+		-o $(BUILD)/host-tests-size-fault-range
+	$(BUILD)/host-tests-size-fault-range
 
 host-test-compact: | $(BUILD)
 	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 $(HOST_SRCS) \
@@ -775,6 +780,45 @@ m23-footprint-r4i: | $(BUILD)
 		--msp $(M23_ARGHTOS_MSP) --json \
 		> $(BUILD)/footprint-r4i.json
 	cat $(BUILD)/footprint-r4i.json
+
+m23-footprint-r4j: | $(BUILD)
+	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 \
+		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
+		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
+		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
+		-DARGHTOS_SPECIALIZED_SERVICES=1 -DARGHTOS_MINIMAL_VALIDATION=1 \
+		-DARGHTOS_RUNTIME_PROFILING=0 -DARGHTOS_SIZE_FIRST_SELECTOR=1 \
+		-DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 -DARGHTOS_SIZE_FIRST_NO_START_TIME=1 \
+		-DARGHTOS_SIZE_FIRST_FAULT_RANGE=1 \
+		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_r4j.o
+	$(CLANG) $(M23_COMMON) -c port/cortex_m23/arghtos_port.c \
+		-o $(BUILD)/arghtos_port_m23_r4j.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
+		-ffunction-sections -c port/cortex_m23/arghtos_context.S \
+		-o $(BUILD)/arghtos_context_m23_r4j.o
+	$(CLANG) $(M23_COMMON) -c footprint/m23_board_stub.c \
+		-o $(BUILD)/m23_board_stub_r4j.o
+	$(CLANG) $(M23_COMMON) -DARGHTOS_STATIC_CONFIG=1 \
+		-DARGHTOS_STATIC_TASK_COUNT=24 -DARGHTOS_COMPACT_RUNTIME=1 \
+		-DARGHTOS_COMPACT_DESCRIPTOR=1 -DARGHTOS_UNIFIED_SLOT=1 \
+		-DARGHTOS_PRODUCTION_PROFILE=1 -DARGHTOS_SPECIALIZED_SERVICES=1 \
+		-DARGHTOS_MINIMAL_VALIDATION=1 -DARGHTOS_RUNTIME_PROFILING=0 \
+		-DARGHTOS_SIZE_FIRST_SELECTOR=1 -DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 \
+		-DARGHTOS_SIZE_FIRST_NO_START_TIME=1 -DARGHTOS_SIZE_FIRST_FAULT_RANGE=1 \
+		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_r4j.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib \
+		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-r4j.map \
+		-Wl,-T,footprint/m23.ld -o $(BUILD)/m23-r4j.elf \
+		$(BUILD)/arghtos_kernel_m23_r4j.o \
+		$(BUILD)/arghtos_port_m23_r4j.o \
+		$(BUILD)/arghtos_context_m23_r4j.o \
+		$(BUILD)/m23_board_stub_r4j.o \
+		$(BUILD)/m23_footprint_r4j.o
+	size -A $(BUILD)/m23-r4j.elf
+	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r4j.map \
+		--msp $(M23_ARGHTOS_MSP) --json \
+		> $(BUILD)/footprint-r4j.json
+	cat $(BUILD)/footprint-r4j.json
 
 footprint-report: m23-footprint
 
