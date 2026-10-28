@@ -379,6 +379,54 @@ static bool process_time_locked(arghtos_time_t now)
     uint32_t best_delta = 0u;
     uint8_t id;
 
+#if ARGHTOS_R5Q_PARTITIONED_TIME
+    for (id = 0u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
+        const uint32_t period = ARGHTOS_TASK_PERIOD(id);
+        arghtos_task_control_t *c = &controls[id];
+
+        if (time_due(now, ARGHTOS_CTRL_NEXT(c))) {
+            const uint32_t late = now - ARGHTOS_CTRL_NEXT(c);
+            const uint32_t releases = 1u + (late / period);
+            uint32_t missed;
+
+            ARGHTOS_CTRL_NEXT(c) += releases * period;
+
+            if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT) {
+                ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+                changed = true;
+                missed = releases - 1u;
+            } else if ((ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) ||
+                       (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_RUNNING)) {
+                missed = releases;
+            } else {
+                arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+            }
+
+            if (missed != 0u) {
+                missed_release_add(id, c, missed);
+            }
+        }
+
+        timer_consider(
+            now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
+    }
+
+    for (id = (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT;
+         id < ARGHTOS_TASK_COUNT; ++id) {
+        arghtos_task_control_t *c = &controls[id];
+
+        if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_SLEEPING) {
+            if (time_due(now, ARGHTOS_CTRL_NEXT(c))) {
+                ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+                ARGHTOS_CTRL_AGE_ID(id) = 0u;
+                changed = true;
+            } else {
+                timer_consider(
+                    now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
+            }
+        }
+    }
+#else
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         const uint32_t period = ARGHTOS_TASK_PERIOD(id);
         arghtos_task_control_t *c = &controls[id];
@@ -420,6 +468,7 @@ static bool process_time_locked(arghtos_time_t now)
             }
         }
     }
+#endif
 
     if (have_timer) {
         arghtos_port_timer_arm(best_time);
