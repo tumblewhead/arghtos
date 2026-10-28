@@ -82,7 +82,7 @@ static void test_prestart_interrupt_wake_is_rejected(void)
     assert(arghtos_init(&cfg) == ARGHTOS_OK);
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     assert(arghtos_wake_from_interrupt(0u) == ARGHTOS_ERR_BAD_STATE);
-    assert(arghtos_test_controls()[0].state == ARGHTOS_TASK_DORMANT);
+    assert(arghtos_test_controls()ARGHTOS_CTRL_STATE(&[0]) == ARGHTOS_TASK_DORMANT);
     assert(arghtos_host_dispatch_request_count() == 0u);
 }
 
@@ -139,9 +139,9 @@ static void test_start_releases_all_periodic_at_one_epoch(void)
     assert(!arghtos_host_interrupts_masked());
 
     c = arghtos_test_controls();
-    assert(c[0].state == ARGHTOS_TASK_READY);
-    assert(c[1].state == ARGHTOS_TASK_READY);
-    assert(c[2].state == ARGHTOS_TASK_DORMANT);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_STATE(&c[2]) == ARGHTOS_TASK_DORMANT);
     assert(c[0].next_time == 1100u);
     assert(c[1].next_time == 1010u);
     assert(arghtos_host_timer_is_armed());
@@ -172,8 +172,8 @@ static void test_periodic_rms_and_same_task_reselect_accounting(void)
     c = arghtos_test_controls();
     assert(arghtos_test_kernel()->current_task == 1u);
     assert(c[1].total_cpu_ticks == 5u);
-    assert(c[1].max_run_ticks == 5u);
-    assert(c[1].state == ARGHTOS_TASK_RUNNING);
+    assert(ARGHTOS_CTRL_MAX_RUN(&c[1]) == 5u);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_RUNNING);
 }
 
 static void setup_one_async_at(arghtos_time_t now)
@@ -209,15 +209,15 @@ static void test_wake_wait_handshake(void)
     ctx = c[0].context;
 
     assert(arghtos_wake(0u) == ARGHTOS_OK);
-    assert((c[0].flags & ARGHTOS_TCF_WAKE_PENDING) != 0u);
+    assert(ARGHTOS_CTRL_WAKE_PENDING(&c[0]));
 
     assert(arghtos_wait() == ARGHTOS_OK);
-    assert(c[0].state == ARGHTOS_TASK_RUNNING);
-    assert((c[0].flags & ARGHTOS_TCF_WAKE_PENDING) == 0u);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_RUNNING);
+    assert(!ARGHTOS_CTRL_WAKE_PENDING(&c[0]));
     assert(arghtos_host_dispatch_request_count() == 0u);
 
     assert(arghtos_wait() == ARGHTOS_OK);
-    assert(c[0].state == ARGHTOS_TASK_WAITING);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_WAITING);
     assert(arghtos_host_dispatch_request_count() == 1u);
 
     assert(arghtos_kernel_dispatch(ctx) == ARGHTOS_CONTEXT_NONE);
@@ -225,9 +225,9 @@ static void test_wake_wait_handshake(void)
 
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     assert(arghtos_wake_from_interrupt(0u) == ARGHTOS_OK);
-    assert(c[0].state == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
     assert(arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE) == c[0].context);
-    assert(c[0].state == ARGHTOS_TASK_RUNNING);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_RUNNING);
 }
 
 static void test_sleep_is_timer_only_and_preserves_pending_wake(void)
@@ -241,30 +241,30 @@ static void test_sleep_is_timer_only_and_preserves_pending_wake(void)
     arghtos_host_set_time(100u);
 
     assert(arghtos_sleep_for(10u) == ARGHTOS_OK);
-    assert(c[0].state == ARGHTOS_TASK_SLEEPING);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_SLEEPING);
     assert(c[0].next_time == 110u);
     assert(arghtos_host_timer_deadline() == 110u);
 
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     assert(arghtos_wake_from_interrupt(0u) == ARGHTOS_OK);
-    assert(c[0].state == ARGHTOS_TASK_SLEEPING);
-    assert((c[0].flags & ARGHTOS_TCF_WAKE_PENDING) != 0u);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_SLEEPING);
+    assert(ARGHTOS_CTRL_WAKE_PENDING(&c[0]));
 
     assert(arghtos_kernel_dispatch(ctx) == ARGHTOS_CONTEXT_NONE);
     arghtos_host_set_time(109u);
     arghtos_timer_interrupt();
-    assert(c[0].state == ARGHTOS_TASK_SLEEPING);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_SLEEPING);
 
     arghtos_host_set_time(110u);
     arghtos_timer_interrupt();
-    assert(c[0].state == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
     assert(arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE) == c[0].context);
 
     arghtos_host_set_mode(ARGHTOS_HOST_TASK);
     arghtos_host_clear_dispatch_requests();
     assert(arghtos_wait() == ARGHTOS_OK);
-    assert(c[0].state == ARGHTOS_TASK_RUNNING);
-    assert((c[0].flags & ARGHTOS_TCF_WAKE_PENDING) == 0u);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_RUNNING);
+    assert(!ARGHTOS_CTRL_WAKE_PENDING(&c[0]));
 }
 
 static void test_sleep_wraparound(void)
@@ -275,7 +275,7 @@ static void test_sleep_wraparound(void)
     c = arghtos_test_controls();
     arghtos_host_set_time(0xFFFFFFF0u);
     assert(arghtos_sleep_until(0x00000010u) == ARGHTOS_OK);
-    assert(c[0].state == ARGHTOS_TASK_SLEEPING);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_SLEEPING);
     assert(arghtos_host_timer_deadline() == 0x00000010u);
 }
 
@@ -296,16 +296,16 @@ static void test_periodic_delayed_release_catchup(void)
 
     arghtos_host_set_mode(ARGHTOS_HOST_TASK);
     assert(arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
-    assert(arghtos_test_controls()[0].state == ARGHTOS_TASK_DORMANT);
+    assert(arghtos_test_controls()ARGHTOS_CTRL_STATE(&[0]) == ARGHTOS_TASK_DORMANT);
     assert(arghtos_kernel_dispatch(ctx) == ARGHTOS_CONTEXT_NONE);
 
     arghtos_host_set_time(137u);
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     arghtos_timer_interrupt();
     c = arghtos_test_controls();
-    assert(c[0].state == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
     assert(c[0].next_time == 140u);
-    assert(c[0].missed_release_count == 2u);
+    assert(ARGHTOS_CTRL_MISSED(&c[0]) == 2u);
 }
 
 static void test_periodic_active_counts_all_missed_releases(void)
@@ -321,14 +321,14 @@ static void test_periodic_active_counts_all_missed_releases(void)
     assert(arghtos_init(&cfg) == ARGHTOS_OK);
     start_and_escape();
     c = arghtos_test_controls();
-    assert(c[0].state == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
 
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     arghtos_host_set_time(137u);
     arghtos_timer_interrupt();
-    assert(c[0].state == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
     assert(c[0].next_time == 140u);
-    assert(c[0].missed_release_count == 3u);
+    assert(ARGHTOS_CTRL_MISSED(&c[0]) == 3u);
 }
 
 static void test_async_aging_eventually_beats_high_base_peer(void)
@@ -403,7 +403,7 @@ static void test_profile_snapshot_is_committed_only(void)
     (void)arghtos_kernel_dispatch(ctx);
     assert(arghtos_profile_get(0u, &p) == ARGHTOS_OK);
     assert(p.total_cpu_ticks == 25u);
-    assert(p.max_run_ticks == 25u);
+    assert(ARGHTOS_CTRL_MAX_RUN(&p) == 25u);
 }
 
 static void test_invalid_wake_id_does_not_mutate(void)
@@ -442,7 +442,7 @@ static void test_fatal_commits_generic_crash_record(void)
     assert((crash_record.flags & ARGHTOS_CRASH_F_PORT_STATE_VALID) != 0u);
     assert(crash_record.port_words == 1u);
     assert(crash_record.commit_magic == ARGHTOS_CRASH_COMMIT_MAGIC);
-    assert(arghtos_test_controls()[0].state == ARGHTOS_TASK_FAULTED);
+    assert(arghtos_test_controls()ARGHTOS_CTRL_STATE(&[0]) == ARGHTOS_TASK_FAULTED);
 }
 
 int main(void)
