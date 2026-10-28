@@ -32,10 +32,12 @@ R5b accepted minimum            = 2286 B
 R5d accepted minimum            = 2270 B
 R5e accepted minimum            = 2202 B
 R5h accepted minimum            = 1970 B
-linked before MSP               = 1890 B
-ArghtOS-only MSP                =   80 B
+R5i accepted minimum            = 1914 B
+R5j accepted minimum            = 1906 B
+linked before MSP               = 1834 B
+ArghtOS-only MSP                =   72 B
 soft target                     = 1536 B
-remaining gap                   =  434 B
+remaining gap                   =  370 B
 ```
 
 The final same-revision profiling-enabled R3c reference on the frozen R4 source
@@ -215,45 +217,86 @@ generated configurations to direct halfword access.
 See
 [implementation/R5h-direct-schedule16.md](implementation/R5h-direct-schedule16.md).
 
-## Exact next action: R5i fixed 8-bit schedule codes
-
-Keep R5h as accepted control at 1970 B.
-
-Use one O(1) byte per task:
+## R5i accepted result
 
 ```text
-0x01..0x5F  direct periodic period 1..95
-0x60..0x77  overflow index 0..23
-0x81..0xFF  direct async priority 1..127
+CI 40718436840  success
+
+R5h 1970 B
+R5i 1914 B
+saved  56 B
 ```
 
-All longer periods and async priorities 128..254 remain representable through
-the optional exact 32-bit overflow table.
-
-For the current footprint fixture, all periods are 1..24 and overflow count is
-zero. The target path should therefore compile to direct byte access with no
-overflow helper.
-
-Raw resident-state target:
+R5i replaces the fixed 16-bit schedule table with O(1) fixed 8-bit schedule
+codes plus exact overflow fallback. The target fixture has zero overflow
+entries.
 
 ```text
-core slots      8 * 24 = 192 B
-status meta     1 * 24 =  24 B
-schedule8       1 * 24 =  24 B
-------------------------------
-total                    240 B
+.arghtos_cfg          264 -> 240 B
+process_time_locked   208 -> 188 B
+kernel_dispatch       188 -> 180 B
+arghtos_start         100 ->  96 B
 ```
 
-This is another 24 B raw saving versus R5h, with possible text reduction from
-byte access.
+See [implementation/R5i-schedule8.md](implementation/R5i-schedule8.md).
+
+## R5j accepted result
+
+```text
+CI 40719129049  success
+
+R5i 1914 B
+R5j 1906 B
+saved   8 B
+```
+
+R5j is an accounting-only requalification of the exact R5i linked image.
+The deepest linked normal ArghtOS-owned MSP chain is now:
+
+```text
+SVC explicit push               8 B
+kernel_service frame           16 B
+process_time_locked frame      48 B
+-----------------------------------
+total                          72 B
+```
+
+See [implementation/R5j-msp-72.md](implementation/R5j-msp-72.md).
+
+## Exact next action: R5k compact Cortex-M23 crash fill
+
+Keep R5j as accepted control at 1906 B.
+
+R5k should replace only the Cortex-M23 implementation of
+`arghtos_port_crash_fill()` in the minimum-size target build.
+
+Current C/LTO code copies a fixed target context into the required 64-byte
+architecture-neutral crash record using scalar loads/stores.
+
+R5k hypothesis:
+
+* keep the portable kernel and C5 crash protocol unchanged;
+* keep `arghtos_m23_fault_context_t` unchanged;
+* implement the port payload copy as a leaf Thumb-1 assembly function;
+* use paired `LDMIA/STMIA` transfers for MSP/PSP and hardware-frame words;
+* allocate no MSP stack in the helper;
+* keep NULL-context capture of live MSP/PSP;
+* preserve exactly:
+  * `port_format = 0x4D23`;
+  * `port_words = 2, 3, or 10`;
+  * state word ordering;
+  * skipped hardware R12 slot;
+  * generic zero-before-fill and commit-last protocol.
 
 Acceptance:
 
-1. Preserve R5h same-revision control.
-2. Host general encoding must exercise direct periodic, direct async, and
-   overflow exact-value forms.
-3. Target fixture uses zero overflow entries.
-4. Keep all legal schedule values representable.
-5. Run host/sanitizer/portability and Cortex-M23 comparison.
-6. Accept only if total <1970 B.
-7. Refresh this handoff.
+1. Keep R5i linked code / R5j 72 B MSP accounting as control.
+2. Gate the assembly helper behind an R5k-only port build define.
+3. Exclude only the Cortex-M23 C crash-fill definition in R5k.
+4. Run frozen host/sanitizer/portability gates.
+5. Link R5k with 72 B MSP.
+6. Inspect `arghtos_fatal` + crash-fill symbol sizes and disassembly.
+7. Confirm the helper is leaf/no-stack and the 72 B MSP bound remains valid.
+8. Accept only if total <1906 B.
+9. Refresh this handoff.
+
