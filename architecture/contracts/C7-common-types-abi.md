@@ -108,6 +108,14 @@ enum {
 
 Async larger numeric priority means greater urgency.
 
+```text
+0x00       reserved: no async priority / periodic sentinel
+0x01..MAX legal async priorities
+0xFF       reserved: invalid
+```
+
+`ARGHTOS_ASYNC_PRIORITY_MAX` is the largest legal async value and must be in 1..254.
+
 Periodic priority is not represented by this number; it is derived from period.
 
 Periodic versus async is a class-first scheduling decision, not a numeric comparison.
