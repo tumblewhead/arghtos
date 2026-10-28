@@ -79,3 +79,18 @@ This proof does not claim memory isolation. With no MPU-based containment requir
 # Dependencies
 
 Depends on [P0](P0-static-configuration-validity.md) and the concrete Cortex-M23 port contract produced during architecture design.
+
+
+# I0 implementation evidence
+
+Static Cortex-M23 disassembly and compiler stack-usage evidence are recorded in [I0 context static audit](../implementation/I0-context-static-audit.md).
+
+Confirmed statically:
+
+* R4-R11 save/restore structure is symmetric in the current PendSV object;
+* SVC service arguments/results use the documented stacked R0/R1 ABI;
+* HardFault reaches the generic crash path with target context;
+* the first-dispatch path reclaims the startup MSP frame;
+* the current normal-path ArghtOS-only MSP static lower bound is approximately 104 B.
+
+P2 remains conditional on target register-canary, alignment, PSP/MSP ownership, and high-water tests.
