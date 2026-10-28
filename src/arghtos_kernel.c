@@ -1086,10 +1086,15 @@ void arghtos_timer_interrupt(void)
 
 static bool task_fault_attributed(arghtos_fault_reason_t reason)
 {
+#if ARGHTOS_SIZE_FIRST_FAULT_RANGE
+    return ((uint16_t)(reason - ARGHTOS_FAULT_CONTEXT_CORRUPT) <= 2u) ||
+           (reason == ARGHTOS_FAULT_CPU_EXCEPTION);
+#else
     return (reason == ARGHTOS_FAULT_ASYNC_RETURNED) ||
            (reason == ARGHTOS_FAULT_STACK_RANGE) ||
            (reason == ARGHTOS_FAULT_CONTEXT_CORRUPT) ||
            (reason == ARGHTOS_FAULT_CPU_EXCEPTION);
+#endif
 }
 
 ARGHTOS_NORETURN void arghtos_fatal(
