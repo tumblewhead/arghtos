@@ -8,9 +8,16 @@
 #include <stdio.h>
 #include <string.h>
 
+#if (ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5H_DIRECT_SCHEDULE16) || \
+    (ARGHTOS_R5I_SCHEDULE8 && ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT > 0u)
+#define ARGHTOS_TEST_THREE_TASKS 1
+#else
+#define ARGHTOS_TEST_THREE_TASKS 0
+#endif
+
 static _Alignas(8) uint8_t stack0[256];
 static _Alignas(8) uint8_t stack1[256];
-#if ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5H_DIRECT_SCHEDULE16
+#if ARGHTOS_TEST_THREE_TASKS
 static _Alignas(8) uint8_t stack2[256];
 #endif
 
@@ -26,7 +33,7 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
 #else
         .entry = periodic_task,
 #endif
-#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16
+#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5I_SCHEDULE8
         .schedule = ARGHTOS_STATIC_PERIOD(10u)
 #endif
     },
@@ -37,11 +44,11 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
 #else
         .entry = async_task,
 #endif
-#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16
+#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5I_SCHEDULE8
         .schedule = ARGHTOS_STATIC_ASYNC(3u)
 #endif
     }
-#if ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5H_DIRECT_SCHEDULE16
+#if ARGHTOS_TEST_THREE_TASKS
     ,{
         .context = (arghtos_context_t)(uintptr_t)&stack2[sizeof(stack2)],
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
@@ -84,6 +91,23 @@ uint32_t arghtos_static_schedule_overflow[ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT] =
 };
 #endif
 #endif
+#if ARGHTOS_R5I_SCHEDULE8
+#if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT > 0u
+uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
+    ARGHTOS_R5I_OVERFLOW_BASE | 0u,
+    ARGHTOS_R5I_ASYNC_BASE | 3u,
+    11u
+};
+uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT] = {
+    ARGHTOS_STATIC_PERIOD(10u)
+};
+#else
+uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
+    10u,
+    ARGHTOS_R5I_ASYNC_BASE | 3u
+};
+#endif
+#endif
 #if ARGHTOS_SPLIT_META
 arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
 #endif
@@ -109,14 +133,14 @@ static void reset_all(void)
         (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)];
     arghtos_static_slots[1].context =
         (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)];
-#if ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5H_DIRECT_SCHEDULE16
+#if ARGHTOS_TEST_THREE_TASKS
     arghtos_static_slots[2].context =
         (arghtos_context_t)(uintptr_t)&stack2[sizeof(stack2)];
 #endif
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
     ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[0]) = periodic_task;
     ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[1]) = async_task;
-#if ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5H_DIRECT_SCHEDULE16
+#if ARGHTOS_TEST_THREE_TASKS
     ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[2]) = periodic_task;
 #endif
 #endif
@@ -146,7 +170,7 @@ static void test_static_init_ignores_runtime_config(void)
 
     assert(arghtos_init(NULL) == ARGHTOS_OK);
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
-#if ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5H_DIRECT_SCHEDULE16
+#if ARGHTOS_TEST_THREE_TASKS
     assert(arghtos_host_initial_arg() == (uintptr_t)periodic_task);
 #else
     assert(arghtos_host_initial_arg() == (uintptr_t)async_task);
@@ -186,7 +210,7 @@ static void test_static_dispatch_and_async_wake(void)
         ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
     assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_DORMANT);
 
-#if ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5H_DIRECT_SCHEDULE16
+#if ARGHTOS_TEST_THREE_TASKS
     {
         const arghtos_context_t second_periodic_context =
             arghtos_kernel_dispatch(periodic_context);
