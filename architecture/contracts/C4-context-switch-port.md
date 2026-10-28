@@ -191,27 +191,28 @@ The WFI must remain inside a loop because WFI may complete for reasons that do n
 
 This protocol eliminates the check-then-sleep race without allocating an idle task or idle PSP stack.
 
-# SVC ABI
+# Cortex-M23 task-service realization
 
-Task-context ownership-changing calls use SVC.
-
-The v1 service numbers are:
+The portable task API calls the abstract port function:
 
 ```c
-typedef uint8_t arghtos_svc_id_t;
-
-enum {
-    ARGHTOS_SVC_YIELD       = 0u,
-    ARGHTOS_SVC_WAIT        = 1u,
-    ARGHTOS_SVC_SLEEP_UNTIL = 2u,
-    ARGHTOS_SVC_WAKE        = 3u,
-    ARGHTOS_SVC_TASK_RETURN = 4u
-};
+arghtos_result_t arghtos_port_service_call(
+    uint8_t service_id,
+    uint32_t arg0);
 ```
 
-For services with one scalar argument, the argument is passed in R0 according to the Cortex-M C ABI. The result code is returned in R0 when the calling task later resumes.
+The Cortex-M23 port realizes this with one fixed `SVC #0` instruction. The call ABI is:
 
-The SVC handler validates the service number and forwards it to the kernel API gateway. It never selects or restores a task directly; it requests PendSV when a dispatch decision is needed.
+```text
+R0 = service_id
+R1 = arg0
+SVC #0
+result returned in R0
+```
+
+The SVC handler reads the service ID from stacked R0 and arg0 from stacked R1, calls `arghtos_kernel_service(service_id,arg0)`, writes the result into stacked R0, and returns or tail-chains to PendSV.
+
+The handler does not decode an SVC immediate from the instruction stream. Only the target port knows that Cortex-M23 uses SVC; the portable kernel knows only the abstract service-call operation.
 
 # Saved task frame
 
