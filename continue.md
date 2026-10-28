@@ -19,6 +19,10 @@ experiment on this branch.
 
 ## Frozen result
 
+The final same-revision R3c reference is 3104 B. Earlier R4 documents may show
+the historical 3080 B R3c value from earlier source revisions; do not rewrite
+those historical measurements.
+
 Default capacity:
 
 ```text
@@ -28,7 +32,7 @@ Default capacity:
 Complete physical ArghtOS resident footprint:
 
 ```text
-physical R3c reference                3080 B
+physical R3c final reference          3104 B
 R4h corrected physical baseline      2778 B
 R4m full LTO                          2530 B
 R4n omit frame pointer                2450 B
@@ -158,7 +162,7 @@ Supported Makefile/CI surfaces are now:
 1. Run the final PR #3 CI on this frozen branch head.
 2. Confirm:
    * all frozen CI steps pass;
-   * R3c remains 3080 B physical;
+   * R3c is 3104 B physical;
    * R4y remains 2294 B physical;
    * PR #3 remains mergeable.
 3. If green, mark PR #3 ready for review/merge.
