@@ -48,7 +48,7 @@ _Noreturn void arghtos_task_start_trampoline(void)
     if (d->period != 0u) {
         for (;;) {
             d->entry();
-            svc(ARGHTOS_SVC_TASK_RETURN);
+            arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u);
         }
     }
 
@@ -65,17 +65,17 @@ The production implementation may reload `id`/descriptor after each resume if th
 sequenceDiagram
   participant TR as Trampoline
   participant JOB as Periodic application entry
-  participant SVC as TASK_RETURN SVC
+  participant CALL as TASK_RETURN service call
   participant K as Kernel
   participant TM as Timer
 
   TR->>JOB: call entry()
   JOB-->>TR: return
-  TR->>SVC: TASK_RETURN
-  SVC->>K: RUNNING -> DORMANT
-  K-->>TR: suspended in SVC return path
+  TR->>CALL: port_service_call(TASK_RETURN)
+  CALL->>K: kernel_service -> DORMANT
+  K-->>TR: suspended in target service-call path
   TM->>K: next release DORMANT -> READY
-  K-->>TR: dispatch resumes after SVC
+  K-->>TR: dispatch resumes after service call
   TR->>JOB: call entry() again
 ```
 
@@ -131,7 +131,7 @@ Each task stack must accommodate:
 * trampoline call frame;
 * public API wrapper frames used by that task;
 * application WCET stack use;
-* interrupt hardware frame on PSP when interrupted.
+* target-specific interrupt/context-save overhead defined by the selected port.
 
 Task stack sizing is application/system responsibility, but D08 must avoid unnecessary local objects.
 
@@ -175,13 +175,13 @@ Stack grows every period.
 
 ## 3. Trampoline caches current_task across suspension incorrectly
 
-If compiler keeps task ID in a caller-saved register across SVC in a way inconsistent with ABI assumptions, resume can reference the wrong descriptor.
+If compiler/port ABI handling fails to preserve the trampoline's C state across the abstract service call, resume can reference the wrong descriptor.
 
 **Tester should:**
 
 * alternate equal-priority periodic tasks rapidly;
 * after every release verify the trampoline calls the descriptor matching current_task;
-* inspect generated assembly for descriptor/id lifetime across the SVC boundary.
+* inspect generated target code and the port service-call ABI for descriptor/id lifetime across the suspension boundary.
 
 ## 4. Application entry tail-call optimization bypasses return service
 
@@ -190,7 +190,7 @@ An optimizer could theoretically transform code shape unexpectedly if the trampo
 **Tester should:**
 
 * inspect optimized disassembly;
-* verify periodic entry returns to code that executes TASK_RETURN SVC;
+* verify periodic entry returns to code that invokes the TASK_RETURN abstract service call;
 * build at all supported optimization levels.
 
 ## 5. Return guard optimized away or shares wrong calling convention
