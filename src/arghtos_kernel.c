@@ -61,10 +61,12 @@ static bool time_due(arghtos_time_t now, arghtos_time_t t)
     return (int32_t)(now - t) >= 0;
 }
 
+#if !ARGHTOS_MINIMAL_VALIDATION || !ARGHTOS_TRUSTED_CONFIG
 static bool duration_valid(arghtos_duration_t dt)
 {
     return dt < ARGHTOS_TIME_HALF_RANGE;
 }
+#endif
 
 static bool task_id_valid(arghtos_task_id_t id)
 {
