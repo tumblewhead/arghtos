@@ -86,6 +86,27 @@ static void test_prestart_interrupt_wake_is_rejected(void)
     assert(arghtos_host_dispatch_request_count() == 0u);
 }
 
+static void test_async_priority_sentinels_rejected(void)
+{
+#if !ARGHTOS_TRUSTED_CONFIG
+    arghtos_task_config_t task = {
+        task0, stack0, 0u, sizeof(stack0), ARGHTOS_PRIORITY_NONE, 0u
+    };
+    arghtos_config_t cfg = make_config(&task, 1u);
+
+    reset_all();
+    assert(arghtos_init(&cfg) == ARGHTOS_ERR_BAD_CONFIG);
+
+    task.async_priority = ARGHTOS_PRIORITY_INVALID;
+    reset_all();
+    assert(arghtos_init(&cfg) == ARGHTOS_ERR_BAD_CONFIG);
+
+    task.async_priority = (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX;
+    reset_all();
+    assert(arghtos_init(&cfg) == ARGHTOS_OK);
+#endif
+}
+
 static void test_start_establishes_normal_interrupt_state(void)
 {
     arghtos_task_config_t task = {
@@ -313,9 +334,9 @@ static void test_periodic_active_counts_all_missed_releases(void)
 static void test_async_aging_eventually_beats_high_base_peer(void)
 {
     arghtos_task_config_t tasks[2] = {
-        {task0, stack0, 0u, sizeof(stack0), 0u, 0u},
+        {task0, stack0, 0u, sizeof(stack0), 1u, 0u},
         {task1, stack1, 0u, sizeof(stack1),
-            (uint8_t)(ARGHTOS_ASYNC_PRIORITY_LEVELS - 1u), 0u}
+            (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX, 0u}
     };
     arghtos_config_t cfg = make_config(tasks, 2u);
     arghtos_context_t ctx;
@@ -347,7 +368,7 @@ static void test_periodic_selection_does_not_age_async(void)
 {
     arghtos_task_config_t tasks[2] = {
         {task0, stack0, 10u, sizeof(stack0), 0u, 0u},
-        {task1, stack1, 0u, sizeof(stack1), 0u, 0u}
+        {task1, stack1, 0u, sizeof(stack1), 1u, 0u}
     };
     arghtos_config_t cfg = make_config(tasks, 2u);
 
@@ -431,6 +452,7 @@ int main(void)
     test_init_rejects_overlap();
 #endif
     test_prestart_interrupt_wake_is_rejected();
+    test_async_priority_sentinels_rejected();
     test_start_establishes_normal_interrupt_state();
     test_start_releases_all_periodic_at_one_epoch();
     test_periodic_rms_and_same_task_reselect_accounting();
