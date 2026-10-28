@@ -712,6 +712,72 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 
     key = arghtos_port_critical_enter();
 
+#if ARGHTOS_SIZE_FIRST_SERVICE_IF_CHAIN
+    if (service_id == ARGHTOS_SERVICE_YIELD) {
+        ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_READY);
+        if (task_is_async(self)) {
+            controls[self].age_credit = 0u;
+        }
+        dispatch = true;
+    } else if (service_id == ARGHTOS_SERVICE_WAIT) {
+#if !ARGHTOS_SPECIALIZED_SERVICES
+        if (!task_is_async(self)) {
+            result = ARGHTOS_ERR_BAD_TASK_CLASS;
+        } else
+#endif
+        if (ARGHTOS_CTRL_WAKE_PENDING(&controls[self])) {
+            ARGHTOS_CTRL_CLEAR_WAKE(&controls[self]);
+        } else {
+            ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_WAITING);
+            controls[self].age_credit = 0u;
+            dispatch = true;
+        }
+    } else if (service_id == ARGHTOS_SERVICE_SLEEP_UNTIL) {
+#if !ARGHTOS_SPECIALIZED_SERVICES
+        if (!task_is_async(self)) {
+            result = ARGHTOS_ERR_BAD_TASK_CLASS;
+        } else
+#endif
+        {
+            const arghtos_time_t now = arghtos_port_time_now();
+            const arghtos_time_t deadline = (arghtos_time_t)arg0;
+            const uint32_t delta = deadline - now;
+
+            if (!time_due(now, deadline)) {
+#if !ARGHTOS_MINIMAL_VALIDATION
+                if (!duration_valid(delta)) {
+                    result = ARGHTOS_ERR_BAD_TIME;
+                } else
+#endif
+                {
+                    controls[self].next_time = deadline;
+                    ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_SLEEPING);
+                    controls[self].age_credit = 0u;
+                    (void)process_time_locked(now);
+                    dispatch = true;
+                }
+            }
+#if ARGHTOS_MINIMAL_VALIDATION
+            (void)delta;
+#endif
+        }
+    } else if (service_id == ARGHTOS_SERVICE_WAKE) {
+        dispatch = wake_locked((arghtos_task_id_t)arg0, &result);
+    } else if (service_id == ARGHTOS_SERVICE_TASK_RETURN) {
+#if !ARGHTOS_SPECIALIZED_SERVICES
+        if (!task_is_periodic(self)) {
+            result = ARGHTOS_ERR_BAD_TASK_CLASS;
+        } else
+#endif
+        {
+            ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_DORMANT);
+            dispatch = true;
+        }
+    } else {
+        arghtos_port_critical_exit(key);
+        arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+    }
+#else
     switch (service_id) {
     case ARGHTOS_SERVICE_YIELD:
         ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_READY);
@@ -789,6 +855,7 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
         arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
     }
 
+#endif
     arghtos_port_critical_exit(key);
 
     if (dispatch) {
