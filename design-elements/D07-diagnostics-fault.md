@@ -132,11 +132,11 @@ record.timestamp
 zero record.port_format / port_words / port_state[]
 arghtos_port_crash_fill(record, port_fault_context)
 
-compiler barrier / required ordering primitive
+C11 release fence / target memory-order barrier
 record.commit_magic = CRAS
 ```
 
-The commit marker is the final validity write.
+The commit marker is the final validity write. In the Cortex-M23 build the release fence compiles to DMB before that store.
 
 No CRC is required in v1.
 
