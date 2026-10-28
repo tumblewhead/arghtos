@@ -14,7 +14,7 @@ It protects synchronous compile-time RMS tasks and schedules asynchronous event 
 
 # Key goals
 
-* Soft target: complete ArghtOS resident footprint near or below 1.5 KiB at 32 tasks.
+* Soft target: complete ArghtOS resident footprint near or below 1.5 KiB at 24 tasks.
 * Count kernel/port `.text`, `.rodata`, literals, data, descriptors, runtime state, and MSP.
 * Exclude application task stacks and application task bodies from the ArghtOS-overhead subtotal, while including them in total system SRAM.
 * Keep API small and deterministic.
@@ -26,11 +26,11 @@ It protects synchronous compile-time RMS tasks and schedules asynchronous event 
 
 # Concrete v1 baseline
 
-* `ARGHTOS_MAX_TASKS=32` default, adjustable up to 254.
+* `ARGHTOS_MAX_TASKS=24` default, adjustable up to 254.
 * C0 descriptor: 16 B/task.
 * C8 runtime control: 20 B/task.
 * C9 global state: 20 B.
-* 32-task metadata lower bound: 1172 B.
+* 24-task metadata lower bound is the current implementation target; exact linked evidence is tracked in I1.
 * required crash record: 64 B.
 * periodic tasks: synchronous, phase 0, `D=T`.
 * periodic priority: RMS, shorter period first, task-ID tie break.
