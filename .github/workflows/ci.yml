@@ -40,6 +40,9 @@ jobs:
       - name: Host live R5e age/deadline overlay
         run: make host-test-r5e
 
+      - name: Host live R5f compressed schedule
+        run: make host-test-r5f
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -67,9 +70,12 @@ jobs:
       - name: Cortex-M23 live R5e age/deadline overlay
         run: make m23-footprint-r5e
 
+      - name: Cortex-M23 live R5f compressed schedule
+        run: make m23-footprint-r5f
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5a r5b r5c r5d r5e; do
+          for p in r3c r4y r5a r5b r5c r5d r5e r5f; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -89,6 +95,7 @@ jobs:
             build/footprint-r5c.json
             build/footprint-r5d.json
             build/footprint-r5e.json
+            build/footprint-r5f.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5a.map
@@ -96,6 +103,7 @@ jobs:
             build/m23-r5c.map
             build/m23-r5d.map
             build/m23-r5e.map
+            build/m23-r5f.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5a-symbols.txt
@@ -103,10 +111,12 @@ jobs:
             build/m23-r5c-symbols.txt
             build/m23-r5d-symbols.txt
             build/m23-r5e-symbols.txt
+            build/m23-r5f-symbols.txt
             build/m23-r4y.elf
             build/m23-r5a.elf
             build/m23-r5b.elf
             build/m23-r5c.elf
             build/m23-r5d.elf
             build/m23-r5e.elf
+            build/m23-r5f.elf
             build/*.su
