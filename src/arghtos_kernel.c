@@ -355,6 +355,21 @@ static void missed_release_add(
 #endif
 }
 
+#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+static void timer_consider(
+    arghtos_time_t now,
+    arghtos_time_t t,
+    arghtos_time_t *best,
+    uint32_t *best_delta)
+{
+    const uint32_t delta = t - now;
+
+    if (delta < *best_delta) {
+        *best = t;
+        *best_delta = delta;
+    }
+}
+#else
 static void timer_consider(
     arghtos_time_t now,
     arghtos_time_t t,
@@ -370,13 +385,19 @@ static void timer_consider(
         *best_delta = delta;
     }
 }
+#endif
 
 static bool process_time_locked(arghtos_time_t now)
 {
     bool changed = false;
+#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+    arghtos_time_t best_time = 0u;
+    uint32_t best_delta = UINT32_MAX;
+#else
     bool have_timer = false;
     arghtos_time_t best_time = 0u;
     uint32_t best_delta = 0u;
+#endif
     uint8_t id;
 
 #if ARGHTOS_R5Q_PARTITIONED_TIME
@@ -407,8 +428,13 @@ static bool process_time_locked(arghtos_time_t now)
             }
         }
 
+#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+        timer_consider(
+            now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
+#else
         timer_consider(
             now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
+#endif
     }
 
     for (id = (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT;
@@ -423,8 +449,13 @@ static bool process_time_locked(arghtos_time_t now)
 #endif
                 changed = true;
             } else {
+#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+                timer_consider(
+                    now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
+#else
                 timer_consider(
                     now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
+#endif
             }
         }
     }
@@ -474,11 +505,16 @@ static bool process_time_locked(arghtos_time_t now)
     }
 #endif
 
+#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+    arghtos_port_timer_arm(best_time);
+#else
     if (have_timer) {
         arghtos_port_timer_arm(best_time);
     } else {
         arghtos_port_timer_disarm();
     }
+
+#endif
 
     return changed;
 }
