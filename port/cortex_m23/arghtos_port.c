@@ -157,22 +157,19 @@ void arghtos_port_idle_wait(void)
         ::: "memory");
 }
 
-arghtos_context_t arghtos_port_build_initial_context(
-    void *stack_base,
-    uint32_t stack_size,
+static arghtos_context_t m23_build_context_at_top(
+    uintptr_t top,
     void (*thread_start)(void),
     void (*return_guard)(void))
 {
-    uintptr_t top;
     uint32_t *sp;
     unsigned i;
 
-    if (!arghtos_port_stack_valid(stack_base, stack_size) ||
+    if ((top == 0u) || ((top & 0x7u) != 0u) ||
         (thread_start == NULL) || (return_guard == NULL)) {
         return ARGHTOS_CONTEXT_NONE;
     }
 
-    top = ((uintptr_t)stack_base + stack_size) & ~(uintptr_t)0x7u;
     sp = (uint32_t *)(top - 64u);
 
     for (i = 0u; i < 16u; ++i) {
@@ -184,6 +181,31 @@ arghtos_context_t arghtos_port_build_initial_context(
     sp[15] = ARGHTOS_M23_XPSR_T;
 
     return (arghtos_context_t)(uintptr_t)sp;
+}
+
+arghtos_context_t arghtos_port_build_initial_context(
+    void *stack_base,
+    uint32_t stack_size,
+    void (*thread_start)(void),
+    void (*return_guard)(void))
+{
+    uintptr_t top;
+
+    if (!arghtos_port_stack_valid(stack_base, stack_size)) {
+        return ARGHTOS_CONTEXT_NONE;
+    }
+
+    top = ((uintptr_t)stack_base + stack_size) & ~(uintptr_t)0x7u;
+    return m23_build_context_at_top(top, thread_start, return_guard);
+}
+
+arghtos_context_t arghtos_port_build_initial_context_top(
+    void *stack_top,
+    void (*thread_start)(void),
+    void (*return_guard)(void))
+{
+    return m23_build_context_at_top(
+        (uintptr_t)stack_top, thread_start, return_guard);
 }
 
 void arghtos_port_crash_fill(
