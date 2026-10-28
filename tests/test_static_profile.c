@@ -137,7 +137,9 @@ static void test_static_crash_record_symbol_is_used(void)
 static void test_compact_runtime_saturation(void)
 {
     const arghtos_task_control_t *ctrl;
+#if ARGHTOS_RUNTIME_PROFILING
     arghtos_task_profile_t p;
+#endif
     arghtos_context_t ctx;
 
     reset_all();
@@ -153,9 +155,11 @@ static void test_compact_runtime_saturation(void)
     ctx = arghtos_kernel_dispatch(ctx);
     assert(ctx == ctrl[0].context);
 
+#if ARGHTOS_RUNTIME_PROFILING
     arghtos_host_set_mode(ARGHTOS_HOST_TASK);
     assert(arghtos_profile_get(0u, &p) == ARGHTOS_OK);
     assert(p.max_run_ticks == UINT16_MAX);
+#endif
 
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     arghtos_host_set_time(1000u);
