@@ -1,7 +1,7 @@
 ---
 type: CodeModuleDesign
-title: "D06 - Cortex-M23 execution port and context switch"
-description: "Design of PRIMASK serialization, SVC gateway, PendSV-only task handoff, PSP frame layout, MSP use, and target timer hooks."
+title: "D06 - Cortex-M23 reference port implementation"
+description: "Reference implementation of the architecture-neutral ArghtOS port ABI on Cortex-M23, including service calls, context handoff, timer, crash payload, and low-power behavior."
 tags: [design, cortex-m23, pendsv, svc, psp, msp, assembly]
 status: draft
 sources:
@@ -15,7 +15,7 @@ sources:
 
 # Goal
 
-Own every Cortex-M23-specific operation that can affect task execution ownership while keeping scheduling policy in portable C.
+Provide a complete Cortex-M23 implementation of the architecture-neutral `arghtos_port.h` ABI. Every Cortex-M23-specific register, exception, instruction, timer adaptation, low-power rule, and crash-register extraction belongs here or in `arghtos_context.S`, never in portable kernel code.
 
 # Logical module
 
@@ -26,9 +26,11 @@ CORTEX_M23_PORT
 # Physical files
 
 ```text
-include/arghtos/arghtos_port.h
+include/arghtos/arghtos_port.h          # generic interface, not Cortex-specific
+src/arghtos_kernel_port.h               # generic callbacks into kernel
 port/cortex_m23/arghtos_port.c
 port/cortex_m23/arghtos_context.S
+port/cortex_m23/arghtos_port_private.h
 ```
 
 The assembly file must stay small enough to review instruction-by-instruction.
@@ -95,20 +97,22 @@ It never directly changes PSP or calls the selector.
 
 Repeated calls are idempotent.
 
-## D06-D: SVC entry
+## D06-D: abstract service-call realization
 
-Task API wrappers use fixed SVC numbers.
+Portable task API wrappers call `arghtos_port_service_call(service_id,arg0)`. The Cortex-M23 port implements that abstract operation with one fixed `SVC #0` trap.
 
 Hardware stacking preserves task R0-R3/R12/LR/PC/xPSR on PSP.
 
-The handler:
+The Cortex-M23 service-call wrapper passes `service_id` in R0 and `arg0` in R1, then executes `SVC #0`.
+
+The SVC handler:
 
 1. obtains the stacked frame pointer;
-2. decodes the SVC number from the instruction preceding stacked PC, or uses an equally compact fixed ABI;
-3. reads arg0 from stacked R0 when needed;
-4. calls `arghtos_kernel_service(service,arg0)` on MSP;
-5. writes returned result into stacked R0;
-6. returns from SVC.
+2. reads service ID from stacked R0;
+3. reads arg0 from stacked R1;
+4. calls `arghtos_kernel_service(service_id,arg0)` on MSP;
+5. writes the returned result into stacked R0;
+6. returns from SVC or tail-chains to PendSV.
 
 If the service requested scheduling, PendSV is pending and tail-chains before Thread mode resumes.
 
@@ -118,8 +122,8 @@ sequenceDiagram
   participant S as SVC/MSP
   participant K as D03 kernel service
   participant P as PendSV
-  T->>S: svc #service
-  S->>K: service(id,arg0)
+  T->>S: port_service_call -> SVC #0
+  S->>K: kernel_service(stacked R0, stacked R1)
   K-->>S: result + maybe pend
   S-->>P: exception return / tail-chain if pending
   P-->>T: task resumes later with R0=result
@@ -135,15 +139,15 @@ Logical flow:
 if outgoing task context exists:
     read PSP
     save R4-R11 below hardware frame
-    outgoing_saved_psp = new low address
+    outgoing_context = new low address
 else:
-    outgoing_saved_psp = 0
+    outgoing_context = 0
 
 preserve handler EXC_RETURN on MSP
-call arghtos_kernel_dispatch(outgoing_saved_psp)
+call arghtos_kernel_dispatch(outgoing_context)
 restore handler EXC_RETURN
 
-if returned saved_psp != 0:
+if returned context != 0:
     restore R4-R11
     write PSP to hardware-frame position
     exception-return to Thread/PSP
@@ -210,7 +214,7 @@ This is a first-class correctness requirement.
 `arghtos_port_start()` enters the same logical dispatch path with:
 
 ```text
-outgoing_saved_psp = 0
+outgoing_context = 0
 ```
 
 The first task should not use a separate bespoke restore algorithm if the normal restore path can be reused.
@@ -246,7 +250,7 @@ No fake idle task and no idle PSP stack is allocated.
 # Initial frame builder
 
 ```c
-uintptr_t arghtos_port_build_initial_psp(
+arghtos_context_t arghtos_port_build_initial_context(
     void *stack_base,
     uint32_t stack_size,
     void (*thread_start)(void),
@@ -262,7 +266,13 @@ Builder requirements:
 * PC = D08 task-start trampoline;
 * LR = D08 fatal return guard;
 * general registers initialized deterministically, preferably zero;
-* returned saved PSP points at saved R4.
+* returned `arghtos_context_t` encodes the saved PSP that points at R4.
+
+# Crash-payload realization
+
+`arghtos_port_crash_fill(record, port_fault_context)` fills only the generic C5 port payload and format metadata. For the Cortex-M23 reference format it captures MSP, PSP, EXC_RETURN, R0-R3, LR, PC, and xPSR as available. It must not change generic crash header fields or the final commit marker.
+
+The assembly/fault adapter may pass a Cortex-private context structure through the opaque `port_fault_context` pointer declared by `arghtos_kernel_port.h`.
 
 # Time/timer platform hooks
 
@@ -373,15 +383,16 @@ If a device interrupt can be preempted by PendSV, the task switch may occur befo
 * trigger a device handler, pend PendSV inside it, and confirm PendSV runs only after handler completion;
 * test timer and external interrupt nesting allowed by the integration.
 
-## 7. SVC decoder trusts arbitrary PC
+## 7. Service-call wrapper/handler ABI mismatch
 
-A corrupted stacked PC could cause the decoder to read an invalid instruction address when fetching the SVC immediate.
+**Failure example:** wrapper places service ID in R0/arg in R1, but handler still interprets R0 as the API argument.
 
 **Tester should:**
 
-* host-test decoder bounds if modeled;
-* fault-inject corrupted stacked PC in a synthetic exception frame;
-* ensure impossible service decoding enters C5 fatal handling rather than executing a random service.
+* exercise every service ID with distinctive argument patterns;
+* inspect stacked R0/R1 at SVC entry;
+* verify returned result is written to stacked R0;
+* verify the handler never reads the instruction preceding stacked PC.
 
 ## 8. Idle WFI race
 
@@ -430,6 +441,12 @@ Because v1 tasks are privileged, test/application code must not directly write P
 
 Testers should include one negative integration test documenting that this is a trust assumption rather than a contained fault.
 
+# Port-source isolation rule
+
+Only files under `port/cortex_m23/` may include CMSIS/vendor headers or name PRIMASK, PSP, MSP, PendSV, SVC, NVIC, WFI, EXC_RETURN, or Cortex exception-frame fields.
+
+A source audit should fail if any of those identifiers appear in `src/arghtos_kernel.c` or `src/arghtos_internal.h`.
+
 # Boundary specification
 
-D06 owns processor execution mechanics and platform time/timer hooks. It never decides scheduling policy or device event semantics.
+D06 owns the complete Cortex-M23 realization of the generic port ABI. It never decides scheduling policy, lifecycle semantics, or device event meaning.
