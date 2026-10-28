@@ -1,7 +1,7 @@
 ---
 type: CodeModuleDesign
 title: "D08 - Task trampoline and periodic job restart"
-description: "Design of the persistent kernel task wrapper that gives periodic jobs fresh calls without rebuilding PSP context and converts async return into a fatal fault."
+description: "Design of the persistent kernel task wrapper that gives periodic jobs fresh calls without rebuilding the target context token and converts async return into a fatal fault."
 tags: [design, trampoline, periodic, task-entry, stack]
 status: draft
 ---
