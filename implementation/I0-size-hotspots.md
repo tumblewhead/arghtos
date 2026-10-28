@@ -9,9 +9,9 @@ status: current
 # Stabilized baseline
 
 ```text
-ArghtOS resident before MSP  4118 B
+ArghtOS resident before MSP  4122 B
 soft target                  1536 B
-deficit                      2582 B
+deficit                      2586 B
 ```
 
 The build uses Cortex-M23, `-Oz`, section GC, no libc, and all ArghtOS sections in SRAM.
@@ -73,9 +73,9 @@ The audited 32-task metadata plus crash record leaves only 300 B for **all** cod
 Current full-link text sizes:
 
 ```text
--Os                3304 B
--Oz                3052 B
--Oz + LTO          2760 B
+-Os                3308 B
+-Oz                3056 B
+-Oz + LTO          2764 B
 ```
 
 LTO recovers hundreds of bytes, not the required thousands.
@@ -91,7 +91,7 @@ The size gap is architectural. Productive next reductions must change one or mor
 * profiling/crash richness;
 * or the 1.5 KiB target itself.
 
-Assembly micro-optimization and compiler flags remain useful later, but they cannot close the present 2582 B gap.
+Assembly micro-optimization and compiler flags remain useful later, but they cannot close the present 2586 B gap.
 
 # Evidence source
 
