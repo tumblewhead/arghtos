@@ -2,6 +2,7 @@ HOST_CC ?= gcc
 CLANG ?= clang
 PYTHON ?= python3
 BUILD ?= build
+M23_ARGHTOS_MSP ?= 104
 
 HOST_CFLAGS := -std=c11 -Wall -Wextra -Werror -O2 -DARGHTOS_TEST \
 	-Iinclude -Isrc -Iport/host
@@ -9,7 +10,7 @@ HOST_SRCS := src/arghtos_kernel.c port/host/arghtos_port.c tests/test_kernel.c
 
 M23_COMMON := --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -std=c11 \
 	-ffreestanding -fno-builtin -fdata-sections -ffunction-sections \
-	-fno-unwind-tables -fno-asynchronous-unwind-tables -Oz \
+	-fno-unwind-tables -fno-asynchronous-unwind-tables -fstack-usage -Oz \
 	-Wall -Wextra -Werror -Iinclude -Isrc -Iport/cortex_m23
 
 .PHONY: all portability-check host-test host-sanitize m23-compile m23-footprint footprint-report clean
@@ -50,7 +51,8 @@ m23-footprint: m23-compile
 		$(BUILD)/arghtos_context_m23.o $(BUILD)/m23_board_stub.o \
 		$(BUILD)/m23_footprint.o
 	size -A $(BUILD)/m23.elf
-	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23.map --json \
+	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23.map \
+		--msp $(M23_ARGHTOS_MSP) --json \
 		> $(BUILD)/footprint.json
 	cat $(BUILD)/footprint.json
 
