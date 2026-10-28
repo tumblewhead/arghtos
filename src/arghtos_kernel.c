@@ -295,6 +295,7 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 {
     arghtos_task_control_t *c;
 
+#if !ARGHTOS_SPECIALIZED_SERVICES
     if (!task_id_valid(id)) {
         *result = ARGHTOS_ERR_BAD_TASK_ID;
         return false;
@@ -304,6 +305,7 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
         *result = ARGHTOS_ERR_BAD_TASK_CLASS;
         return false;
     }
+#endif
 
     c = &controls[id];
 
@@ -335,6 +337,7 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
     }
 }
 
+#if !ARGHTOS_SPECIALIZED_SERVICES
 static bool current_running(arghtos_task_id_t *id)
 {
     if ((kernel.current_task == ARGHTOS_TASK_ID_INVALID) ||
@@ -346,6 +349,7 @@ static bool current_running(arghtos_task_id_t *id)
     *id = kernel.current_task;
     return true;
 }
+#endif
 
 arghtos_result_t arghtos_init(const arghtos_config_t *config)
 {
@@ -608,9 +612,13 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
     arghtos_result_t result = ARGHTOS_OK;
     bool dispatch = false;
 
+#if ARGHTOS_SPECIALIZED_SERVICES
+    self = kernel.current_task;
+#else
     if (!current_running(&self)) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
     }
+#endif
 
     key = arghtos_port_critical_enter();
 
@@ -624,10 +632,12 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
         break;
 
     case ARGHTOS_SERVICE_WAIT:
+#if !ARGHTOS_SPECIALIZED_SERVICES
         if (!task_is_async(self)) {
             result = ARGHTOS_ERR_BAD_TASK_CLASS;
             break;
         }
+#endif
         if (ARGHTOS_CTRL_WAKE_PENDING(&controls[self])) {
             ARGHTOS_CTRL_CLEAR_WAKE(&controls[self]);
         } else {
@@ -638,10 +648,13 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
         break;
 
     case ARGHTOS_SERVICE_SLEEP_UNTIL:
+#if !ARGHTOS_SPECIALIZED_SERVICES
         if (!task_is_async(self)) {
             result = ARGHTOS_ERR_BAD_TASK_CLASS;
             break;
-        } else {
+        }
+#endif
+        {
             const arghtos_time_t now = arghtos_port_time_now();
             const arghtos_time_t deadline = (arghtos_time_t)arg0;
             const uint32_t delta = deadline - now;
@@ -667,10 +680,12 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
         break;
 
     case ARGHTOS_SERVICE_TASK_RETURN:
+#if !ARGHTOS_SPECIALIZED_SERVICES
         if (!task_is_periodic(self)) {
             result = ARGHTOS_ERR_BAD_TASK_CLASS;
             break;
         }
+#endif
         ARGHTOS_CTRL_SET_STATE(&controls[self], ARGHTOS_TASK_DORMANT);
         dispatch = true;
         break;
