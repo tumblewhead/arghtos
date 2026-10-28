@@ -98,7 +98,7 @@ m23-footprint-compact: | $(BUILD)
 
 m23-footprint-static: | $(BUILD)
 	$(CLANG) $(M23_COMMON) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=32 \
+		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
 		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_static.o
 	$(CLANG) $(M23_COMMON) -c port/cortex_m23/arghtos_port.c \
 		-o $(BUILD)/arghtos_port_m23_static.o
@@ -108,7 +108,7 @@ m23-footprint-static: | $(BUILD)
 	$(CLANG) $(M23_COMMON) -c footprint/m23_board_stub.c \
 		-o $(BUILD)/m23_board_stub_static.o
 	$(CLANG) $(M23_COMMON) -DARGHTOS_STATIC_CONFIG=1 \
-		-DARGHTOS_STATIC_TASK_COUNT=32 \
+		-DARGHTOS_STATIC_TASK_COUNT=24 \
 		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_static.o
 	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib \
 		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-static.map \
