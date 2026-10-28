@@ -52,15 +52,15 @@ jobs:
       - name: Cortex-M23 accepted compact-PendSV profile R4v
         run: make m23-footprint-r4v
 
-      - name: Cortex-M23 live no-inline experiment R4w
-        run: make m23-footprint-r4w
+      - name: Cortex-M23 live compact-SVC-return experiment R4x
+        run: make m23-footprint-r4x
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4v r4w; do
+          for p in r3c r4v r4x; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
           done
-          for p in r3c r4v r4w; do
+          for p in r3c r4v r4x; do
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
             echo "--- largest $p symbols ---"
@@ -74,13 +74,13 @@ jobs:
           path: |
             build/footprint-r3c.json
             build/footprint-r4v.json
-            build/footprint-r4w.json
+            build/footprint-r4x.json
             build/m23-r3c.map
             build/m23-r4v.map
-            build/m23-r4w.map
+            build/m23-r4x.map
             build/m23-r3c-symbols.txt
             build/m23-r4v-symbols.txt
-            build/m23-r4w-symbols.txt
+            build/m23-r4x-symbols.txt
             build/m23-r4v.elf
-            build/m23-r4w.elf
+            build/m23-r4x.elf
             build/*.su
