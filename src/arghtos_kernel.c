@@ -222,6 +222,21 @@ static void missed_release_add(arghtos_task_control_t *c, uint32_t count)
 #endif
 }
 
+#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+static void timer_consider(
+    arghtos_time_t now,
+    arghtos_time_t t,
+    arghtos_time_t *best,
+    uint32_t *best_delta)
+{
+    const uint32_t delta = t - now;
+
+    if (delta < *best_delta) {
+        *best = t;
+        *best_delta = delta;
+    }
+}
+#else
 static void timer_consider(
     arghtos_time_t now,
     arghtos_time_t t,
@@ -237,13 +252,19 @@ static void timer_consider(
         *best_delta = delta;
     }
 }
+#endif
 
 static bool process_time_locked(arghtos_time_t now)
 {
     bool changed = false;
+#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+    arghtos_time_t best_time = 0u;
+    uint32_t best_delta = UINT32_MAX;
+#else
     bool have_timer = false;
     arghtos_time_t best_time = 0u;
     uint32_t best_delta = 0u;
+#endif
     uint8_t id;
 
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
@@ -274,21 +295,33 @@ static bool process_time_locked(arghtos_time_t now)
                 }
             }
 
+#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+            timer_consider(now, c->next_time, &best_time, &best_delta);
+#else
             timer_consider(
                 now, c->next_time, &have_timer, &best_time, &best_delta);
+#endif
         } else if (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_SLEEPING) {
             if (time_due(now, c->next_time)) {
                 ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
                 c->age_credit = 0u;
                 changed = true;
             } else {
+#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+                timer_consider(now, c->next_time, &best_time, &best_delta);
+#else
                 timer_consider(
                     now, c->next_time, &have_timer, &best_time, &best_delta);
+#endif
             }
         }
     }
 
+#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+    if (best_delta != UINT32_MAX) {
+#else
     if (have_timer) {
+#endif
         arghtos_port_timer_arm(best_time);
     } else {
         arghtos_port_timer_disarm();
@@ -457,9 +490,14 @@ ARGHTOS_NORETURN void arghtos_start(void)
 {
     arghtos_time_t start;
     arghtos_irq_key_t key;
+#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+    arghtos_time_t earliest = 0u;
+    uint32_t earliest_delta = UINT32_MAX;
+#else
     bool have_timer = false;
     arghtos_time_t earliest = 0u;
     uint32_t earliest_delta = 0u;
+#endif
     uint8_t id;
 
 #if !ARGHTOS_MINIMAL_VALIDATION
@@ -477,14 +515,23 @@ ARGHTOS_NORETURN void arghtos_start(void)
         if (task_is_periodic(id)) {
             ARGHTOS_CTRL_SET_STATE(&controls[id], ARGHTOS_TASK_READY);
             controls[id].next_time = start + ARGHTOS_TASK_PERIOD(id);
+#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+            timer_consider(start, controls[id].next_time,
+                           &earliest, &earliest_delta);
+#else
             timer_consider(start, controls[id].next_time,
                            &have_timer, &earliest, &earliest_delta);
+#endif
         }
     }
 
     kernel.flags |= ARGHTOS_KF_STARTED;
 
+#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+    if (earliest_delta != UINT32_MAX) {
+#else
     if (have_timer) {
+#endif
         arghtos_port_timer_arm(earliest);
     } else {
         arghtos_port_timer_disarm();
