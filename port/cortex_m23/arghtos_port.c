@@ -44,8 +44,11 @@ arghtos_result_t arghtos_port_init(void)
 {
     volatile uint8_t *const pendsv_priority =
         (volatile uint8_t *)ARGHTOS_M23_SHPR3_PENDSV_ADDR;
+    volatile uint32_t *const icsr =
+        (volatile uint32_t *)ARGHTOS_M23_SCB_ICSR_ADDR;
 
     *pendsv_priority = 0xFFu;
+    *icsr = ARGHTOS_M23_ICSR_PENDSVCLR;
     arghtos_m23_board_timer_disarm();
     return ARGHTOS_OK;
 }
@@ -124,6 +127,10 @@ void arghtos_port_request_dispatch(void)
 ARGHTOS_NORETURN void arghtos_port_start(void)
 {
     arghtos_port_request_dispatch();
+    __asm volatile(
+        "cpsie i\n"
+        "isb\n"
+        ::: "memory");
     for (;;) {
         __asm volatile("wfi" ::: "memory");
     }
