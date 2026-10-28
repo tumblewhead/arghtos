@@ -1,0 +1,812 @@
+#include <arghtos/arghtos.h>
+#include <arghtos/arghtos_port.h>
+#include "arghtos_internal.h"
+#include "arghtos_kernel_port.h"
+
+static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
+static arghtos_kernel_state_t kernel;
+
+static bool time_due(arghtos_time_t now, arghtos_time_t t)
+{
+    return (int32_t)(now - t) >= 0;
+}
+
+static bool duration_valid(arghtos_duration_t dt)
+{
+    return dt < ARGHTOS_TIME_HALF_RANGE;
+}
+
+static bool task_id_valid(arghtos_task_id_t id)
+{
+    return id < kernel.task_count;
+}
+
+static bool task_is_periodic(arghtos_task_id_t id)
+{
+    return kernel.tasks[id].period != 0u;
+}
+
+static bool task_is_async(arghtos_task_id_t id)
+{
+    return kernel.tasks[id].period == 0u;
+}
+
+static void control_clear(arghtos_task_control_t *c)
+{
+    c->context = ARGHTOS_CONTEXT_NONE;
+    c->next_time = 0u;
+    c->total_cpu_ticks = 0u;
+    c->max_run_ticks = 0u;
+    c->missed_release_count = 0u;
+    c->age_credit = 0u;
+    c->state = ARGHTOS_TASK_DORMANT;
+    c->flags = 0u;
+}
+
+static bool range_end(uintptr_t base, uint32_t size, uintptr_t *end)
+{
+    if ((uintptr_t)size > UINTPTR_MAX - base) {
+        return false;
+    }
+    *end = base + (uintptr_t)size;
+    return true;
+}
+
+static bool stacks_overlap(
+    const arghtos_task_config_t *a,
+    const arghtos_task_config_t *b)
+{
+    const uintptr_t ab = (uintptr_t)a->stack_base;
+    const uintptr_t bb = (uintptr_t)b->stack_base;
+    uintptr_t ae;
+    uintptr_t be;
+
+    if (!range_end(ab, a->stack_size, &ae) ||
+        !range_end(bb, b->stack_size, &be)) {
+        return true;
+    }
+
+    return (ab < be) && (bb < ae);
+}
+
+static arghtos_result_t validate_descriptor(const arghtos_task_config_t *d)
+{
+    if ((d->entry == NULL) || (d->stack_base == NULL) ||
+        (d->stack_size == 0u) || (d->flags != 0u)) {
+        return ARGHTOS_ERR_BAD_CONFIG;
+    }
+
+    if (!arghtos_port_stack_valid(d->stack_base, d->stack_size)) {
+        return ARGHTOS_ERR_BAD_CONFIG;
+    }
+
+    if (d->period == 0u) {
+        if (d->async_priority >= ARGHTOS_ASYNC_PRIORITY_LEVELS) {
+            return ARGHTOS_ERR_BAD_CONFIG;
+        }
+    } else {
+        if (!duration_valid(d->period) || (d->async_priority != 0u)) {
+            return ARGHTOS_ERR_BAD_CONFIG;
+        }
+    }
+
+    return ARGHTOS_OK;
+}
+
+static arghtos_result_t validate_config(const arghtos_config_t *config)
+{
+    uint8_t i;
+    uint8_t j;
+
+    if ((config == NULL) || (config->tasks == NULL) ||
+        (config->crash_record == NULL)) {
+        return ARGHTOS_ERR_BAD_ARGUMENT;
+    }
+
+    if ((config->task_count == 0u) ||
+        (config->task_count > ARGHTOS_MAX_TASKS)) {
+        return ARGHTOS_ERR_BAD_CONFIG;
+    }
+
+    if (((uintptr_t)config->crash_record %
+         _Alignof(arghtos_crash_record_t)) != 0u) {
+        return ARGHTOS_ERR_BAD_CONFIG;
+    }
+
+    for (i = 0u; i < config->task_count; ++i) {
+        const arghtos_result_t r = validate_descriptor(&config->tasks[i]);
+        if (r != ARGHTOS_OK) {
+            return r;
+        }
+    }
+
+    for (i = 0u; i < config->task_count; ++i) {
+        for (j = (uint8_t)(i + 1u); j < config->task_count; ++j) {
+            if (stacks_overlap(&config->tasks[i], &config->tasks[j])) {
+                return ARGHTOS_ERR_BAD_CONFIG;
+            }
+        }
+    }
+
+    return ARGHTOS_OK;
+}
+
+static void missed_release_add(arghtos_task_control_t *c, uint32_t count)
+{
+    const uint32_t room = (uint32_t)UINT8_MAX - c->missed_release_count;
+
+    if (count >= room) {
+        c->missed_release_count = UINT8_MAX;
+    } else {
+        c->missed_release_count =
+            (uint8_t)(c->missed_release_count + (uint8_t)count);
+    }
+}
+
+static void timer_consider(
+    arghtos_time_t now,
+    arghtos_time_t t,
+    bool *have,
+    arghtos_time_t *best,
+    uint32_t *best_delta)
+{
+    const uint32_t delta = t - now;
+
+    if ((!*have) || (delta < *best_delta)) {
+        *have = true;
+        *best = t;
+        *best_delta = delta;
+    }
+}
+
+static bool process_time_locked(arghtos_time_t now)
+{
+    bool changed = false;
+    bool have_timer = false;
+    arghtos_time_t best_time = 0u;
+    uint32_t best_delta = 0u;
+    uint8_t id;
+
+    for (id = 0u; id < kernel.task_count; ++id) {
+        const arghtos_task_config_t *d = &kernel.tasks[id];
+        arghtos_task_control_t *c = &controls[id];
+
+        if (d->period != 0u) {
+            if (time_due(now, c->next_time)) {
+                const uint32_t late = now - c->next_time;
+                const uint32_t releases = 1u + (late / d->period);
+                uint32_t missed;
+
+                c->next_time += releases * d->period;
+
+                if (c->state == ARGHTOS_TASK_DORMANT) {
+                    c->state = ARGHTOS_TASK_READY;
+                    changed = true;
+                    missed = releases - 1u;
+                } else if ((c->state == ARGHTOS_TASK_READY) ||
+                           (c->state == ARGHTOS_TASK_RUNNING)) {
+                    missed = releases;
+                } else {
+                    arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+                }
+
+                if (missed != 0u) {
+                    missed_release_add(c, missed);
+                }
+            }
+
+            timer_consider(
+                now, c->next_time, &have_timer, &best_time, &best_delta);
+        } else if (c->state == ARGHTOS_TASK_SLEEPING) {
+            if (time_due(now, c->next_time)) {
+                c->state = ARGHTOS_TASK_READY;
+                c->age_credit = 0u;
+                changed = true;
+            } else {
+                timer_consider(
+                    now, c->next_time, &have_timer, &best_time, &best_delta);
+            }
+        }
+    }
+
+    if (have_timer) {
+        arghtos_port_timer_arm(best_time);
+    } else {
+        arghtos_port_timer_disarm();
+    }
+
+    return changed;
+}
+
+static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
+{
+    arghtos_task_control_t *c;
+
+    if (!task_id_valid(id)) {
+        *result = ARGHTOS_ERR_BAD_TASK_ID;
+        return false;
+    }
+
+    if (!task_is_async(id)) {
+        *result = ARGHTOS_ERR_BAD_TASK_CLASS;
+        return false;
+    }
+
+    c = &controls[id];
+
+    switch (c->state) {
+    case ARGHTOS_TASK_DORMANT:
+    case ARGHTOS_TASK_WAITING:
+        c->state = ARGHTOS_TASK_READY;
+        c->age_credit = 0u;
+        c->flags &= (uint8_t)~ARGHTOS_TCF_WAKE_PENDING;
+        *result = ARGHTOS_OK;
+        return true;
+
+    case ARGHTOS_TASK_READY:
+        *result = ARGHTOS_OK;
+        return false;
+
+    case ARGHTOS_TASK_RUNNING:
+    case ARGHTOS_TASK_SLEEPING:
+        c->flags |= ARGHTOS_TCF_WAKE_PENDING;
+        *result = ARGHTOS_OK;
+        return false;
+
+    case ARGHTOS_TASK_FAULTED:
+        *result = ARGHTOS_ERR_BAD_STATE;
+        return false;
+
+    default:
+        arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+    }
+}
+
+static bool current_running(arghtos_task_id_t *id)
+{
+    if ((kernel.current_task == ARGHTOS_TASK_ID_INVALID) ||
+        !task_id_valid(kernel.current_task) ||
+        (controls[kernel.current_task].state != ARGHTOS_TASK_RUNNING)) {
+        return false;
+    }
+
+    *id = kernel.current_task;
+    return true;
+}
+
+arghtos_result_t arghtos_init(const arghtos_config_t *config)
+{
+    arghtos_result_t r;
+    uint8_t id;
+
+    if ((kernel.flags & ARGHTOS_KF_INITIALIZED) != 0u) {
+        return ARGHTOS_ERR_BAD_STATE;
+    }
+
+    r = validate_config(config);
+    if (r != ARGHTOS_OK) {
+        return r;
+    }
+
+    r = arghtos_port_init();
+    if (r != ARGHTOS_OK) {
+        return r;
+    }
+
+    for (id = 0u; id < config->task_count; ++id) {
+        control_clear(&controls[id]);
+        controls[id].context = arghtos_port_build_initial_context(
+            config->tasks[id].stack_base,
+            config->tasks[id].stack_size,
+            arghtos_task_start_trampoline,
+            arghtos_task_return_guard);
+
+        if (controls[id].context == ARGHTOS_CONTEXT_NONE) {
+            return ARGHTOS_ERR_BAD_CONFIG;
+        }
+    }
+
+    for (; id < ARGHTOS_MAX_TASKS; ++id) {
+        control_clear(&controls[id]);
+    }
+
+    kernel.tasks = config->tasks;
+    kernel.crash_record = config->crash_record;
+    kernel.start_time = 0u;
+    kernel.run_start = 0u;
+    kernel.current_task = ARGHTOS_TASK_ID_INVALID;
+    kernel.task_count = config->task_count;
+    kernel.flags = ARGHTOS_KF_INITIALIZED;
+    kernel.reserved = 0u;
+
+    arghtos_port_timer_disarm();
+    return ARGHTOS_OK;
+}
+
+ARGHTOS_NORETURN void arghtos_start(void)
+{
+    arghtos_time_t start;
+    bool have_timer = false;
+    arghtos_time_t earliest = 0u;
+    uint32_t earliest_delta = 0u;
+    uint8_t id;
+
+    if (((kernel.flags & ARGHTOS_KF_INITIALIZED) == 0u) ||
+        ((kernel.flags & ARGHTOS_KF_STARTED) != 0u)) {
+        arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+    }
+
+    start = arghtos_port_time_now();
+    kernel.start_time = start;
+
+    for (id = 0u; id < kernel.task_count; ++id) {
+        if (task_is_periodic(id)) {
+            controls[id].state = ARGHTOS_TASK_READY;
+            controls[id].next_time = start + kernel.tasks[id].period;
+            timer_consider(start, controls[id].next_time,
+                           &have_timer, &earliest, &earliest_delta);
+        }
+    }
+
+    if (have_timer) {
+        arghtos_port_timer_arm(earliest);
+    } else {
+        arghtos_port_timer_disarm();
+    }
+
+    kernel.flags |= ARGHTOS_KF_STARTED;
+    arghtos_port_start();
+}
+
+arghtos_result_t arghtos_yield(void)
+{
+    if (!arghtos_port_is_task_context()) {
+        return ARGHTOS_ERR_BAD_CONTEXT;
+    }
+    return arghtos_port_service_call(ARGHTOS_SERVICE_YIELD, 0u);
+}
+
+arghtos_result_t arghtos_wait(void)
+{
+    if (!arghtos_port_is_task_context()) {
+        return ARGHTOS_ERR_BAD_CONTEXT;
+    }
+    return arghtos_port_service_call(ARGHTOS_SERVICE_WAIT, 0u);
+}
+
+arghtos_result_t arghtos_sleep_until(arghtos_time_t absolute_time)
+{
+    if (!arghtos_port_is_task_context()) {
+        return ARGHTOS_ERR_BAD_CONTEXT;
+    }
+    return arghtos_port_service_call(
+        ARGHTOS_SERVICE_SLEEP_UNTIL, absolute_time);
+}
+
+arghtos_result_t arghtos_sleep_for(arghtos_duration_t duration)
+{
+    arghtos_time_t now;
+
+    if (!arghtos_port_is_task_context()) {
+        return ARGHTOS_ERR_BAD_CONTEXT;
+    }
+    if (!duration_valid(duration)) {
+        return ARGHTOS_ERR_BAD_TIME;
+    }
+    if (duration == 0u) {
+        return ARGHTOS_OK;
+    }
+
+    now = arghtos_port_time_now();
+    return arghtos_port_service_call(
+        ARGHTOS_SERVICE_SLEEP_UNTIL, now + duration);
+}
+
+arghtos_result_t arghtos_wake(arghtos_task_id_t task_id)
+{
+    if (!arghtos_port_is_task_context()) {
+        return ARGHTOS_ERR_BAD_CONTEXT;
+    }
+    return arghtos_port_service_call(ARGHTOS_SERVICE_WAKE, task_id);
+}
+
+arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
+{
+    arghtos_irq_key_t key;
+    arghtos_result_t result;
+    bool dispatch;
+
+    if (!arghtos_port_is_handler_context()) {
+        return ARGHTOS_ERR_BAD_CONTEXT;
+    }
+
+    key = arghtos_port_critical_enter();
+    dispatch = wake_locked(task_id, &result);
+    arghtos_port_critical_exit(key);
+
+    if (dispatch) {
+        arghtos_port_request_dispatch();
+    }
+
+    return result;
+}
+
+arghtos_result_t arghtos_profile_get(
+    arghtos_task_id_t task_id,
+    arghtos_task_profile_t *out)
+{
+    arghtos_irq_key_t key;
+    const arghtos_task_control_t *c;
+
+    if (!arghtos_port_is_task_context()) {
+        return ARGHTOS_ERR_BAD_CONTEXT;
+    }
+    if (out == NULL) {
+        return ARGHTOS_ERR_BAD_ARGUMENT;
+    }
+    if (!task_id_valid(task_id)) {
+        return ARGHTOS_ERR_BAD_TASK_ID;
+    }
+
+    key = arghtos_port_critical_enter();
+    c = &controls[task_id];
+    out->total_cpu_ticks = c->total_cpu_ticks;
+    out->max_run_ticks = c->max_run_ticks;
+    out->missed_release_count = c->missed_release_count;
+    out->age_credit = c->age_credit;
+    out->state = c->state;
+    out->flags = c->flags;
+    arghtos_port_critical_exit(key);
+
+    return ARGHTOS_OK;
+}
+
+arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
+{
+    arghtos_irq_key_t key;
+    arghtos_task_id_t self;
+    arghtos_result_t result = ARGHTOS_OK;
+    bool dispatch = false;
+
+    if (!current_running(&self)) {
+        arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+    }
+
+    key = arghtos_port_critical_enter();
+
+    switch (service_id) {
+    case ARGHTOS_SERVICE_YIELD:
+        controls[self].state = ARGHTOS_TASK_READY;
+        if (task_is_async(self)) {
+            controls[self].age_credit = 0u;
+        }
+        dispatch = true;
+        break;
+
+    case ARGHTOS_SERVICE_WAIT:
+        if (!task_is_async(self)) {
+            result = ARGHTOS_ERR_BAD_TASK_CLASS;
+            break;
+        }
+        if ((controls[self].flags & ARGHTOS_TCF_WAKE_PENDING) != 0u) {
+            controls[self].flags &= (uint8_t)~ARGHTOS_TCF_WAKE_PENDING;
+        } else {
+            controls[self].state = ARGHTOS_TASK_WAITING;
+            controls[self].age_credit = 0u;
+            dispatch = true;
+        }
+        break;
+
+    case ARGHTOS_SERVICE_SLEEP_UNTIL:
+        if (!task_is_async(self)) {
+            result = ARGHTOS_ERR_BAD_TASK_CLASS;
+            break;
+        } else {
+            const arghtos_time_t now = arghtos_port_time_now();
+            const arghtos_time_t deadline = (arghtos_time_t)arg0;
+            const uint32_t delta = deadline - now;
+
+            if (time_due(now, deadline)) {
+                break;
+            }
+            if (!duration_valid(delta)) {
+                result = ARGHTOS_ERR_BAD_TIME;
+                break;
+            }
+
+            controls[self].next_time = deadline;
+            controls[self].state = ARGHTOS_TASK_SLEEPING;
+            controls[self].age_credit = 0u;
+            (void)process_time_locked(now);
+            dispatch = true;
+        }
+        break;
+
+    case ARGHTOS_SERVICE_WAKE:
+        dispatch = wake_locked((arghtos_task_id_t)arg0, &result);
+        break;
+
+    case ARGHTOS_SERVICE_TASK_RETURN:
+        if (!task_is_periodic(self)) {
+            result = ARGHTOS_ERR_BAD_TASK_CLASS;
+            break;
+        }
+        controls[self].state = ARGHTOS_TASK_DORMANT;
+        dispatch = true;
+        break;
+
+    default:
+        arghtos_port_critical_exit(key);
+        arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+    }
+
+    arghtos_port_critical_exit(key);
+
+    if (dispatch) {
+        arghtos_port_request_dispatch();
+    }
+
+    return result;
+}
+
+arghtos_task_id_t arghtos_select_next(void)
+{
+    arghtos_task_id_t best = ARGHTOS_TASK_ID_INVALID;
+    uint8_t id;
+
+    for (id = 0u; id < kernel.task_count; ++id) {
+        if (task_is_periodic(id) &&
+            (controls[id].state == ARGHTOS_TASK_READY)) {
+            if ((best == ARGHTOS_TASK_ID_INVALID) ||
+                (kernel.tasks[id].period < kernel.tasks[best].period) ||
+                ((kernel.tasks[id].period == kernel.tasks[best].period) &&
+                 (id < best))) {
+                best = id;
+            }
+        }
+    }
+
+    if (best != ARGHTOS_TASK_ID_INVALID) {
+        return best;
+    }
+
+    for (id = 0u; id < kernel.task_count; ++id) {
+        if (task_is_async(id) &&
+            (controls[id].state == ARGHTOS_TASK_READY)) {
+            const uint8_t ceiling =
+                (uint8_t)(ARGHTOS_ASYNC_PRIORITY_LEVELS - 1u);
+            uint16_t raised;
+            uint8_t effective;
+
+            if (controls[id].age_credit != UINT8_MAX) {
+                controls[id].age_credit++;
+            }
+
+            raised = (uint16_t)kernel.tasks[id].async_priority +
+                     (uint16_t)controls[id].age_credit;
+            effective = (raised > ceiling) ? ceiling : (uint8_t)raised;
+
+            if (best == ARGHTOS_TASK_ID_INVALID) {
+                best = id;
+            } else {
+                const uint8_t best_ceiling =
+                    (uint8_t)(ARGHTOS_ASYNC_PRIORITY_LEVELS - 1u);
+                const uint16_t best_raised =
+                    (uint16_t)kernel.tasks[best].async_priority +
+                    (uint16_t)controls[best].age_credit;
+                const uint8_t best_effective =
+                    (best_raised > best_ceiling) ?
+                    best_ceiling : (uint8_t)best_raised;
+
+                if ((effective > best_effective) ||
+                    ((effective == best_effective) &&
+                     (controls[id].age_credit > controls[best].age_credit)) ||
+                    ((effective == best_effective) &&
+                     (controls[id].age_credit == controls[best].age_credit) &&
+                     (id < best))) {
+                    best = id;
+                }
+            }
+        }
+    }
+
+    return best;
+}
+
+arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
+{
+    const arghtos_time_t now = arghtos_port_time_now();
+    arghtos_task_id_t next;
+
+    if (outgoing_context != ARGHTOS_CONTEXT_NONE) {
+        arghtos_task_control_t *c;
+        uint32_t elapsed;
+
+        if ((kernel.current_task == ARGHTOS_TASK_ID_INVALID) ||
+            !task_id_valid(kernel.current_task)) {
+            arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
+        }
+
+        c = &controls[kernel.current_task];
+        c->context = outgoing_context;
+
+        elapsed = now - kernel.run_start;
+        c->total_cpu_ticks += elapsed;
+        if (elapsed > c->max_run_ticks) {
+            c->max_run_ticks = elapsed;
+        }
+
+        if (c->state == ARGHTOS_TASK_RUNNING) {
+            c->state = ARGHTOS_TASK_READY;
+            if (task_is_async(kernel.current_task)) {
+                c->age_credit = 0u;
+            }
+        }
+    } else if (kernel.current_task != ARGHTOS_TASK_ID_INVALID) {
+        arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
+    }
+
+    next = arghtos_select_next();
+
+    if (next == ARGHTOS_TASK_ID_INVALID) {
+        kernel.current_task = ARGHTOS_TASK_ID_INVALID;
+        return ARGHTOS_CONTEXT_NONE;
+    }
+
+    if ((controls[next].state != ARGHTOS_TASK_READY) ||
+        (controls[next].context == ARGHTOS_CONTEXT_NONE)) {
+        arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
+    }
+
+    controls[next].state = ARGHTOS_TASK_RUNNING;
+    if (task_is_async(next)) {
+        controls[next].age_credit = 0u;
+    }
+
+    kernel.current_task = next;
+    kernel.run_start = now;
+    return controls[next].context;
+}
+
+void arghtos_timer_interrupt(void)
+{
+    arghtos_irq_key_t key;
+    bool changed;
+
+    if ((kernel.flags & ARGHTOS_KF_STARTED) == 0u) {
+        arghtos_port_timer_disarm();
+        return;
+    }
+
+    key = arghtos_port_critical_enter();
+    changed = process_time_locked(arghtos_port_time_now());
+    arghtos_port_critical_exit(key);
+
+    if (changed) {
+        arghtos_port_request_dispatch();
+    }
+}
+
+static bool task_fault_attributed(arghtos_fault_reason_t reason)
+{
+    return (reason == ARGHTOS_FAULT_ASYNC_RETURNED) ||
+           (reason == ARGHTOS_FAULT_STACK_RANGE) ||
+           (reason == ARGHTOS_FAULT_CONTEXT_CORRUPT) ||
+           (reason == ARGHTOS_FAULT_CPU_EXCEPTION);
+}
+
+ARGHTOS_NORETURN void arghtos_fatal(
+    arghtos_fault_reason_t reason,
+    const void *port_fault_context)
+{
+    arghtos_crash_record_t *r;
+    uint8_t i;
+
+    if ((kernel.flags & ARGHTOS_KF_FAULT_ACTIVE) != 0u) {
+        arghtos_port_fault_terminal();
+    }
+
+    kernel.flags |= ARGHTOS_KF_FAULT_ACTIVE;
+
+    if (task_fault_attributed(reason) &&
+        task_id_valid(kernel.current_task)) {
+        controls[kernel.current_task].state = ARGHTOS_TASK_FAULTED;
+    }
+
+    r = kernel.crash_record;
+    if (r != NULL) {
+        r->commit_magic = 0u;
+        r->magic = ARGHTOS_CRASH_MAGIC;
+        r->version = ARGHTOS_CRASH_VERSION;
+        r->size = (uint16_t)sizeof(*r);
+        r->reason = reason;
+        r->task_id = ARGHTOS_TASK_ID_INVALID;
+        r->flags = 0u;
+        r->timestamp = arghtos_port_time_now();
+        r->port_format = 0u;
+        r->port_words = 0u;
+        r->reserved = 0u;
+
+        if (task_id_valid(kernel.current_task)) {
+            r->task_id = kernel.current_task;
+            r->flags |= ARGHTOS_CRASH_F_TASK_VALID;
+        }
+
+        for (i = 0u; i < 10u; ++i) {
+            r->port_state[i] = 0u;
+        }
+
+        arghtos_port_crash_fill(r, port_fault_context);
+        if (r->port_words > 10u) {
+            r->port_words = 10u;
+        }
+        if (r->port_words != 0u) {
+            r->flags |= ARGHTOS_CRASH_F_PORT_STATE_VALID;
+        }
+
+        r->commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC;
+    }
+
+    arghtos_port_fault_terminal();
+}
+
+ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
+{
+    arghtos_task_id_t id = kernel.current_task;
+    const arghtos_task_config_t *d;
+
+    if (!task_id_valid(id)) {
+        arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
+    }
+
+    d = &kernel.tasks[id];
+
+    if (d->period != 0u) {
+        for (;;) {
+            arghtos_result_t r;
+            d->entry();
+            r = arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u);
+            if (r != ARGHTOS_OK) {
+                arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+            }
+        }
+    }
+
+    d->entry();
+    arghtos_fatal(ARGHTOS_FAULT_ASYNC_RETURNED, NULL);
+}
+
+ARGHTOS_NORETURN void arghtos_task_return_guard(void)
+{
+    arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+}
+
+#ifdef ARGHTOS_TEST
+const arghtos_task_control_t *arghtos_test_controls(void)
+{
+    return controls;
+}
+
+const arghtos_kernel_state_t *arghtos_test_kernel(void)
+{
+    return &kernel;
+}
+
+void arghtos_test_reset(void)
+{
+    uint8_t id;
+
+    for (id = 0u; id < ARGHTOS_MAX_TASKS; ++id) {
+        control_clear(&controls[id]);
+    }
+
+    kernel.tasks = NULL;
+    kernel.crash_record = NULL;
+    kernel.start_time = 0u;
+    kernel.run_start = 0u;
+    kernel.current_task = ARGHTOS_TASK_ID_INVALID;
+    kernel.task_count = 0u;
+    kernel.flags = 0u;
+    kernel.reserved = 0u;
+}
+#endif
