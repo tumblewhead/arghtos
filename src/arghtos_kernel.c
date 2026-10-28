@@ -73,10 +73,12 @@ static bool task_id_valid(arghtos_task_id_t id)
     return id < ARGHTOS_TASK_COUNT;
 }
 
+#if !ARGHTOS_SIZE_FIRST_START_TIMER || !ARGHTOS_SPECIALIZED_SERVICES
 static bool task_is_periodic(arghtos_task_id_t id)
 {
     return ARGHTOS_TASK_PERIOD(id) != 0u;
 }
+#endif
 
 static bool task_is_async(arghtos_task_id_t id)
 {
