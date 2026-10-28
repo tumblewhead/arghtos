@@ -38,6 +38,7 @@ During normal operation:
 * Task stacks are application-owned static storage.
 * Stack-region non-overlap is a configuration/link-time responsibility.
 * Arbitrary memory corruption cannot be contained without an MPU and is not claimed to be recoverable.
+* Privileged application tasks obey the C4 trusted-task restriction and do not directly modify PRIMASK, PSP/MSP selection, or scheduler-owned exception configuration.
 
 # Proof sketch
 
