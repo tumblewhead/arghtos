@@ -46,22 +46,30 @@ void arghtos_port_critical_exit(arghtos_irq_key_t);
 bool arghtos_port_is_task_context(void);
 bool arghtos_port_is_handler_context(void);
 
+arghtos_result_t arghtos_port_service_call(
+    uint8_t service_id,
+    uint32_t arg0);
+
 void arghtos_port_request_dispatch(void);
 void arghtos_port_start(void);
 void arghtos_port_idle_wait(void);
 
-uintptr_t arghtos_port_build_initial_psp(
+arghtos_context_t arghtos_port_build_initial_context(
     void *stack_base,
     uint32_t stack_size,
     void (*thread_start)(void),
     void (*return_guard)(void));
+
+void arghtos_port_crash_fill(
+    arghtos_crash_record_t *record,
+    const void *port_fault_context);
 
 _Noreturn void arghtos_port_fault_terminal(void);
 ```
 
 The fake port records calls and exposes deterministic hook points.
 
-Host tests do not need to emulate actual PSP/MSP switching to test state/policy/time logic.
+Host tests do not need to emulate a target's real register-stack mechanism. The fake port may represent `arghtos_context_t` with deterministic synthetic tokens.
 
 # Interleaving hooks
 
@@ -316,3 +324,14 @@ A green canary result under easy traffic can understate MSP.
 # Boundary specification
 
 D11 defines evidence acquisition and adversarial test structure. The owning proof remains the authority for what the evidence must establish.
+
+# Portability regression
+
+The same portable kernel sources must be compiled in at least two configurations:
+
+1. host fake port;
+2. Cortex-M23 reference port.
+
+Tests should fail if `src/arghtos_kernel.c` or portable headers include target-private headers or target identifiers.
+
+A source scanner should flag at least: `PRIMASK`, `PSP`, `MSP`, `PendSV`, `SVC`, `NVIC`, `WFI`, `EXC_RETURN`, CMSIS core headers, and inline assembly in portable sources.
