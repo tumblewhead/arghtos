@@ -30,6 +30,7 @@ static inline uint32_t m23_read_control(void)
     return v;
 }
 
+#if !ARGHTOS_R5K_ASM_CRASH_FILL
 static inline uint32_t m23_read_msp(void)
 {
     uint32_t v;
@@ -43,6 +44,7 @@ static inline uint32_t m23_read_psp(void)
     __asm volatile("mrs %0, psp" : "=r"(v));
     return v;
 }
+#endif
 
 arghtos_result_t arghtos_port_init(void)
 {
