@@ -14,15 +14,29 @@
 #endif
 
 #if ARGHTOS_STATIC_CONFIG
+#if ARGHTOS_COMPACT_DESCRIPTOR
+extern const arghtos_static_task_t arghtos_static_tasks[ARGHTOS_STATIC_TASK_COUNT];
+#define ARGHTOS_TASK_ENTRY(id)    (arghtos_static_tasks[(id)].entry)
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((arghtos_static_tasks[(id)].schedule & ARGHTOS_STATIC_ASYNC_TAG) != 0u) ? \
+        0u : arghtos_static_tasks[(id)].schedule)
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(arghtos_static_tasks[(id)].schedule & ARGHTOS_STATIC_ASYNC_MASK))
+#else
 extern const arghtos_task_config_t arghtos_static_tasks[ARGHTOS_STATIC_TASK_COUNT];
+#define ARGHTOS_TASK_ENTRY(id)    (arghtos_static_tasks[(id)].entry)
+#define ARGHTOS_TASK_PERIOD(id)   (arghtos_static_tasks[(id)].period)
+#define ARGHTOS_TASK_PRIORITY(id) (arghtos_static_tasks[(id)].async_priority)
+#endif
 extern arghtos_crash_record_t arghtos_static_crash_record;
-#define ARGHTOS_TASK_TABLE   (arghtos_static_tasks)
 #define ARGHTOS_TASK_COUNT   ((uint8_t)ARGHTOS_STATIC_TASK_COUNT)
 #define ARGHTOS_CRASH_RECORD (&arghtos_static_crash_record)
 #else
-#define ARGHTOS_TASK_TABLE   (kernel.tasks)
-#define ARGHTOS_TASK_COUNT   (kernel.task_count)
-#define ARGHTOS_CRASH_RECORD (kernel.crash_record)
+#define ARGHTOS_TASK_ENTRY(id)    (kernel.tasks[(id)].entry)
+#define ARGHTOS_TASK_PERIOD(id)   (kernel.tasks[(id)].period)
+#define ARGHTOS_TASK_PRIORITY(id) (kernel.tasks[(id)].async_priority)
+#define ARGHTOS_TASK_COUNT        (kernel.task_count)
+#define ARGHTOS_CRASH_RECORD      (kernel.crash_record)
 #endif
 
 static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
@@ -45,12 +59,12 @@ static bool task_id_valid(arghtos_task_id_t id)
 
 static bool task_is_periodic(arghtos_task_id_t id)
 {
-    return ARGHTOS_TASK_TABLE[id].period != 0u;
+    return ARGHTOS_TASK_PERIOD(id) != 0u;
 }
 
 static bool task_is_async(arghtos_task_id_t id)
 {
-    return ARGHTOS_TASK_TABLE[id].period == 0u;
+    return ARGHTOS_TASK_PERIOD(id) == 0u;
 }
 
 static void control_clear(arghtos_task_control_t *c)
@@ -213,16 +227,16 @@ static bool process_time_locked(arghtos_time_t now)
     uint8_t id;
 
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
-        const arghtos_task_config_t *d = &ARGHTOS_TASK_TABLE[id];
+        const uint32_t period = ARGHTOS_TASK_PERIOD(id);
         arghtos_task_control_t *c = &controls[id];
 
-        if (d->period != 0u) {
+        if (period != 0u) {
             if (time_due(now, c->next_time)) {
                 const uint32_t late = now - c->next_time;
-                const uint32_t releases = 1u + (late / d->period);
+                const uint32_t releases = 1u + (late / period);
                 uint32_t missed;
 
-                c->next_time += releases * d->period;
+                c->next_time += releases * period;
 
                 if (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_DORMANT) {
                     ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
@@ -323,7 +337,9 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 {
     arghtos_result_t r;
     uint8_t id;
+#if !ARGHTOS_COMPACT_DESCRIPTOR
     const arghtos_task_config_t *init_tasks;
+#endif
     arghtos_crash_record_t *init_crash;
     uint8_t init_count;
 
@@ -333,7 +349,9 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 
 #if ARGHTOS_STATIC_CONFIG
     (void)config;
+#if !ARGHTOS_COMPACT_DESCRIPTOR
     init_tasks = arghtos_static_tasks;
+#endif
     init_crash = &arghtos_static_crash_record;
     init_count = (uint8_t)ARGHTOS_STATIC_TASK_COUNT;
 #else
@@ -355,11 +373,18 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 
     for (id = 0u; id < init_count; ++id) {
         control_clear(&controls[id]);
+#if ARGHTOS_COMPACT_DESCRIPTOR
+        controls[id].context = arghtos_port_build_initial_context_top(
+            arghtos_static_tasks[id].stack_top,
+            arghtos_task_start_trampoline,
+            arghtos_task_return_guard);
+#else
         controls[id].context = arghtos_port_build_initial_context(
             init_tasks[id].stack_base,
             init_tasks[id].stack_size,
             arghtos_task_start_trampoline,
             arghtos_task_return_guard);
+#endif
 
         if (controls[id].context == ARGHTOS_CONTEXT_NONE) {
             return ARGHTOS_ERR_BAD_CONFIG;
@@ -413,7 +438,7 @@ ARGHTOS_NORETURN void arghtos_start(void)
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         if (task_is_periodic(id)) {
             ARGHTOS_CTRL_SET_STATE(&controls[id], ARGHTOS_TASK_READY);
-            controls[id].next_time = start + ARGHTOS_TASK_TABLE[id].period;
+            controls[id].next_time = start + ARGHTOS_TASK_PERIOD(id);
             timer_consider(start, controls[id].next_time,
                            &have_timer, &earliest, &earliest_delta);
         }
@@ -637,8 +662,8 @@ arghtos_task_id_t arghtos_select_next(void)
         if (task_is_periodic(id) &&
             (ARGHTOS_CTRL_STATE(&controls[id]) == ARGHTOS_TASK_READY)) {
             if ((best == ARGHTOS_TASK_ID_INVALID) ||
-                (ARGHTOS_TASK_TABLE[id].period < ARGHTOS_TASK_TABLE[best].period) ||
-                ((ARGHTOS_TASK_TABLE[id].period == ARGHTOS_TASK_TABLE[best].period) &&
+                (ARGHTOS_TASK_PERIOD(id) < ARGHTOS_TASK_PERIOD(best)) ||
+                ((ARGHTOS_TASK_PERIOD(id) == ARGHTOS_TASK_PERIOD(best)) &&
                  (id < best))) {
                 best = id;
             }
@@ -661,7 +686,7 @@ arghtos_task_id_t arghtos_select_next(void)
                 controls[id].age_credit++;
             }
 
-            raised = (uint16_t)ARGHTOS_TASK_TABLE[id].async_priority +
+            raised = (uint16_t)ARGHTOS_TASK_PRIORITY(id) +
                      (uint16_t)controls[id].age_credit;
             effective = (raised > ceiling) ? ceiling : (uint8_t)raised;
 
@@ -671,7 +696,7 @@ arghtos_task_id_t arghtos_select_next(void)
                 const uint8_t best_ceiling =
                     (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX;
                 const uint16_t best_raised =
-                    (uint16_t)ARGHTOS_TASK_TABLE[best].async_priority +
+                    (uint16_t)ARGHTOS_TASK_PRIORITY(best) +
                     (uint16_t)controls[best].age_credit;
                 const uint8_t best_effective =
                     (best_raised > best_ceiling) ?
@@ -844,18 +869,15 @@ ARGHTOS_NORETURN void arghtos_fatal(
 ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
 {
     arghtos_task_id_t id = kernel.current_task;
-    const arghtos_task_config_t *d;
 
     if (!task_id_valid(id)) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
 
-    d = &ARGHTOS_TASK_TABLE[id];
-
-    if (d->period != 0u) {
+    if (ARGHTOS_TASK_PERIOD(id) != 0u) {
         for (;;) {
             arghtos_result_t r;
-            d->entry();
+            ARGHTOS_TASK_ENTRY(id)();
             r = arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u);
             if (r != ARGHTOS_OK) {
                 arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
@@ -863,7 +885,7 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
         }
     }
 
-    d->entry();
+    ARGHTOS_TASK_ENTRY(id)();
     arghtos_fatal(ARGHTOS_FAULT_ASYNC_RETURNED, NULL);
 }
 
