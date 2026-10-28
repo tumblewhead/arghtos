@@ -127,11 +127,11 @@ The bounded-work and bounded-storage claims remain architecturally consistent an
 The quantitative footprint result is now known:
 
 ```text
-I0 linked ArghtOS resident footprint before MSP = 4098 B
+I0 linked ArghtOS resident footprint before MSP = 4106 B
 soft target                                     = 1536 B
-delta                                           = +2562 B
+delta                                           = +2570 B
 ```
 
 See [I0 footprint skeleton](../implementation/I0-footprint-skeleton.md).
 
-Because MSP is not yet added, the final target footprint can only be larger. The 1.5 KiB target therefore fails at I0 even though boundedness itself is preserved.
+Static compiler/assembly analysis now supplies an approximately 104 B ArghtOS-only MSP lower bound, producing a current combined lower bound of about 4210 B. Hardware high-water validation can only maintain or increase the required physical reservation. The 1.5 KiB target therefore fails at I0 even though boundedness itself is preserved.
