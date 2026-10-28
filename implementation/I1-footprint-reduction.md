@@ -302,3 +302,84 @@ Therefore no R1a footprint delta is recorded here yet.
 
 Do not infer a size improvement until the compact linker map exists.
 
+
+# R1a measured result
+
+GitHub Actions run:
+
+```text
+run 40642609403
+conclusion: success
+```
+
+All gates passed:
+
+* portable-source boundary;
+* generic host tests;
+* trusted-config host tests;
+* ASan + UBSan;
+* Cortex-M23 compile;
+* baseline linked footprint;
+* compact R1a linked footprint.
+
+Measured fixed/corrected branch baseline:
+
+```text
+kernel code/data        2958 B
+port C                   402 B
+context assembly         188 B
+board adapter             12 B
+task descriptors         512 B
+crash record              64 B
+linker metadata           16 B
+ArghtOS-only MSP         104 B
+------------------------------
+total                   4256 B
+```
+
+Measured R1a trusted-config profile:
+
+```text
+kernel code/data        2762 B
+port C                   402 B
+context assembly         188 B
+board adapter             12 B
+task descriptors         512 B
+crash record              64 B
+linker metadata           16 B
+ArghtOS-only MSP         104 B
+------------------------------
+total                   4060 B
+```
+
+R1a delta relative to the correctness-fixed branch baseline:
+
+```text
+4256 - 4060 = 196 B saved
+```
+
+All savings are in portable kernel code/data, as intended.
+
+Relative to the frozen I0 result of 4226 B, R1a is 166 B smaller overall because the resumed I1 branch also includes correctness fixes that add approximately 30 B:
+
+```text
+I0 frozen                 4226 B
+I1 fixed baseline         4256 B   (+30 B)
+I1 R1a compact            4060 B   (-196 B from fixed baseline)
+                             
+net vs I0                 -166 B
+```
+
+R1a therefore validates the build-time/static-configuration direction, but it removes only about 7.3% of the original 2690-byte excess.
+
+Remaining excess versus the 1536-byte target:
+
+```text
+4060 - 1536 = 2524 B
+```
+
+The architecture remains far above target. Continue to R1b/R2 rather than instruction-level polishing.
+
+# CI note
+
+The symbol-size step used `llvm-nm`, which was unavailable on the GitHub runner. This did not affect compilation, tests, or footprint JSON. The workflow should use the available `nm` command or explicitly install LLVM tools before the next symbol-delta run.
