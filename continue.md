@@ -10,110 +10,100 @@ Read [agents.md](agents.md) first. Repository state is authoritative.
 repo:   https://github.com/tumblewhead/arghtos
 base:   main @ dcf188aae8765d0d65d729af706da4bdaa922474
 branch: implementation/r4-feature-specialization-001
-PR:     #3 (draft)
+PR:     #3
+title:  R4: freeze minimum-footprint Cortex-M23 production profile at 2294 B
 ```
 
-Soft target:
+PR #3 is in **freeze / merge-gate mode**. Do not start another R4 footprint
+experiment on this branch.
+
+## Frozen result
+
+Default capacity:
 
 ```text
-1536 B complete ArghtOS resident footprint
-24-task default
+24 tasks
 ```
 
-Physical linker output-section occupancy is authoritative. All ArghtOS code,
-constants, data, generated scheduler state, crash state, port code, assembly,
-alignment/linker metadata, and ArghtOS-only MSP count.
-
-## Minimum-size policy
-
-Runtime profiling is optional in the minimum-size production profile and
-enabled by default elsewhere.
-
-Minimum-size work may trade cycles for bytes, but must retain scheduler
-semantics, C11 defined behavior, portability boundaries, bounded work, crash
-integrity, wake/wait correctness, and required invariants.
-
-## Accepted footprint chain
+Complete physical ArghtOS resident footprint:
 
 ```text
-physical R3c                           3080 B
-R4h corrected physical baseline       2778 B
-R4m full LTO                           2530 B
-R4n omit frame pointer                 2450 B
-R4p no ARM unwind index                2434 B
-R4q no jump tables                     2410 B
-R4s split task metadata                2402 B
-R4u entry/next-time lifetime overlay   2322 B
-R4v compact PendSV assembly             2298 B
-R4y direct SVC EXC_RETURN branch        2294 B
----------------------------------------------
-current accepted minimum               2294 B
-soft target                            1536 B
-remaining gap                           758 B
+physical R3c reference                3080 B
+R4h corrected physical baseline      2778 B
+R4m full LTO                          2530 B
+R4n omit frame pointer                2450 B
+R4p no ARM unwind index               2434 B
+R4q no jump tables                    2410 B
+R4s split task metadata               2402 B
+R4u entry/next-time lifetime overlay  2322 B
+R4v compact PendSV assembly            2298 B
+R4y direct SVC EXC_RETURN branch       2294 B
+--------------------------------------------
+frozen accepted minimum               2294 B
+soft target                           1536 B
+remaining gap                          758 B
 ```
 
 R4y:
 
 ```text
 linked before MSP  2214 B
-MSP                  80 B
+ArghtOS-only MSP      80 B
 total               2294 B
 ```
 
-Authoritative R4y CI evidence is recorded in
-[implementation/R4y-direct-svc-return.md](implementation/R4y-direct-svc-return.md).
+See:
 
-## Selective inlining/outlining conclusion
+* [implementation/R4-freeze.md](implementation/R4-freeze.md)
+* [implementation/R4y-direct-svc-return.md](implementation/R4y-direct-svc-return.md)
 
-R4w global no-inline was strongly negative:
+## Supported minimum-size profile
 
-```text
-R4v 2298 B
-R4w 2594 B
-delta +296 B
-```
+The frozen R4y minimum-size Cortex-M23 profile uses:
 
-R4x then tested the strongest selective-outlining candidates while retaining
-normal full LTO everywhere else.
+* static/trusted production configuration;
+* 24-task maximum;
+* compact runtime + compact descriptor + unified slot;
+* optional runtime profiling disabled only in this minimum-size profile;
+* accepted size-first selector;
+* no-profile dispatch clock read removed;
+* unused start epoch removed;
+* split task metadata;
+* entry/next-time lifetime overlay;
+* full LTO;
+* `-fomit-frame-pointer`;
+* `-fno-jump-tables`;
+* linker script without unused ARM unwind index;
+* compact Thumb-1 PendSV save/restore;
+* direct SVC branch to saved EXC_RETURN.
 
-Authoritative selective sweep:
+The portable kernel remains target-independent C11.
 
-```text
-CI 40667730031  success
+## Preserved semantics / contracts
 
-candidate                  total      delta vs R4y
-R4y baseline               2294 B       0 B
-fault attribution          2314 B     +20 B
-time_due                   2310 B     +16 B
-task_is_async              2326 B     +32 B
-```
+R4y preserves:
 
-All host, sanitizer, portability, and Cortex-M23 gates passed.
+* synchronous periodic RMS scheduling;
+* equal-period lower-ID tie order;
+* one active periodic instance;
+* arithmetic delayed-release catch-up;
+* async residual-capacity scheduling and age credit;
+* pending-wake race closure;
+* async return as fatal;
+* required 64-byte crash record;
+* no heap;
+* bounded scheduler work;
+* portable kernel / target-port boundary;
+* Cortex-M23 32-byte software R4-R11 task frame;
+* first-dispatch MSP reclamation;
+* PRIMASK serialization and race-free idle WFI protocol.
 
-Conclusion: for these candidates, Clang/LLVM `-Oz` + full LTO already makes
-better size decisions than manual out-of-line boundaries.
+## Rejected experiment history
 
-Do not repeat these three helpers without a materially different ABI or
-algorithmic hypothesis.
+Rejected/neutral R4 experiments remain documented under `implementation/`.
+They are evidence, not supported build profiles.
 
-See [implementation/R4x-fault-helper.md](implementation/R4x-fault-helper.md).
-
-## R4z timer-delta recomputation
-
-R4z traded retained `best_delta` state for recomputation.
-
-```text
-R4y 2294 B
-R4z 2294 B
-delta   0 B
-```
-
-Reject as neutral.
-
-See
-[implementation/R4z-timer-delta-recompute.md](implementation/R4z-timer-delta-recompute.md).
-
-## Rejected / neutral experiments
+Notable rejected/neutral results include:
 
 ```text
 R4c looped crash copy                 +8 B
@@ -134,47 +124,46 @@ R4x task_is_async helper             +32 B
 R4z timer-delta recomputation          0 B
 ```
 
-## Exact next action: freeze/clean PR #3 before merge
+The post-freeze R4aa/R4ab research commits were intentionally removed from the
+PR branch before merge because they were not accepted checkpoints.
 
-PR #3 now contains a large accepted R4 progression plus many rejected
-experimental build switches and stale historical target names.
+## Freeze cleanup completed
 
-Before merging:
+The merge branch now:
 
-1. Keep the accepted minimum-size path through R4y.
-2. Keep generic/debug and useful reference profiles needed for regression.
-3. Remove or quarantine rejected experimental build targets/switches that are
-   not part of the supported product surface.
-4. Preserve implementation checkpoint documents for the experiment history.
-5. Update PR #3 title/body to describe the full R4 footprint-specialization
-   work rather than the old R4a-only description.
-6. Refresh this file to the frozen branch head.
-7. Run one final clean CI on that frozen branch.
-8. If green and mergeable, merge PR #3, preferably as a squash merge.
+* removes post-R4y experimental helper translation units;
+* removes rejected R4t/R4x/R4z private source switches;
+* removes rejected legacy kernel/port experiment branches from product source;
+* keeps useful wake/state regression coverage;
+* collapses the Makefile from the lab matrix to supported/reference profiles;
+* collapses CI to supported/reference profiles;
+* preserves all measured experiment checkpoint documents;
+* updates PR #3 title/body to the complete R4 scope.
 
-Do not start another footprint experiment before this cleanup unless the user
-explicitly chooses to continue research instead of freezing R4.
+Supported Makefile/CI surfaces are now:
 
-## Architecture rules
+* generic host tests;
+* accepted size-first selector host regression;
+* profiling-enabled R3c reference;
+* accepted minimum-source R4u host tests;
+* ASan/UBSan;
+* generic Cortex-M23 compile;
+* generic footprint harness;
+* R3c footprint reference;
+* final R4y footprint;
+* R3c/R4y map and symbol evidence.
 
-* portable kernel remains target-independent C11;
-* Cortex-M23 mechanics remain under `port/cortex_m23/`;
-* no dynamic allocation;
-* periodic synchronous RMS semantics remain;
-* async age/wake semantics remain;
-* arithmetic missed-release catch-up remains;
-* required 64-byte crash record remains;
-* no hidden application-owned exclusions;
-* do not remove invariants merely for bytes.
+## Exact next action
 
-## Useful files
+1. Run the final PR #3 CI on this frozen branch head.
+2. Confirm:
+   * all frozen CI steps pass;
+   * R3c remains 3080 B physical;
+   * R4y remains 2294 B physical;
+   * PR #3 remains mergeable.
+3. If green, mark PR #3 ready for review/merge.
+4. User should merge PR #3, preferably with **Squash and merge**.
+5. After merge, start any new footprint research from fresh canonical `main`,
+   using frozen R4y as the control.
 
-* [agents.md](agents.md)
-* this file
-* [implementation/R4u-entry-next-overlay.md](implementation/R4u-entry-next-overlay.md)
-* [implementation/R4v-compact-pendsv.md](implementation/R4v-compact-pendsv.md)
-* [implementation/R4y-direct-svc-return.md](implementation/R4y-direct-svc-return.md)
-* [implementation/R4x-fault-helper.md](implementation/R4x-fault-helper.md)
-* [implementation/R4z-timer-delta-recompute.md](implementation/R4z-timer-delta-recompute.md)
-* `Makefile`
-* `.github/workflows/ci.yml`
+Do not add another experiment to PR #3.
