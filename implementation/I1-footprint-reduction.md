@@ -383,3 +383,152 @@ The architecture remains far above target. Continue to R1b/R2 rather than instru
 # CI note
 
 The symbol-size step used `llvm-nm`, which was unavailable on the GitHub runner. This did not affect compilation, tests, or footprint JSON. The workflow should use the available `nm` command or explicitly install LLVM tools before the next symbol-delta run.
+
+# R1b measured result
+
+GitHub Actions run:
+
+```text
+run 40647159438
+conclusion: success
+```
+
+All gates passed:
+
+* portable-source boundary;
+* generic host tests;
+* R1a trusted-config host tests;
+* R1b linked-static host tests;
+* ASan + UBSan;
+* Cortex-M23 compile;
+* baseline footprint;
+* R1a footprint;
+* R1b footprint;
+* symbol-size report.
+
+Measured in one build revision:
+
+```text
+                         baseline    R1a       R1b
+kernel code/data           2974 B    2790 B     2706 B
+port C                      402 B     402 B      402 B
+context assembly            188 B     188 B      188 B
+board adapter                12 B      12 B       12 B
+task descriptors            512 B     512 B      512 B
+crash record                 64 B      64 B       64 B
+linker metadata              16 B      16 B       16 B
+ArghtOS-only MSP            104 B     104 B      104 B
+--------------------------------------------------------
+total                       4272 B    4088 B     4004 B
+```
+
+R1b delta relative to R1a in the same source revision:
+
+```text
+4088 - 4004 = 84 B saved
+```
+
+R1b delta relative to the previously measured R1a checkpoint (4060 B):
+
+```text
+4060 - 4004 = 56 B net saved
+```
+
+The difference is dual-profile scaffolding added to preserve the generic/R1a/R1b comparison in one source tree. If the linked-static profile becomes canonical, removing the generic-profile compatibility code should recover some of that overhead.
+
+R1b changes:
+
+* task table pointer removed from C9 in static profile;
+* crash-record pointer removed from C9 in static profile;
+* runtime task_count removed from C9 in static profile;
+* task count becomes a compile-time constant;
+* task table and crash record are linked symbols;
+* static-profile C9 shrinks from 20 B to 12 B;
+* portable scheduler behavior remains unchanged.
+
+# R1b symbol evidence
+
+Largest retained R1b symbols:
+
+```text
+controls                         640 B
+arghtos_static_tasks             512 B
+arghtos_kernel_service           296 B
+process_time_locked              276 B
+arghtos_select_next              232 B
+arghtos_kernel_dispatch          188 B
+arghtos_fatal                    176 B
+arghtos_start                    156 B
+wake_locked                      144 B
+PendSV_Handler                   130 B
+arghtos_init                     124 B
+```
+
+# Architectural lower-bound consequence
+
+R1b total is:
+
+```text
+4004 B
+```
+
+The portable kernel bucket is 2706 B, but that bucket contains both executable code and the 652 B static kernel state:
+
+```text
+controls        640 B
+static C9        12 B
+---------------------
+kernel state    652 B
+```
+
+Therefore the R1b footprint excluding portable kernel executable code is approximately:
+
+```text
+4004 - (2706 - 652) = 1950 B
+```
+
+That 1950 B consists of required scheduler state plus the current port, descriptors, crash record, linker metadata, and MSP estimate.
+
+This is already:
+
+```text
+1950 - 1536 = 414 B
+```
+
+over the target before counting any portable scheduler executable code.
+
+Thus **the 1.5 KiB target cannot be reached by portable-kernel code optimization alone**.
+
+Even under the more generous thought experiment where all current port executable code disappeared, the retained metadata/state/MSP terms are approximately:
+
+```text
+controls                    640 B
+static C9                    12 B
+task descriptors            512 B
+crash record                 64 B
+ArghtOS-only MSP            104 B
+linker metadata              16 B
+--------------------------------
+non-port-code lower bound  1348 B
+```
+
+That leaves only:
+
+```text
+1536 - 1348 = 188 B
+```
+
+for the entire portable scheduler plus context/port code.
+
+Therefore the next checkpoint must attack representation/state size, not merely instruction count.
+
+# R1 conclusion
+
+R1 is successful as an experiment:
+
+* R1a proved runtime configuration validation costs about 196 B in the first measured branch revision;
+* R1b proved linked static ownership saves another 84 B in the same-revision comparison;
+* R1b total is 4004 B;
+* configuration generality is not the dominant remaining problem.
+
+Proceed to R2: compact runtime/descriptor representation.
