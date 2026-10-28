@@ -3,7 +3,7 @@ type: ImplementationCheckpoint
 title: "R4b - Size-first selector code generation"
 description: "Micro-optimization experiment that trades source friendliness for smaller Cortex-M23 selector code while preserving C6 ordering and bounded scans."
 tags: [implementation, footprint, selector, size-first, codegen]
-status: experimental
+status: accepted
 ---
 
 # Baseline
@@ -54,4 +54,21 @@ Generic host tests now explicitly lock:
 
 R4a and R4b are linked in the same CI revision.
 
-Authoritative linked result: pending.
+Authoritative linked result: CI run 40659232208, success.
+
+```text
+R4a  2845 B
+R4b  2781 B
+-----------
+saved    64 B
+```
+
+The entire saving is `arghtos_select_next`:
+
+```text
+224 B -> 160 B
+```
+
+No other footprint category changed. Remaining gap to the 1536 B soft target is 1245 B.
+
+R4b is accepted for the minimum-size production profile.
