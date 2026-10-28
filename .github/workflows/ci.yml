@@ -67,6 +67,9 @@ jobs:
       - name: Host R4g no-dispatch-time tests
         run: make host-test-r4g
 
+      - name: Host R4h no-start-time tests
+        run: make host-test-r4h
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -121,6 +124,9 @@ jobs:
       - name: Cortex-M23 footprint no-dispatch-time R4g
         run: make m23-footprint-r4g
 
+      - name: Cortex-M23 footprint no-start-time R4h
+        run: make m23-footprint-r4h
+
       - name: Symbol-size report
         run: |
           nm -S --size-sort --radix=d build/m23.elf > build/m23-symbols.txt || true
@@ -139,6 +145,7 @@ jobs:
           nm -S --size-sort --radix=d build/m23-r4e.elf > build/m23-r4e-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-r4f.elf > build/m23-r4f-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-r4g.elf > build/m23-r4g-symbols.txt || true
+          nm -S --size-sort --radix=d build/m23-r4h.elf > build/m23-r4h-symbols.txt || true
           echo '--- baseline ---'
           cat build/footprint.json
           echo '--- compact R1a ---'
@@ -175,6 +182,8 @@ jobs:
           cat build/footprint-r4f.json
           echo '--- no-dispatch-time R4g ---'
           cat build/footprint-r4g.json
+          echo '--- no-start-time R4h ---'
+          cat build/footprint-r4h.json
           echo '--- largest R3c symbols ---'
           tail -80 build/m23-r3c-symbols.txt || true
           echo '--- largest R4a symbols ---'
@@ -191,6 +200,8 @@ jobs:
           tail -80 build/m23-r4f-symbols.txt || true
           echo '--- largest R4g symbols ---'
           tail -80 build/m23-r4g-symbols.txt || true
+          echo '--- largest R4h symbols ---'
+          tail -80 build/m23-r4h-symbols.txt || true
 
       - name: Upload footprint evidence
         uses: actions/upload-artifact@v4
@@ -213,6 +224,7 @@ jobs:
             build/footprint-r4e.json
             build/footprint-r4f.json
             build/footprint-r4g.json
+            build/footprint-r4h.json
             build/m23.map
             build/m23-compact.map
             build/m23-static.map
@@ -229,6 +241,7 @@ jobs:
             build/m23-r4e.map
             build/m23-r4f.map
             build/m23-r4g.map
+            build/m23-r4h.map
             build/m23-symbols.txt
             build/m23-compact-symbols.txt
             build/m23-static-symbols.txt
@@ -245,4 +258,5 @@ jobs:
             build/m23-r4e-symbols.txt
             build/m23-r4f-symbols.txt
             build/m23-r4g-symbols.txt
+            build/m23-r4h-symbols.txt
             build/*.su
