@@ -24,7 +24,8 @@ include/
 
 src/
     ├── arghtos_internal.h
-    └── arghtos_kernel.c    # portable C11 only
+    ├── arghtos_kernel_port.h  # private callbacks visible to a port
+    └── arghtos_kernel.c       # portable C11 only
 
 port/
 ├── host/
@@ -112,7 +113,7 @@ There must be no dependency from PORT back into application semantics or from PO
 
 Owns only public types/configuration/API declarations.
 
-Must not contain scheduler state definitions, SVC numbers, or nontrivial inline implementation.
+Must not contain scheduler state definitions, port service IDs, or nontrivial inline implementation.
 
 ## `include/arghtos/arghtos_port.h`
 
@@ -133,14 +134,18 @@ It must contain no Cortex register names, CMSIS/vendor headers, NVIC constants, 
 
 Application code normally does not include this header.
 
+## `src/arghtos_kernel_port.h`
+
+Owns the architecture-neutral callbacks that a selected port may invoke back into the portable kernel: dispatch, service execution, timer interrupt entry, and fatal entry. It contains no target register/frame definitions.
+
 ## `src/arghtos_internal.h`
 
 Owns:
 
 * C8 task-control definition;
 * C9 kernel-global definition;
-* internal service IDs;
-* private helper declarations shared with the port;
+* internal architecture-neutral service IDs;
+* private helper declarations used only inside the portable kernel;
 * compile-time assertions that bind concrete sizes.
 
 It must not be included by application code.
