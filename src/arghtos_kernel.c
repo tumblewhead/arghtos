@@ -471,7 +471,9 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 #else
     (void)init_crash;
 #endif
+#if !ARGHTOS_SIZE_FIRST_NO_START_TIME
     kernel.start_time = 0u;
+#endif
 #if ARGHTOS_RUNTIME_PROFILING
     kernel.run_start = 0u;
 #endif
@@ -513,7 +515,9 @@ ARGHTOS_NORETURN void arghtos_start(void)
 
     key = arghtos_port_critical_enter();
     start = arghtos_port_time_now();
+#if !ARGHTOS_SIZE_FIRST_NO_START_TIME
     kernel.start_time = start;
+#endif
 
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
 #if ARGHTOS_SIZE_FIRST_START_TIMER
@@ -1145,7 +1149,9 @@ void arghtos_test_reset(void)
         control_clear(&controls[id]);
     }
 
+#if !ARGHTOS_SIZE_FIRST_NO_START_TIME
     kernel.start_time = 0u;
+#endif
 #if ARGHTOS_RUNTIME_PROFILING
     kernel.run_start = 0u;
 #endif
