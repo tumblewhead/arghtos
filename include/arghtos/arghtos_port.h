@@ -40,6 +40,11 @@ arghtos_context_t arghtos_port_build_initial_context(
     void (*thread_start)(void),
     void (*return_guard)(void));
 
+arghtos_context_t arghtos_port_build_initial_context_top(
+    void *stack_top,
+    void (*thread_start)(void),
+    void (*return_guard)(void));
+
 void arghtos_port_crash_fill(
     arghtos_crash_record_t *record,
     const void *port_fault_context);
