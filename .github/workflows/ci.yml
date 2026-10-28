@@ -34,7 +34,7 @@ jobs:
       - name: Host accepted split-metadata profile R4s
         run: make host-test-r4s
 
-      - name: Host live entry-overlay experiment R4u
+      - name: Host accepted entry-overlay profile R4u
         run: make host-test-r4u
 
       - name: Host sanitizers
@@ -49,18 +49,18 @@ jobs:
       - name: Cortex-M23 accepted minimum R4q
         run: make m23-footprint-r4q
 
-      - name: Cortex-M23 accepted split-metadata profile R4s
-        run: make m23-footprint-r4s
-
-      - name: Cortex-M23 live entry-overlay experiment R4u
+      - name: Cortex-M23 accepted entry-overlay profile R4u
         run: make m23-footprint-r4u
+
+      - name: Cortex-M23 live compact-PendSV experiment R4v
+        run: make m23-footprint-r4v
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4s r4u; do
+          for p in r3c r4u r4v; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
           done
-          for p in r3c r4s r4u; do
+          for p in r3c r4u r4v; do
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
             echo "--- largest $p symbols ---"
@@ -73,18 +73,14 @@ jobs:
           name: arghtos-r4-footprint
           path: |
             build/footprint-r3c.json
-            build/footprint-r4q.json
-            build/footprint-r4s.json
             build/footprint-r4u.json
+            build/footprint-r4v.json
             build/m23-r3c.map
-            build/m23-r4q.map
-            build/m23-r4s.map
             build/m23-r4u.map
+            build/m23-r4v.map
             build/m23-r3c-symbols.txt
-            build/m23-r4q-symbols.txt
-            build/m23-r4s-symbols.txt
             build/m23-r4u-symbols.txt
-            build/m23-r4q.elf
-            build/m23-r4s.elf
+            build/m23-r4v-symbols.txt
             build/m23-r4u.elf
+            build/m23-r4v.elf
             build/*.su
