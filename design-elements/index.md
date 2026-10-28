@@ -18,3 +18,4 @@ This directory turns the audited contracts into concrete implementation modules.
 All design elements depend on the audited contract baseline in [../architecture/contracts/](../architecture/contracts/) and the gate in [../architecture/A1-consistency-audit.md](../architecture/A1-consistency-audit.md).
 
 The **dangerous code** section in each element is normative for verification planning: testers should use the listed failure examples as deliberate fault-injection or adversarial test cases where practical.
+* [D12 - Code-module design consistency audit](D12-design-consistency-audit.md) - Design freeze/gate before implementation.
