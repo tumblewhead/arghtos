@@ -7,6 +7,7 @@
 #define ARGHTOS_M23_SCB_ICSR_ADDR        ((uintptr_t)0xE000ED04u)
 #define ARGHTOS_M23_SHPR3_PENDSV_ADDR    ((uintptr_t)0xE000ED22u)
 #define ARGHTOS_M23_ICSR_PENDSVSET       (1u << 28)
+#define ARGHTOS_M23_ICSR_PENDSVCLR       (1u << 27)
 #define ARGHTOS_M23_CONTROL_SPSEL        (1u << 1)
 #define ARGHTOS_M23_XPSR_T               (1u << 24)
 #define ARGHTOS_M23_MIN_CONTEXT_RESERVE  68u
