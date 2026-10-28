@@ -18,7 +18,34 @@
 #if ARGHTOS_UNIFIED_SLOT
 extern arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS];
 #define ARGHTOS_TASK_ENTRY(id)    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[(id)])
-#if ARGHTOS_R5F_COMPRESSED_SCHEDULE
+#if ARGHTOS_R5G_SCHEDULE16
+extern uint16_t arghtos_static_schedule16[ARGHTOS_MAX_TASKS];
+#if ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT > 0u
+extern uint32_t arghtos_static_schedule_overflow[ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT];
+#endif
+
+static uint32_t r5g_schedule_get(arghtos_task_id_t id)
+{
+    const uint16_t code = arghtos_static_schedule16[id];
+
+#if ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT > 0u
+    if ((code & 0xFF00u) == ARGHTOS_R5G_OVERFLOW_BASE) {
+        return arghtos_static_schedule_overflow[code & 0x00FFu];
+    }
+#endif
+    if ((code & 0xFF00u) == ARGHTOS_R5G_ASYNC_BASE) {
+        return ARGHTOS_STATIC_ASYNC_TAG | (uint32_t)(code & 0x00FFu);
+    }
+    return (uint32_t)code;
+}
+
+#define ARGHTOS_TASK_SCHEDULE(id) r5g_schedule_get((id))
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_TAG) != 0u) ? \
+        0u : ARGHTOS_TASK_SCHEDULE(id))
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_MASK))
+#elif ARGHTOS_R5F_COMPRESSED_SCHEDULE
 uint32_t arghtos_r5f_schedule_get(arghtos_task_id_t id);
 #define ARGHTOS_TASK_SCHEDULE(id) arghtos_r5f_schedule_get((id))
 #define ARGHTOS_TASK_PERIOD(id) \
