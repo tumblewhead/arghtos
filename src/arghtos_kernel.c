@@ -480,25 +480,31 @@ ARGHTOS_NORETURN void arghtos_start(void)
 
 arghtos_result_t arghtos_yield(void)
 {
+#if !ARGHTOS_PRODUCTION_PROFILE
     if (!arghtos_port_is_task_context()) {
         return ARGHTOS_ERR_BAD_CONTEXT;
     }
+#endif
     return arghtos_port_service_call(ARGHTOS_SERVICE_YIELD, 0u);
 }
 
 arghtos_result_t arghtos_wait(void)
 {
+#if !ARGHTOS_PRODUCTION_PROFILE
     if (!arghtos_port_is_task_context()) {
         return ARGHTOS_ERR_BAD_CONTEXT;
     }
+#endif
     return arghtos_port_service_call(ARGHTOS_SERVICE_WAIT, 0u);
 }
 
 arghtos_result_t arghtos_sleep_until(arghtos_time_t absolute_time)
 {
+#if !ARGHTOS_PRODUCTION_PROFILE
     if (!arghtos_port_is_task_context()) {
         return ARGHTOS_ERR_BAD_CONTEXT;
     }
+#endif
     return arghtos_port_service_call(
         ARGHTOS_SERVICE_SLEEP_UNTIL, absolute_time);
 }
@@ -507,9 +513,11 @@ arghtos_result_t arghtos_sleep_for(arghtos_duration_t duration)
 {
     arghtos_time_t now;
 
+#if !ARGHTOS_PRODUCTION_PROFILE
     if (!arghtos_port_is_task_context()) {
         return ARGHTOS_ERR_BAD_CONTEXT;
     }
+#endif
     if (!duration_valid(duration)) {
         return ARGHTOS_ERR_BAD_TIME;
     }
@@ -524,9 +532,11 @@ arghtos_result_t arghtos_sleep_for(arghtos_duration_t duration)
 
 arghtos_result_t arghtos_wake(arghtos_task_id_t task_id)
 {
+#if !ARGHTOS_PRODUCTION_PROFILE
     if (!arghtos_port_is_task_context()) {
         return ARGHTOS_ERR_BAD_CONTEXT;
     }
+#endif
     return arghtos_port_service_call(ARGHTOS_SERVICE_WAKE, task_id);
 }
 
@@ -536,9 +546,11 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     arghtos_result_t result;
     bool dispatch;
 
+#if !ARGHTOS_PRODUCTION_PROFILE
     if (!arghtos_port_is_handler_context()) {
         return ARGHTOS_ERR_BAD_CONTEXT;
     }
+#endif
 
     key = arghtos_port_critical_enter();
 
@@ -564,9 +576,11 @@ arghtos_result_t arghtos_profile_get(
     arghtos_irq_key_t key;
     const arghtos_task_control_t *c;
 
+#if !ARGHTOS_PRODUCTION_PROFILE
     if (!arghtos_port_is_task_context()) {
         return ARGHTOS_ERR_BAD_CONTEXT;
     }
+#endif
     if (out == NULL) {
         return ARGHTOS_ERR_BAD_ARGUMENT;
     }
