@@ -19,67 +19,16 @@ jobs:
       - name: Portable-source boundary
         run: make portability-check
 
-      - name: Host kernel tests
+      - name: Host generic kernel tests
         run: make host-test
 
-      - name: Host size-first selector tests
+      - name: Host accepted size-first selector tests
         run: make host-test-size-selector
 
-      - name: Host size-first crash-clear tests
-        run: make host-test-size-crash-clear
-
-      - name: Host size-first timer-sentinel tests
-        run: make host-test-size-timer-sentinel
-
-      - name: Host size-first startup-timer tests
-        run: make host-test-size-start-timer
-
-      - name: Host size-first service-ifchain tests
-        run: make host-test-size-service-ifchain
-
-      - name: Host size-first fault-range tests
-        run: make host-test-size-fault-range
-
-      - name: Host size-first two-pass time tests
-        run: make host-test-size-time-two-pass
-
-      - name: Host size-first wake-result-hoist tests
-        run: make host-test-size-wake-result-hoist
-
-      - name: Host compact-profile tests
-        run: make host-test-compact
-
-      - name: Host linked-static-profile tests
-        run: make host-test-static
-
-      - name: Host R2a compact-runtime tests
-        run: make host-test-r2a
-
-      - name: Host R2b compact-descriptor tests
-        run: make host-test-r2b
-
-      - name: Host R2c unified-slot tests
-        run: make host-test-r2c
-
-      - name: Host R3a production-profile tests
-        run: make host-test-r3a
-
-      - name: Host R3b specialized-service tests
-        run: make host-test-r3b
-
-      - name: Host R3c minimal-validation tests
+      - name: Host profiling-enabled R3c reference
         run: make host-test-r3c
 
-      - name: Host R4a no-profiling tests
-        run: make host-test-r4a
-
-      - name: Host R4b size-first selector tests
-        run: make host-test-r4b
-
-      - name: Host R4g no-dispatch-time tests
-        run: make host-test-r4g
-
-      - name: Host R4h no-start-time tests
+      - name: Host current non-LTO minimum profile R4h
         run: make host-test-r4h
 
       - name: Host sanitizers
@@ -88,68 +37,11 @@ jobs:
       - name: Cortex-M23 compile
         run: make m23-compile
 
-      - name: Cortex-M23 footprint baseline
-        run: make m23-footprint
-
-      - name: Cortex-M23 footprint compact R1a
-        run: make m23-footprint-compact
-
-      - name: Cortex-M23 footprint static R1b
-        run: make m23-footprint-static
-
-      - name: Cortex-M23 footprint compact runtime R2a
-        run: make m23-footprint-r2a
-
-      - name: Cortex-M23 footprint compact descriptor R2b
-        run: make m23-footprint-r2b
-
-      - name: Cortex-M23 footprint unified slot R2c
-        run: make m23-footprint-r2c
-
-      - name: Cortex-M23 footprint production profile R3a
-        run: make m23-footprint-r3a
-
-      - name: Cortex-M23 footprint specialized services R3b
-        run: make m23-footprint-r3b
-
-      - name: Cortex-M23 footprint minimal validation R3c
+      - name: Cortex-M23 footprint profiling-enabled reference R3c
         run: make m23-footprint-r3c
 
-      - name: Cortex-M23 footprint no-profiling R4a
-        run: make m23-footprint-r4a
-
-      - name: Cortex-M23 footprint size-first selector R4b
-        run: make m23-footprint-r4b
-
-      - name: Cortex-M23 footprint looped crash copy R4c
-        run: make m23-footprint-r4c
-
-      - name: Cortex-M23 footprint whole-record crash clear R4d
-        run: make m23-footprint-r4d
-
-      - name: Cortex-M23 footprint timer sentinel R4e
-        run: make m23-footprint-r4e
-
-      - name: Cortex-M23 footprint startup timer R4f
-        run: make m23-footprint-r4f
-
-      - name: Cortex-M23 footprint no-dispatch-time R4g
-        run: make m23-footprint-r4g
-
-      - name: Cortex-M23 footprint no-start-time R4h
+      - name: Cortex-M23 footprint non-LTO minimum R4h
         run: make m23-footprint-r4h
-
-      - name: Cortex-M23 footprint service-ifchain R4i
-        run: make m23-footprint-r4i
-
-      - name: Cortex-M23 footprint fault-range R4j
-        run: make m23-footprint-r4j
-
-      - name: Cortex-M23 footprint two-pass time R4k
-        run: make m23-footprint-r4k
-
-      - name: Cortex-M23 footprint wake-result-hoist R4l
-        run: make m23-footprint-r4l
 
       - name: Cortex-M23 footprint LTO R4m
         run: make m23-footprint-r4m
@@ -157,186 +49,41 @@ jobs:
       - name: Cortex-M23 footprint LTO omit-frame-pointer R4n
         run: make m23-footprint-r4n
 
+      - name: Cortex-M23 footprint live ICF experiment R4o
+        run: make m23-footprint-r4o
+
       - name: Symbol-size report
         run: |
-          nm -S --size-sort --radix=d build/m23.elf > build/m23-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-compact.elf > build/m23-compact-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-static.elf > build/m23-static-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r2a.elf > build/m23-r2a-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r2b.elf > build/m23-r2b-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r2c.elf > build/m23-r2c-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r3a.elf > build/m23-r3a-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r3b.elf > build/m23-r3b-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r3c.elf > build/m23-r3c-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4a.elf > build/m23-r4a-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4b.elf > build/m23-r4b-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4c.elf > build/m23-r4c-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4d.elf > build/m23-r4d-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4e.elf > build/m23-r4e-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4f.elf > build/m23-r4f-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4g.elf > build/m23-r4g-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4h.elf > build/m23-r4h-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4i.elf > build/m23-r4i-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4j.elf > build/m23-r4j-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4k.elf > build/m23-r4k-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4l.elf > build/m23-r4l-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4m.elf > build/m23-r4m-symbols.txt || true
-          nm -S --size-sort --radix=d build/m23-r4n.elf > build/m23-r4n-symbols.txt || true
-          echo '--- baseline ---'
-          cat build/footprint.json
-          echo '--- compact R1a ---'
-          cat build/footprint-compact.json
-          echo '--- static R1b ---'
-          cat build/footprint-static.json
-          echo '--- compact runtime R2a ---'
-          cat build/footprint-r2a.json
-          echo '--- compact runtime R2a ---'
-          cat build/footprint-r2a.json
-          echo '--- compact descriptor R2b ---'
-          cat build/footprint-r2b.json
-          echo '--- compact descriptor R2b ---'
-          cat build/footprint-r2b.json
-          echo '--- unified slot R2c ---'
-          cat build/footprint-r2c.json
-          echo '--- production profile R3a ---'
-          cat build/footprint-r3a.json
-          echo '--- specialized services R3b ---'
-          cat build/footprint-r3b.json
-          echo '--- minimal validation R3c ---'
-          cat build/footprint-r3c.json
-          echo '--- no-profiling R4a ---'
-          cat build/footprint-r4a.json
-          echo '--- size-first selector R4b ---'
-          cat build/footprint-r4b.json
-          echo '--- looped crash copy R4c ---'
-          cat build/footprint-r4c.json
-          echo '--- whole-record crash clear R4d ---'
-          cat build/footprint-r4d.json
-          echo '--- timer sentinel R4e ---'
-          cat build/footprint-r4e.json
-          echo '--- startup timer R4f ---'
-          cat build/footprint-r4f.json
-          echo '--- no-dispatch-time R4g ---'
-          cat build/footprint-r4g.json
-          echo '--- no-start-time R4h ---'
-          cat build/footprint-r4h.json
-          echo '--- service-ifchain R4i ---'
-          cat build/footprint-r4i.json
-          echo '--- fault-range R4j ---'
-          cat build/footprint-r4j.json
-          echo '--- two-pass time R4k ---'
-          cat build/footprint-r4k.json
-          echo '--- wake-result-hoist R4l ---'
-          cat build/footprint-r4l.json
-          echo '--- LTO R4m ---'
-          cat build/footprint-r4m.json
-          echo '--- LTO omit-frame-pointer R4n ---'
-          cat build/footprint-r4n.json
-          echo '--- largest R3c symbols ---'
-          tail -80 build/m23-r3c-symbols.txt || true
-          echo '--- largest R4a symbols ---'
-          tail -80 build/m23-r4a-symbols.txt || true
-          echo '--- largest R4b symbols ---'
-          tail -80 build/m23-r4b-symbols.txt || true
-          echo '--- largest R4c symbols ---'
-          tail -80 build/m23-r4c-symbols.txt || true
-          echo '--- largest R4d symbols ---'
-          tail -80 build/m23-r4d-symbols.txt || true
-          echo '--- largest R4e symbols ---'
-          tail -80 build/m23-r4e-symbols.txt || true
-          echo '--- largest R4f symbols ---'
-          tail -80 build/m23-r4f-symbols.txt || true
-          echo '--- largest R4g symbols ---'
-          tail -80 build/m23-r4g-symbols.txt || true
-          echo '--- largest R4h symbols ---'
-          tail -80 build/m23-r4h-symbols.txt || true
-          echo '--- largest R4i symbols ---'
-          tail -80 build/m23-r4i-symbols.txt || true
-          echo '--- largest R4j symbols ---'
-          tail -80 build/m23-r4j-symbols.txt || true
-          echo '--- largest R4k symbols ---'
-          tail -80 build/m23-r4k-symbols.txt || true
-          echo '--- largest R4l symbols ---'
-          tail -80 build/m23-r4l-symbols.txt || true
-          echo '--- largest R4m symbols ---'
-          tail -80 build/m23-r4m-symbols.txt || true
-          echo '--- largest R4n symbols ---'
-          tail -80 build/m23-r4n-symbols.txt || true
+          for p in r3c r4h r4m r4n r4o; do
+            nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
+          done
+          for p in r3c r4h r4m r4n r4o; do
+            echo "--- $p footprint ---"
+            cat "build/footprint-$p.json"
+            echo "--- largest $p symbols ---"
+            tail -80 "build/m23-$p-symbols.txt" || true
+          done
 
-      - name: Upload footprint evidence
+      - name: Upload active footprint evidence
         uses: actions/upload-artifact@v4
         with:
-          name: arghtos-i1-footprint
+          name: arghtos-r4-footprint
           path: |
-            build/footprint.json
-            build/footprint-compact.json
-            build/footprint-static.json
-            build/footprint-r2a.json
-            build/footprint-r2b.json
-            build/footprint-r2c.json
-            build/footprint-r3a.json
-            build/footprint-r3b.json
             build/footprint-r3c.json
-            build/footprint-r4a.json
-            build/footprint-r4b.json
-            build/footprint-r4c.json
-            build/footprint-r4d.json
-            build/footprint-r4e.json
-            build/footprint-r4f.json
-            build/footprint-r4g.json
             build/footprint-r4h.json
-            build/footprint-r4i.json
-            build/footprint-r4j.json
-            build/footprint-r4k.json
-            build/footprint-r4l.json
             build/footprint-r4m.json
             build/footprint-r4n.json
-            build/m23.map
-            build/m23-compact.map
-            build/m23-static.map
-            build/m23-r2a.map
-            build/m23-r2b.map
-            build/m23-r2c.map
-            build/m23-r3a.map
-            build/m23-r3b.map
+            build/footprint-r4o.json
             build/m23-r3c.map
-            build/m23-r4a.map
-            build/m23-r4b.map
-            build/m23-r4c.map
-            build/m23-r4d.map
-            build/m23-r4e.map
-            build/m23-r4f.map
-            build/m23-r4g.map
             build/m23-r4h.map
-            build/m23-r4i.map
-            build/m23-r4j.map
-            build/m23-r4k.map
-            build/m23-r4l.map
             build/m23-r4m.map
             build/m23-r4n.map
-            build/m23-symbols.txt
-            build/m23-compact-symbols.txt
-            build/m23-static-symbols.txt
-            build/m23-r2a-symbols.txt
-            build/m23-r2b-symbols.txt
-            build/m23-r2c-symbols.txt
-            build/m23-r3a-symbols.txt
-            build/m23-r3b-symbols.txt
+            build/m23-r4o.map
             build/m23-r3c-symbols.txt
-            build/m23-r4a-symbols.txt
-            build/m23-r4b-symbols.txt
-            build/m23-r4c-symbols.txt
-            build/m23-r4d-symbols.txt
-            build/m23-r4e-symbols.txt
-            build/m23-r4f-symbols.txt
-            build/m23-r4g-symbols.txt
             build/m23-r4h-symbols.txt
-            build/m23-r4i-symbols.txt
-            build/m23-r4j-symbols.txt
-            build/m23-r4k-symbols.txt
-            build/m23-r4l-symbols.txt
             build/m23-r4m-symbols.txt
             build/m23-r4n-symbols.txt
-            build/m23-r4m.elf
+            build/m23-r4o-symbols.txt
             build/m23-r4n.elf
+            build/m23-r4o.elf
             build/*.su
