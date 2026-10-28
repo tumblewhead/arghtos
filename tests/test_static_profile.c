@@ -139,7 +139,11 @@ static void test_static_init_ignores_runtime_config(void)
 
     assert(arghtos_init(NULL) == ARGHTOS_OK);
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
+#if ARGHTOS_R5G_SCHEDULE16
+    assert(arghtos_host_initial_arg() == (uintptr_t)periodic_task);
+#else
     assert(arghtos_host_initial_arg() == (uintptr_t)async_task);
+#endif
 #endif
     start_and_escape();
 
