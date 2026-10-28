@@ -18,7 +18,42 @@
 #if ARGHTOS_UNIFIED_SLOT
 extern arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS];
 #define ARGHTOS_TASK_ENTRY(id)    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[(id)])
-#if ARGHTOS_R5G_SCHEDULE16
+#if ARGHTOS_R5I_SCHEDULE8
+extern uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS];
+#if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT > 0u
+extern uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT];
+#endif
+
+#if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT == 0u
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((arghtos_static_schedule8[(id)] & ARGHTOS_R5I_ASYNC_BASE) != 0u) ? \
+        0u : (uint32_t)arghtos_static_schedule8[(id)])
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(arghtos_static_schedule8[(id)] & 0x7Fu))
+#else
+static uint32_t r5i_schedule_get(arghtos_task_id_t id)
+{
+    const uint8_t code = arghtos_static_schedule8[id];
+
+    if ((code >= ARGHTOS_R5I_OVERFLOW_BASE) &&
+        (code <= ARGHTOS_R5I_OVERFLOW_LAST)) {
+        return arghtos_static_schedule8_overflow[
+            (uint8_t)(code - ARGHTOS_R5I_OVERFLOW_BASE)];
+    }
+    if ((code & ARGHTOS_R5I_ASYNC_BASE) != 0u) {
+        return ARGHTOS_STATIC_ASYNC_TAG | (uint32_t)(code & 0x7Fu);
+    }
+    return (uint32_t)code;
+}
+
+#define ARGHTOS_TASK_SCHEDULE(id) r5i_schedule_get((id))
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_TAG) != 0u) ? \
+        0u : ARGHTOS_TASK_SCHEDULE(id))
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_MASK))
+#endif
+#elif ARGHTOS_R5G_SCHEDULE16
 extern uint16_t arghtos_static_schedule16[ARGHTOS_MAX_TASKS];
 #if ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT > 0u
 extern uint32_t arghtos_static_schedule_overflow[ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT];
