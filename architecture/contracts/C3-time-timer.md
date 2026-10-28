@@ -162,3 +162,26 @@ Inability to satisfy the timebase, timer horizon, or half-range service requirem
 # Boundary specification
 
 C3 owns scheduler-visible time and timed eligibility. The platform owns hardware realization of that timebase and deadline.
+
+# R5q generated class-partition time scan
+
+When C0's R5p generated ordering is enabled, the trusted minimum-size timer
+engine may use two bounded contiguous scans instead of decoding task class for
+every slot:
+
+```text
+for id in [0, P):
+    process periodic release/catch-up
+    consider next periodic release for timer
+
+for id in [P, N):
+    if async state is SLEEPING:
+        process/consider its sleep deadline
+```
+
+The two scan ranges are disjoint and cover exactly the same generated task set
+as the ordinary single mixed-class scan. Periodic catch-up arithmetic, async
+sleep release semantics, earliest-deadline selection, and dispatch-request
+behavior are unchanged.
+
+Total task inspections remain bounded by `N`.
