@@ -652,9 +652,11 @@ ARGHTOS_NORETURN void arghtos_start(void)
 {
     arghtos_time_t start;
     arghtos_irq_key_t key;
+#if !ARGHTOS_R5O_GENERATED_START_TIMER
     bool have_timer = false;
     arghtos_time_t earliest = 0u;
     uint32_t earliest_delta = 0u;
+#endif
     uint8_t id;
 
 #if !ARGHTOS_MINIMAL_VALIDATION
@@ -674,18 +676,28 @@ ARGHTOS_NORETURN void arghtos_start(void)
         if (task_is_periodic(id)) {
             ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
             ARGHTOS_CTRL_NEXT(&controls[id]) = start + ARGHTOS_TASK_PERIOD(id);
+#if !ARGHTOS_R5O_GENERATED_START_TIMER
             timer_consider(start, ARGHTOS_CTRL_NEXT(&controls[id]),
                            &have_timer, &earliest, &earliest_delta);
+#endif
         }
     }
 
     kernel.flags |= ARGHTOS_KF_STARTED;
 
+#if ARGHTOS_R5O_GENERATED_START_TIMER
+#if ARGHTOS_R5O_MIN_PERIOD > 0u
+    arghtos_port_timer_arm(start + (arghtos_time_t)ARGHTOS_R5O_MIN_PERIOD);
+#else
+    arghtos_port_timer_disarm();
+#endif
+#else
     if (have_timer) {
         arghtos_port_timer_arm(earliest);
     } else {
         arghtos_port_timer_disarm();
     }
+#endif
 
     arghtos_port_critical_exit(key);
     arghtos_port_start();
