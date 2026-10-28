@@ -54,6 +54,10 @@
 #error "ARGHTOS_MINIMAL_VALIDATION requires ARGHTOS_SPECIALIZED_SERVICES=1"
 #endif
 
+#if !ARGHTOS_RUNTIME_PROFILING && !ARGHTOS_MINIMAL_VALIDATION
+#error "profiling may be disabled only in the R4a-on-R3c experimental profile"
+#endif
+
 #if ARGHTOS_STATIC_CONFIG
 #ifndef ARGHTOS_STATIC_TASK_COUNT
 #error "ARGHTOS_STATIC_TASK_COUNT required for static configuration profile"
@@ -90,8 +94,10 @@ typedef struct {
 typedef struct {
     arghtos_context_t context;
     arghtos_time_t    next_time;
+#if ARGHTOS_RUNTIME_PROFILING
     uint32_t          total_cpu_ticks;
     uint16_t          max_run_ticks;
+#endif
     uint8_t           age_credit;
     uint8_t           status;
 #if ARGHTOS_UNIFIED_SLOT
@@ -134,7 +140,9 @@ typedef struct {
 #define ARGHTOS_CTRL_FLAGS(c) \
     (ARGHTOS_CTRL_WAKE_PENDING(c) ? ARGHTOS_TCF_WAKE_PENDING : 0u)
 
+#if ARGHTOS_RUNTIME_PROFILING
 #define ARGHTOS_CTRL_MAX_RUN(c) ((uint32_t)(c)->max_run_ticks)
+#endif
 #else
 typedef struct {
     arghtos_context_t context;
@@ -168,7 +176,9 @@ typedef struct {
     arghtos_crash_record_t      *crash_record;
 #endif
     arghtos_time_t               start_time;
+#if ARGHTOS_RUNTIME_PROFILING
     arghtos_time_t               run_start;
+#endif
     arghtos_task_id_t            current_task;
 #if !ARGHTOS_STATIC_CONFIG
     uint8_t                      task_count;
@@ -190,14 +200,22 @@ _Static_assert(sizeof(arghtos_config_t) == 12u, "32-bit init config ABI changed"
 _Static_assert(sizeof(arghtos_task_profile_t) == 12u, "task profile ABI changed");
 _Static_assert(sizeof(arghtos_crash_record_t) == 64u, "crash record ABI changed");
 #if ARGHTOS_UNIFIED_SLOT
+#if ARGHTOS_RUNTIME_PROFILING
 _Static_assert(sizeof(arghtos_task_control_t) == 24u, "32-bit unified task slot ABI changed");
+#else
+_Static_assert(sizeof(arghtos_task_control_t) == 20u, "32-bit no-profile unified task slot ABI changed");
+#endif
 #elif ARGHTOS_COMPACT_RUNTIME
 _Static_assert(sizeof(arghtos_task_control_t) == 16u, "32-bit compact task control ABI changed");
 #else
 _Static_assert(sizeof(arghtos_task_control_t) == 20u, "32-bit task control ABI changed");
 #endif
 #if ARGHTOS_STATIC_CONFIG
+#if ARGHTOS_RUNTIME_PROFILING
 _Static_assert(sizeof(arghtos_kernel_state_t) == 12u, "32-bit static-profile kernel state ABI changed");
+#else
+_Static_assert(sizeof(arghtos_kernel_state_t) == 8u, "32-bit no-profile static kernel state ABI changed");
+#endif
 #else
 _Static_assert(sizeof(arghtos_kernel_state_t) == 20u, "32-bit kernel state ABI changed");
 #endif
