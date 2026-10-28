@@ -3,7 +3,7 @@ type: ImplementationCheckpoint
 title: "R4 - Profiling-surface specialization"
 description: "Experimental measurement of the complete linked footprint attributable to runtime profiling, preserving R3c as the same-revision control."
 tags: [implementation, footprint, profiling, specialization, experiment]
-status: experimental
+status: measured
 ---
 
 # Baseline
@@ -97,6 +97,48 @@ R4a keeps R3c unchanged in the same source revision and adds:
 
 Draft PR: #3.
 
-Initial CI run: 40658032240.
+Authoritative CI run: 40658079082, success.
 
-Measured R4a result: pending linked CI evidence.
+# Measured R4a result
+
+```text
+R3c  3072 B
+R4a  2845 B
+-----------
+saved  227 B
+```
+
+Breakdown:
+
+```text
+                           R3c    R4a   delta
+kernel code/data          1830   1699   -131 B
+Cortex-M23 port C          282    282      0 B
+context assembly           188    188      0 B
+board adapter               12     12      0 B
+unified task slots         576    480    -96 B
+crash record                64     64      0 B
+linker metadata             16     16      0 B
+ArghtOS-only MSP           104    104      0 B
+------------------------------------------------
+total                     3072   2845   -227 B
+```
+
+Remaining gap to the 1536 B soft target:
+
+```text
+2845 - 1536 = 1309 B
+```
+
+Notable symbol changes:
+
+```text
+arghtos_profile_get       60 ->   0 B
+arghtos_kernel_dispatch 204 -> 160 B
+arghtos_select_next      232 -> 224 B
+arghtos_init             100 ->  92 B
+arghtos_start            128 -> 124 B
+arghtos_static_slots     576 -> 480 B
+```
+
+The 227 B result is meaningful, but insufficient to reach the target. Profiling remains a documented v1 requirement, so R4a is not promoted canonically without an explicit user decision.
