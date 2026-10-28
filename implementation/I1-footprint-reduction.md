@@ -751,3 +751,168 @@ Expected raw saving relative to R2b:
 ```
 
 R2c will be accepted only if the linked total improves after code changes.
+
+# R2c measured result - unified generated task slots
+
+CI run:
+
+```text
+40649991293
+conclusion: success
+```
+
+All six profiles passed:
+
+* portable-source boundary;
+* generic host tests;
+* R1a trusted-config tests;
+* R1b linked-static tests;
+* R2a compact-runtime tests;
+* R2b compact-descriptor tests;
+* R2c unified-slot tests;
+* ASan + UBSan;
+* Cortex-M23 compile;
+* all footprint links;
+* symbol reporting.
+
+Measured ladder in one source revision:
+
+```text
+baseline  4020 B
+R1a      3832 B
+R1b      3744 B
+R2a      3702 B
+R2b      3592 B
+R2c      3376 B
+```
+
+R2c delta:
+
+```text
+3592 - 3376 = 216 B saved vs R2b
+3716 - 3376 = 340 B saved vs 24-task R1b baseline
+4226 - 3376 = 850 B saved vs frozen I0
+```
+
+R2c representation:
+
+```text
+context_or_initial_stack_top   4 B
+next_time                      4 B
+total_cpu_ticks                4 B
+max_run_ticks                  2 B
+age_credit                     1 B
+status                         1 B
+entry                          4 B
+schedule                       4 B
+----------------------------------
+unified slot                  24 B/task
+```
+
+At 24 tasks:
+
+```text
+24 * 24 = 576 B
+```
+
+The slot begins life with `context` holding the generated aligned stack-top.
+During init, the stack-top is consumed and overwritten in place by the
+port's saved context token.
+
+The schedule word retains the R2b encoding:
+
+* high bit clear => periodic, low 31 bits are period;
+* high bit set => async, low byte is priority.
+
+The R2c linker report labels the 576-byte `.arghtos_cfg` bucket as
+`task_descriptors` for historical compatibility, but in R2c that bucket is
+the complete mutable unified task-slot array, not a separate descriptor table.
+
+Measured R2c breakdown:
+
+```text
+kernel code/data        2076 B
+port C                   340 B
+context assembly         188 B
+board adapter             12 B
+unified task slots        576 B
+crash record              64 B
+linker metadata           16 B
+ArghtOS-only MSP         104 B
+------------------------------
+total                   3376 B
+```
+
+The kernel bucket no longer contains a separate `controls[]` array.
+
+Largest R2c symbols:
+
+```text
+arghtos_static_slots          576 B
+arghtos_kernel_service        284 B
+process_time_locked           292 B
+arghtos_select_next           232 B
+arghtos_kernel_dispatch       204 B
+arghtos_fatal                 180 B
+arghtos_start                 144 B
+wake_locked                   140 B
+PendSV_Handler                130 B
+arghtos_init                  112 B
+```
+
+# R2 conclusion
+
+R2 is successful and the unified-slot representation is the best measured
+candidate.
+
+Savings from the 24-task R1b baseline:
+
+```text
+3716 -> 3376 = 340 B
+```
+
+Savings from the original frozen I0:
+
+```text
+4226 -> 3376 = 850 B
+```
+
+The remaining gap is still large:
+
+```text
+3376 - 1536 = 1840 B
+```
+
+The fixed/data-side situation is now much healthier than at I0.
+
+Current non-portable-code storage terms:
+
+```text
+unified task slots          576 B
+static C9                    12 B
+crash record                 64 B
+ArghtOS-only MSP            104 B
+linker metadata              16 B
+-------------------------------
+core state/metadata         772 B
+```
+
+Adding current Cortex-M23 port/context/board code:
+
+```text
+772 + 340 + 188 + 12 = 1312 B
+```
+
+That leaves only:
+
+```text
+1536 - 1312 = 224 B
+```
+
+for the entire portable scheduler executable if the 1.5 KiB target is retained.
+
+Therefore R2 has removed the metadata impossibility, but **code size is now the dominant barrier**.
+
+The next useful reduction axis is R3: remove or specialize runtime/public misuse
+validation in the production profile, followed by API/port simplification if
+necessary.
