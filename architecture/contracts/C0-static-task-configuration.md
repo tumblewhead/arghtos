@@ -102,7 +102,7 @@ void arghtos_start(void);
 
 # Concrete scheduler start transaction
 
-Before C4 performs the first task handoff, `arghtos_start()` performs one bounded scan:
+Before C4 performs the first task handoff, `arghtos_start()` enters the C4 scheduler-serialization primitive and performs one bounded scan:
 
 1. read `start_time = arghtos_port_time_now()`;
 2. store C9 `start_time`;
@@ -110,11 +110,12 @@ Before C4 performs the first task handoff, `arghtos_start()` performs one bounde
    * DORMANT -> READY;
    * set `next_time = start_time + period`;
 4. leave async tasks DORMANT;
-5. arm the platform timer for the earliest periodic `next_time`, or disarm if no periodic task exists;
-6. set the C9 started flag;
-7. call `arghtos_port_start()`.
+5. set the C9 STARTED flag while serialization is still active;
+6. arm the platform timer for the earliest periodic `next_time`, or disarm if no periodic task exists;
+7. exit scheduler serialization;
+8. call `arghtos_port_start()`.
 
-Thus every synchronous periodic task has release 0 at the common scheduler start epoch and is eligible for the first dispatch.
+Thus every synchronous periodic task has release 0 at the common scheduler start epoch and is eligible for the first dispatch. A timer or interrupt cannot observe a half-started scheduler state.
 
 # Descriptor validity rules
 
