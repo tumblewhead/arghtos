@@ -40,6 +40,9 @@ jobs:
       - name: Host size-first fault-range tests
         run: make host-test-size-fault-range
 
+      - name: Host size-first two-pass time tests
+        run: make host-test-size-time-two-pass
+
       - name: Host compact-profile tests
         run: make host-test-compact
 
@@ -139,6 +142,9 @@ jobs:
       - name: Cortex-M23 footprint fault-range R4j
         run: make m23-footprint-r4j
 
+      - name: Cortex-M23 footprint two-pass time R4k
+        run: make m23-footprint-r4k
+
       - name: Symbol-size report
         run: |
           nm -S --size-sort --radix=d build/m23.elf > build/m23-symbols.txt || true
@@ -160,6 +166,7 @@ jobs:
           nm -S --size-sort --radix=d build/m23-r4h.elf > build/m23-r4h-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-r4i.elf > build/m23-r4i-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-r4j.elf > build/m23-r4j-symbols.txt || true
+          nm -S --size-sort --radix=d build/m23-r4k.elf > build/m23-r4k-symbols.txt || true
           echo '--- baseline ---'
           cat build/footprint.json
           echo '--- compact R1a ---'
@@ -202,6 +209,8 @@ jobs:
           cat build/footprint-r4i.json
           echo '--- fault-range R4j ---'
           cat build/footprint-r4j.json
+          echo '--- two-pass time R4k ---'
+          cat build/footprint-r4k.json
           echo '--- largest R3c symbols ---'
           tail -80 build/m23-r3c-symbols.txt || true
           echo '--- largest R4a symbols ---'
@@ -224,6 +233,8 @@ jobs:
           tail -80 build/m23-r4i-symbols.txt || true
           echo '--- largest R4j symbols ---'
           tail -80 build/m23-r4j-symbols.txt || true
+          echo '--- largest R4k symbols ---'
+          tail -80 build/m23-r4k-symbols.txt || true
 
       - name: Upload footprint evidence
         uses: actions/upload-artifact@v4
@@ -249,6 +260,7 @@ jobs:
             build/footprint-r4h.json
             build/footprint-r4i.json
             build/footprint-r4j.json
+            build/footprint-r4k.json
             build/m23.map
             build/m23-compact.map
             build/m23-static.map
@@ -268,6 +280,7 @@ jobs:
             build/m23-r4h.map
             build/m23-r4i.map
             build/m23-r4j.map
+            build/m23-r4k.map
             build/m23-symbols.txt
             build/m23-compact-symbols.txt
             build/m23-static-symbols.txt
@@ -287,4 +300,5 @@ jobs:
             build/m23-r4h-symbols.txt
             build/m23-r4i-symbols.txt
             build/m23-r4j-symbols.txt
+            build/m23-r4k-symbols.txt
             build/*.su
