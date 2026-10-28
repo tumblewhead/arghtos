@@ -312,12 +312,12 @@ static bool process_time_locked(arghtos_time_t now)
 
                 c->next_time += releases * period;
 
-                if (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_DORMANT) {
-                    ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
+                if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT) {
+                    ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
                     changed = true;
                     missed = releases - 1u;
-                } else if ((ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_READY) ||
-                           (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_RUNNING)) {
+                } else if ((ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) ||
+                           (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_RUNNING)) {
                     missed = releases;
                 } else {
                     arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
@@ -327,10 +327,10 @@ static bool process_time_locked(arghtos_time_t now)
                     missed_release_add(id, c, missed);
                 }
             }
-        } else if ((ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_SLEEPING) &&
+        } else if ((ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_SLEEPING) &&
                    time_due(now, c->next_time)) {
-            ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
-            ARGHTOS_CTRL_AGE(c) = 0u;
+            ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+            ARGHTOS_CTRL_AGE_ID(id) = 0u;
             changed = true;
         }
     }
@@ -345,7 +345,7 @@ static bool process_time_locked(arghtos_time_t now)
             const arghtos_task_control_t *c = &controls[id];
 
             if ((period != 0u) ||
-                (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_SLEEPING)) {
+                (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_SLEEPING)) {
                 const uint32_t delta = c->next_time - now;
                 if (delta < best_delta) {
                     best_delta = delta;
@@ -389,12 +389,12 @@ static bool process_time_locked(arghtos_time_t now)
 
                 c->next_time += releases * period;
 
-                if (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_DORMANT) {
-                    ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
+                if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT) {
+                    ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
                     changed = true;
                     missed = releases - 1u;
-                } else if ((ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_READY) ||
-                           (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_RUNNING)) {
+                } else if ((ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) ||
+                           (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_RUNNING)) {
                     missed = releases;
                 } else {
                     arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
@@ -411,10 +411,10 @@ static bool process_time_locked(arghtos_time_t now)
             timer_consider(
                 now, c->next_time, &have_timer, &best_time, &best_delta);
 #endif
-        } else if (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_SLEEPING) {
+        } else if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_SLEEPING) {
             if (time_due(now, c->next_time)) {
-                ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
-                ARGHTOS_CTRL_AGE(c) = 0u;
+                ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+                ARGHTOS_CTRL_AGE_ID(id) = 0u;
                 changed = true;
             } else {
 #if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
@@ -461,12 +461,12 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
     c = &controls[id];
     *result = ARGHTOS_OK;
 
-    switch (ARGHTOS_CTRL_STATE(c)) {
+    switch (ARGHTOS_CTRL_STATE_ID(id)) {
     case ARGHTOS_TASK_DORMANT:
     case ARGHTOS_TASK_WAITING:
-        ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
-        ARGHTOS_CTRL_AGE(c) = 0u;
-        ARGHTOS_CTRL_CLEAR_WAKE(c);
+        ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+        ARGHTOS_CTRL_AGE_ID(id) = 0u;
+        ARGHTOS_CTRL_CLEAR_WAKE_ID(id);
         return true;
 
     case ARGHTOS_TASK_READY:
@@ -474,7 +474,7 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 
     case ARGHTOS_TASK_RUNNING:
     case ARGHTOS_TASK_SLEEPING:
-        ARGHTOS_CTRL_SET_WAKE(c);
+        ARGHTOS_CTRL_SET_WAKE_ID(id);
         return false;
 
     case ARGHTOS_TASK_FAULTED:
@@ -504,12 +504,12 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 
     c = &controls[id];
 
-    switch (ARGHTOS_CTRL_STATE(c)) {
+    switch (ARGHTOS_CTRL_STATE_ID(id)) {
     case ARGHTOS_TASK_DORMANT:
     case ARGHTOS_TASK_WAITING:
-        ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
-        ARGHTOS_CTRL_AGE(c) = 0u;
-        ARGHTOS_CTRL_CLEAR_WAKE(c);
+        ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+        ARGHTOS_CTRL_AGE_ID(id) = 0u;
+        ARGHTOS_CTRL_CLEAR_WAKE_ID(id);
         *result = ARGHTOS_OK;
         return true;
 
@@ -519,7 +519,7 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 
     case ARGHTOS_TASK_RUNNING:
     case ARGHTOS_TASK_SLEEPING:
-        ARGHTOS_CTRL_SET_WAKE(c);
+        ARGHTOS_CTRL_SET_WAKE_ID(id);
         *result = ARGHTOS_OK;
         return false;
 
@@ -1184,10 +1184,10 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
 #endif
 #endif
 
-        if (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_RUNNING) {
-            ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
+        if (ARGHTOS_CTRL_STATE_ID(kernel.current_task) == ARGHTOS_TASK_RUNNING) {
+            ARGHTOS_CTRL_SET_STATE_ID(kernel.current_task, ARGHTOS_TASK_READY);
             if (task_is_async(kernel.current_task)) {
-                ARGHTOS_CTRL_AGE(c) = 0u;
+                ARGHTOS_CTRL_AGE_ID(kernel.current_task) = 0u;
             }
         }
     } else if (kernel.current_task != ARGHTOS_TASK_ID_INVALID) {
