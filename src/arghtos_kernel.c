@@ -256,6 +256,77 @@ static void timer_consider(
 }
 #endif
 
+#if ARGHTOS_SIZE_FIRST_TIME_TWO_PASS
+static bool process_time_locked(arghtos_time_t now)
+{
+    bool changed = false;
+    uint8_t id;
+
+    /* Pass 1: update release/sleep state only. */
+    for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
+        const uint32_t period = ARGHTOS_TASK_PERIOD(id);
+        arghtos_task_control_t *c = &controls[id];
+
+        if (period != 0u) {
+            if (time_due(now, c->next_time)) {
+                const uint32_t late = now - c->next_time;
+                const uint32_t releases = 1u + (late / period);
+                uint32_t missed;
+
+                c->next_time += releases * period;
+
+                if (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_DORMANT) {
+                    ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
+                    changed = true;
+                    missed = releases - 1u;
+                } else if ((ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_READY) ||
+                           (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_RUNNING)) {
+                    missed = releases;
+                } else {
+                    arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+                }
+
+                if (missed != 0u) {
+                    missed_release_add(c, missed);
+                }
+            }
+        } else if ((ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_SLEEPING) &&
+                   time_due(now, c->next_time)) {
+            ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
+            c->age_credit = 0u;
+            changed = true;
+        }
+    }
+
+    /* Pass 2: centralize timer selection. Extra O(N) work buys code size. */
+    {
+        arghtos_time_t best_time = 0u;
+        uint32_t best_delta = UINT32_MAX;
+
+        for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
+            const uint32_t period = ARGHTOS_TASK_PERIOD(id);
+            const arghtos_task_control_t *c = &controls[id];
+
+            if ((period != 0u) ||
+                (ARGHTOS_CTRL_STATE(c) == ARGHTOS_TASK_SLEEPING)) {
+                const uint32_t delta = c->next_time - now;
+                if (delta < best_delta) {
+                    best_delta = delta;
+                    best_time = c->next_time;
+                }
+            }
+        }
+
+        if (best_delta != UINT32_MAX) {
+            arghtos_port_timer_arm(best_time);
+        } else {
+            arghtos_port_timer_disarm();
+        }
+    }
+
+    return changed;
+}
+#else
 static bool process_time_locked(arghtos_time_t now)
 {
     bool changed = false;
@@ -332,6 +403,7 @@ static bool process_time_locked(arghtos_time_t now)
     return changed;
 }
 
+#endif
 static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 {
     arghtos_task_control_t *c;
