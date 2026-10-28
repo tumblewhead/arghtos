@@ -90,9 +90,9 @@ is a **soft target and is disproven by the I0 implementation baseline**.
 The first linked Cortex-M23 I0 build reports:
 
 ```text
-ArghtOS resident before MSP = 4098 B
+ArghtOS resident before MSP = 4106 B
 soft target                 = 1536 B
-excess before MSP           = 2562 B
+excess before MSP           = 2570 B
 ```
 
 The report already includes retained portable kernel code/data, Cortex-M23 port C, context assembly, board-adapter bytes, 32 task descriptors, the required crash record, and linker-resident metadata. The ArghtOS-only MSP term is still zero in this baseline, so 4012 B is an optimistic lower bound.
@@ -130,3 +130,16 @@ Still open:
 * target ArghtOS-only MSP requirement/high-water bound;
 * hardware-validation changes that may alter port size;
 * future architecture/requirement reductions if the 1.5 KiB goal is retained.
+
+
+# Current implementation lower bound including static MSP evidence
+
+The stabilized Clang `-Oz` I0 stack-usage evidence identifies a normal SVC sleep path of approximately 104 B of ArghtOS-only MSP.
+
+Thus:
+
+```text
+F_arghtos >= 4106 + 104 = 4210 B
+```
+
+before any physical-system MSP growth due to application/device handler nesting.
