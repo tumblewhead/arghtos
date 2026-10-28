@@ -77,6 +77,10 @@
 #define ARGHTOS_SPLIT_META 0
 #endif
 
+#ifndef ARGHTOS_ID_NATIVE_META
+#define ARGHTOS_ID_NATIVE_META 0
+#endif
+
 #if ARGHTOS_COMPACT_DESCRIPTOR && !ARGHTOS_STATIC_CONFIG
 #error "ARGHTOS_COMPACT_DESCRIPTOR requires ARGHTOS_STATIC_CONFIG=1"
 #endif
@@ -110,6 +114,10 @@
 #if ARGHTOS_SPLIT_META && \
     (!ARGHTOS_UNIFIED_SLOT || ARGHTOS_RUNTIME_PROFILING)
 #error "split metadata requires the no-profile unified-slot minimum profile"
+#endif
+
+#if ARGHTOS_ID_NATIVE_META && !ARGHTOS_SPLIT_META
+#error "ID-native metadata access requires ARGHTOS_SPLIT_META=1"
 #endif
 
 #if ARGHTOS_STATIC_CONFIG
