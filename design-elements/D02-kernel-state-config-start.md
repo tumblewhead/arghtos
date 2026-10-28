@@ -95,7 +95,7 @@ current_task = INVALID
 
 for configured task:
     state = DORMANT
-    saved_psp = valid dormant context
+    context = valid dormant context
     counters/flags = 0
 ```
 
@@ -182,7 +182,7 @@ The order in which D02 loops over descriptors must not itself become a priority 
 D02 calls D06:
 
 ```c
-saved_psp = arghtos_port_build_initial_psp(
+context = arghtos_port_build_initial_context(
     stack_base,
     stack_size,
     arghtos_task_start_trampoline,
@@ -320,10 +320,10 @@ Host build should permit injecting:
 * fake task descriptor arrays;
 * fake stack addresses;
 * fake port-init result;
-* fake initial-PSP builder;
+* fake initial-context builder;
 * deterministic clock.
 
-The module must be testable without executing Cortex exception instructions.
+The module must compile and be fully testable against the host port without any target-specific exception instruction.
 
 # Boundary specification
 
