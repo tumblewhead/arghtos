@@ -331,6 +331,44 @@ static void test_periodic_active_counts_all_missed_releases(void)
     assert(ARGHTOS_CTRL_MISSED(&c[0]) == 3u);
 }
 
+static void test_equal_period_tie_uses_lowest_id(void)
+{
+    arghtos_task_config_t tasks[2] = {
+        {task0, stack0, 10u, sizeof(stack0), 0u, 0u},
+        {task1, stack1, 10u, sizeof(stack1), 0u, 0u}
+    };
+    arghtos_config_t cfg = make_config(tasks, 2u);
+
+    reset_all();
+    assert(arghtos_init(&cfg) == ARGHTOS_OK);
+    start_and_escape();
+    assert(arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE) != ARGHTOS_CONTEXT_NONE);
+    assert(arghtos_test_kernel()->current_task == 0u);
+}
+
+static void test_equal_async_score_tie_uses_lowest_id(void)
+{
+    arghtos_task_config_t tasks[2] = {
+        {task0, stack0, 0u, sizeof(stack0), 2u, 0u},
+        {task1, stack1, 0u, sizeof(stack1), 2u, 0u}
+    };
+    arghtos_config_t cfg = make_config(tasks, 2u);
+    const arghtos_task_control_t *c;
+
+    reset_all();
+    assert(arghtos_init(&cfg) == ARGHTOS_OK);
+    start_and_escape();
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    assert(arghtos_wake_from_interrupt(0u) == ARGHTOS_OK);
+    assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
+
+    assert(arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE) != ARGHTOS_CONTEXT_NONE);
+    c = arghtos_test_controls();
+    assert(arghtos_test_kernel()->current_task == 0u);
+    assert(c[0].age_credit == 0u);
+    assert(c[1].age_credit == 1u);
+}
+
 static void test_async_aging_eventually_beats_high_base_peer(void)
 {
     arghtos_task_config_t tasks[2] = {
@@ -461,6 +499,8 @@ int main(void)
     test_sleep_wraparound();
     test_periodic_delayed_release_catchup();
     test_periodic_active_counts_all_missed_releases();
+    test_equal_period_tie_uses_lowest_id();
+    test_equal_async_score_tie_uses_lowest_id();
     test_async_aging_eventually_beats_high_base_peer();
     test_periodic_selection_does_not_age_async();
     test_profile_snapshot_is_committed_only();
