@@ -5,6 +5,10 @@
 
 #include <stdatomic.h>
 
+#ifndef ARGHTOS_TRUSTED_CONFIG
+#define ARGHTOS_TRUSTED_CONFIG 0
+#endif
+
 static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
 static arghtos_kernel_state_t kernel;
 
@@ -45,6 +49,7 @@ static void control_clear(arghtos_task_control_t *c)
     c->flags = 0u;
 }
 
+#if !ARGHTOS_TRUSTED_CONFIG
 static bool range_end(uintptr_t base, uint32_t size, uintptr_t *end)
 {
     if ((uintptr_t)size > UINTPTR_MAX - base) {
@@ -132,6 +137,8 @@ static arghtos_result_t validate_config(const arghtos_config_t *config)
 
     return ARGHTOS_OK;
 }
+
+#endif
 
 static void missed_release_add(arghtos_task_control_t *c, uint32_t count)
 {
@@ -285,10 +292,19 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
         return ARGHTOS_ERR_BAD_STATE;
     }
 
+#if !ARGHTOS_TRUSTED_CONFIG
     r = validate_config(config);
     if (r != ARGHTOS_OK) {
         return r;
     }
+#else
+    /*
+     * I1 compact profile: configuration validity, stack layout, and task-table
+     * constraints are build/generator evidence rather than runtime work.
+     * The generic I0 profile keeps the complete validation path above.
+     */
+    (void)config;
+#endif
 
     r = arghtos_port_init();
     if (r != ARGHTOS_OK) {
