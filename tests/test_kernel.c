@@ -296,7 +296,7 @@ static void test_periodic_delayed_release_catchup(void)
 
     arghtos_host_set_mode(ARGHTOS_HOST_TASK);
     assert(arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
-    assert(arghtos_test_controls()ARGHTOS_CTRL_STATE(&[0]) == ARGHTOS_TASK_DORMANT);
+    assert(ARGHTOS_CTRL_STATE(&arghtos_test_controls()[0]) == ARGHTOS_TASK_DORMANT);
     assert(arghtos_kernel_dispatch(ctx) == ARGHTOS_CONTEXT_NONE);
 
     arghtos_host_set_time(137u);
