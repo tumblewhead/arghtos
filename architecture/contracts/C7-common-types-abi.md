@@ -17,11 +17,11 @@ status: draft
 
 ```c
 #ifndef ARGHTOS_MAX_TASKS
-#define ARGHTOS_MAX_TASKS 32u
+#define ARGHTOS_MAX_TASKS 24u
 #endif
 
-#ifndef ARGHTOS_ASYNC_PRIORITY_LEVELS
-#define ARGHTOS_ASYNC_PRIORITY_LEVELS 8u
+#ifndef ARGHTOS_ASYNC_PRIORITY_MAX
+#define ARGHTOS_ASYNC_PRIORITY_MAX 8u
 #endif
 ```
 
@@ -31,8 +31,9 @@ Required constraints:
 _Static_assert(ARGHTOS_MAX_TASKS >= 1u, "at least one task required");
 _Static_assert(ARGHTOS_MAX_TASKS <= 254u, "0xFF reserved as invalid ID");
 
-_Static_assert(ARGHTOS_ASYNC_PRIORITY_LEVELS >= 1u, "empty async domain");
-_Static_assert(ARGHTOS_ASYNC_PRIORITY_LEVELS <= 255u, "priority must fit uint8_t");
+_Static_assert(ARGHTOS_ASYNC_PRIORITY_MAX >= 1u, "empty async priority domain");
+_Static_assert(ARGHTOS_ASYNC_PRIORITY_MAX <= 254u,
+               "0xFF is reserved as invalid async priority");
 ```
 
 # Scalar ABI
