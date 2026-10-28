@@ -127,9 +127,9 @@ The bounded-work and bounded-storage claims remain architecturally consistent an
 The quantitative footprint result is now known:
 
 ```text
-I0 linked ArghtOS resident footprint before MSP = 4012 B
+I0 linked ArghtOS resident footprint before MSP = 4098 B
 soft target                                     = 1536 B
-delta                                           = +2476 B
+delta                                           = +2562 B
 ```
 
 See [I0 footprint skeleton](../implementation/I0-footprint-skeleton.md).
