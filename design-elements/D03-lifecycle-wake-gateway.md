@@ -24,13 +24,7 @@ Portable logic in:
 src/arghtos_kernel.c
 ```
 
-SVC exception entry/argument extraction in:
-
-```text
-port/cortex_m23/arghtos_context.S
-```
-
-or, if smaller after measurement, a minimal assembly entry that calls a C SVC decoder in `arghtos_port.c`.
+Target-specific task-service entry is entirely owned by the selected port. D03 knows only the architecture-neutral `arghtos_port_service_call(service_id,arg0)` operation.
 
 # Public entry points
 
@@ -53,7 +47,7 @@ arghtos_result_t arghtos_kernel_service(
     uint32_t arg0);
 ```
 
-Only D06 SVC handling calls this for task-originating ownership-changing operations.
+Only the selected port calls this private kernel callback for task-originating ownership-changing operations.
 
 The service IDs are the C4 contract values:
 
@@ -65,7 +59,7 @@ WAKE
 TASK_RETURN
 ```
 
-`sleep_for()` uses the existing SLEEP_UNTIL service rather than adding another SVC number. It validates the half-range duration, reads the bounded/read-only D06/C3 clock, forms `deadline = now + dt`, and invokes the same `arghtos_sleep_until()` path. The ownership-changing state mutation still occurs only after SVC entry.
+`sleep_for()` uses the existing SLEEP_UNTIL service rather than adding another service ID. It validates the half-range duration, reads the bounded/read-only D06/C3 clock, forms `deadline = now + dt`, and invokes the same `arghtos_sleep_until()` path. The ownership-changing state mutation still occurs only after the selected port transfers control through its service-call mechanism.
 
 # Core private helpers
 
@@ -226,8 +220,8 @@ A task API called from a handler returns BAD_CONTEXT if a return path is meaning
 ```mermaid
 flowchart TD
   TASK["Task"] --> PUB["public API"]
-  PUB --> SVC["D06 SVC entry"]
-  SVC --> KS["kernel_service"]
+  PUB --> PCALL["arghtos_port_service_call"]
+  PCALL --> KS["kernel_service"]
   KS --> Y["yield"]
   KS --> W["wait"]
   KS --> S["sleep"]
@@ -363,7 +357,7 @@ D03 should compile in a host model with:
 * fake dispatch request counter;
 * deterministic C8/C9 arrays.
 
-Every state transition should be directly testable without executing SVC.
+Every state transition should be directly testable without executing a target trap/SVC mechanism.
 
 # Boundary specification
 
