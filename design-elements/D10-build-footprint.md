@@ -440,3 +440,23 @@ R3c 3072 B    -92 B
 The target remains unmet by 1536 B.
 
 Validation specialization is no longer the dominant remaining lever; further footprint work should move to explicit API/feature specialization or port/code-structure reduction.
+# R4a profiling-surface promotion
+
+The minimum-size production profile may compile runtime profiling out.
+
+Measured same-revision comparison:
+
+```text
+                         R3c    R4a   delta
+kernel code/data         1830   1699  -131 B
+unified task slots        576    480   -96 B
+all other categories      666    666     0 B
+-------------------------------------------
+total                    3072   2845  -227 B
+```
+
+CI evidence: run 40658079082.
+
+The minimum-size baseline for subsequent size experiments is therefore 2845 B.
+The generic/debug and profiling-enabled production builds remain in CI as
+behavioral/reference profiles.
