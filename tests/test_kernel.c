@@ -83,6 +83,21 @@ static void test_prestart_interrupt_wake_is_rejected(void)
     assert(arghtos_host_dispatch_request_count() == 0u);
 }
 
+static void test_start_establishes_normal_interrupt_state(void)
+{
+    arghtos_task_config_t task = {
+        task0, stack0, 0u, sizeof(stack0), 1u, 0u
+    };
+    arghtos_config_t cfg = make_config(&task, 1u);
+
+    reset_all();
+    assert(arghtos_init(&cfg) == ARGHTOS_OK);
+    (void)arghtos_port_critical_enter();
+    assert(arghtos_host_interrupts_masked());
+    start_and_escape();
+    assert(!arghtos_host_interrupts_masked());
+}
+
 static void test_start_releases_all_periodic_at_one_epoch(void)
 {
     arghtos_task_config_t tasks[3] = {
@@ -411,6 +426,7 @@ int main(void)
     test_public_fixed_sizes();
     test_init_rejects_overlap();
     test_prestart_interrupt_wake_is_rejected();
+    test_start_establishes_normal_interrupt_state();
     test_start_releases_all_periodic_at_one_epoch();
     test_periodic_rms_and_same_task_reselect_accounting();
     test_wake_wait_handshake();
