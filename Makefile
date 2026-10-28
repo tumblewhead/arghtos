@@ -6,6 +6,7 @@ M23_ARGHTOS_MSP ?= 104
 M23_ARGHTOS_MSP_LTO ?= 88
 M23_ARGHTOS_MSP_OMIT_FP ?= 80
 M23_ARGHTOS_MSP_R5 ?= 72
+M23_ARGHTOS_MSP_R5T ?= 64
 
 HOST_CFLAGS := -std=c11 -Wall -Wextra -Werror -O2 -DARGHTOS_TEST \
 	-Iinclude -Isrc -Iport/host
@@ -18,7 +19,7 @@ M23_COMMON := --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -std=c11 \
 
 
 
-.PHONY: all portability-check host-test host-test-size-selector host-test-r3c host-test-r4u host-test-r5c host-test-r5d host-test-r5e host-test-r5f host-test-r5g host-test-r5h host-test-r5i host-test-r5l host-test-r5m host-test-r5n host-test-r5o host-test-r5p host-test-r5q host-test-r5r host-test-r5s host-test-r5t host-sanitize m23-compile m23-footprint m23-footprint-r3c m23-footprint-r4y m23-footprint-r5a m23-footprint-r5b m23-footprint-r5c m23-footprint-r5d m23-footprint-r5e m23-footprint-r5f m23-footprint-r5g m23-footprint-r5h m23-footprint-r5i m23-footprint-r5j m23-footprint-r5k m23-footprint-r5l m23-footprint-r5m m23-footprint-r5n m23-footprint-r5o m23-footprint-r5p m23-footprint-r5q m23-footprint-r5r m23-footprint-r5s m23-footprint-r5t footprint-report clean
+.PHONY: all portability-check host-test host-test-size-selector host-test-r3c host-test-r4u host-test-r5c host-test-r5d host-test-r5e host-test-r5f host-test-r5g host-test-r5h host-test-r5i host-test-r5l host-test-r5m host-test-r5n host-test-r5o host-test-r5p host-test-r5q host-test-r5r host-test-r5s host-test-r5t host-sanitize m23-compile m23-footprint m23-footprint-r3c m23-footprint-r4y m23-footprint-r5a m23-footprint-r5b m23-footprint-r5c m23-footprint-r5d m23-footprint-r5e m23-footprint-r5f m23-footprint-r5g m23-footprint-r5h m23-footprint-r5i m23-footprint-r5j m23-footprint-r5k m23-footprint-r5l m23-footprint-r5m m23-footprint-r5n m23-footprint-r5o m23-footprint-r5p m23-footprint-r5q m23-footprint-r5r m23-footprint-r5s m23-footprint-r5t m23-footprint-r5u footprint-report clean
 
 
 
@@ -3140,6 +3141,13 @@ m23-footprint-r5j: m23-footprint-r5i
 		--msp $(M23_ARGHTOS_MSP_R5) --json \
 		> $(BUILD)/footprint-r5j.json
 	cat $(BUILD)/footprint-r5j.json
+
+
+m23-footprint-r5u: m23-footprint-r5t
+	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r5t.map \
+		--msp $(M23_ARGHTOS_MSP_R5T) --json \
+		> $(BUILD)/footprint-r5u.json
+	cat $(BUILD)/footprint-r5u.json
 
 
 footprint-report: m23-footprint
