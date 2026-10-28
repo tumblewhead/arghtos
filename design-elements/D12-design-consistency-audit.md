@@ -12,7 +12,7 @@ The code-module design is internally consistent enough to proceed to implementat
 
 This is a **design GO**, not a claim that:
 
-* the 1.5 KiB resident-footprint target is achievable;
+* the 1.5 KiB resident-footprint target is achievable; I0 now demonstrates that the current implementation does not achieve it;
 * P2 target context switching is proven;
 * P6 schedulability is discharged;
 * target timing/MSP bounds are known.
@@ -160,7 +160,7 @@ D10 reserves that 300 B as:
 
 These are red-line measurement envelopes, not predictions.
 
-The design does not currently demonstrate they are feasible.
+I0 demonstrates that these red-line budgets are not feasible for the current feature set: the linked implementation is 4012 B before MSP.
 
 # First implementation checkpoint
 
@@ -182,7 +182,7 @@ Immediately capture:
 * disassembly;
 * stack-usage artifacts.
 
-If the skeleton already consumes most or all of the 300 B residual, stop and revisit the footprint target/metadata representation before implementing the full scheduler.
+I0 has completed this checkpoint and exceeds the 300 B residual by a wide margin. The next size-focused step must revisit architecture/requirements/metadata representation before claiming the 1.5 KiB goal.
 
 # Open implementation choices that do not change contracts
 
@@ -245,7 +245,7 @@ Heavy instrumentation inside critical/PendSV paths can invalidate measured overh
 
 The next stage may implement D01-D09 and the D10/D11 support tooling.
 
-Implementation should proceed **footprint-first**, with the linkable skeleton checkpoint before deep feature coding.
+The footprint-first checkpoint is complete. Portable implementation and host verification may continue, but any effort aimed at the 1.5 KiB goal must first address the measured ~2.5 KiB deficit.
 
 # Portability gate
 
