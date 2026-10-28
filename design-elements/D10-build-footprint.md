@@ -233,7 +233,7 @@ Examples to scrutinize:
 The checkpoint has been executed. The current Cortex-M23 `-Oz` linked footprint report is:
 
 ```text
-portable kernel + resident state     2934 B
+portable kernel + resident state     2938 B
 Cortex-M23 port C                     408 B
 context + fault assembly              172 B
 board adapter                          12 B
@@ -241,12 +241,12 @@ board adapter                          12 B
 required crash record                  64 B
 linker resident metadata               16 B
 -------------------------------------------
-ArghtOS before MSP                   4118 B
+ArghtOS before MSP                   4122 B
 soft target                          1536 B
-excess                               2582 B
+excess                               2586 B
 ```
 
-Compiler sweep showed 3304 B linked text at `-Os`, 3052 B at `-Oz`, and 2760 B with exploratory `-Oz + LTO`. This confirms a feature/architecture-scale gap rather than an optimization-flag problem.
+Compiler sweep showed 3308 B linked text at `-Os`, 3056 B at `-Oz`, and 2764 B with exploratory `-Oz + LTO`. This confirms a feature/architecture-scale gap rather than an optimization-flag problem.
 
 Evidence: [I0 footprint skeleton](../implementation/I0-footprint-skeleton.md).
 
@@ -370,7 +370,7 @@ The stabilized `-Oz` compiler stack-usage artifacts plus the SVC handler's expli
 That already exceeds the original 48 B MSP red line and yields:
 
 ```text
-4118 B linked + 104 B static MSP = 4222 B lower bound
+4122 B linked + 104 B static MSP = 4226 B lower bound
 ```
 
 Target high-water testing is still required; 104 B is not a final physical MSP reservation.
