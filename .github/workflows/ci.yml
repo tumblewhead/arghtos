@@ -94,9 +94,12 @@ jobs:
       - name: Cortex-M23 live R5j 72-byte MSP requalification
         run: make m23-footprint-r5j
 
+      - name: Cortex-M23 live R5k assembly crash fill
+        run: make m23-footprint-r5k
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h r5i; do
+          for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h r5i r5k; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -121,6 +124,7 @@ jobs:
             build/footprint-r5h.json
             build/footprint-r5i.json
             build/footprint-r5j.json
+            build/footprint-r5k.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5a.map
@@ -132,6 +136,7 @@ jobs:
             build/m23-r5g.map
             build/m23-r5h.map
             build/m23-r5i.map
+            build/m23-r5k.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5a-symbols.txt
@@ -143,6 +148,7 @@ jobs:
             build/m23-r5g-symbols.txt
             build/m23-r5h-symbols.txt
             build/m23-r5i-symbols.txt
+            build/m23-r5k-symbols.txt
             build/m23-r4y.elf
             build/m23-r5a.elf
             build/m23-r5b.elf
@@ -153,4 +159,5 @@ jobs:
             build/m23-r5g.elf
             build/m23-r5h.elf
             build/m23-r5i.elf
+            build/m23-r5k.elf
             build/*.su
