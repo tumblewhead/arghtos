@@ -355,6 +355,7 @@ static void missed_release_add(
 #endif
 }
 
+#if !ARGHTOS_R5V_UNIT_PERIOD_TIMER
 #if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
 static void timer_consider(
     arghtos_time_t now,
@@ -386,19 +387,23 @@ static void timer_consider(
     }
 }
 #endif
+#endif
 
 static bool process_time_locked(arghtos_time_t now)
 {
     bool changed = false;
-#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+    uint8_t id;
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
     arghtos_time_t best_time = 0u;
     uint32_t best_delta = UINT32_MAX;
+    uint8_t id;
 #else
     bool have_timer = false;
     arghtos_time_t best_time = 0u;
     uint32_t best_delta = 0u;
-#endif
     uint8_t id;
+#endif
 
 #if ARGHTOS_R5Q_PARTITIONED_TIME
     for (id = 0u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
@@ -428,7 +433,9 @@ static bool process_time_locked(arghtos_time_t now)
             }
         }
 
-#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+        (void)c;
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
         timer_consider(
             now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
 #else
@@ -449,7 +456,9 @@ static bool process_time_locked(arghtos_time_t now)
 #endif
                 changed = true;
             } else {
-#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+                (void)c;
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
                 timer_consider(
                     now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
 #else
@@ -505,7 +514,9 @@ static bool process_time_locked(arghtos_time_t now)
     }
 #endif
 
-#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+    arghtos_port_timer_arm(ARGHTOS_CTRL_NEXT(&controls[0]));
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
     arghtos_port_timer_arm(best_time);
 #else
     if (have_timer) {
