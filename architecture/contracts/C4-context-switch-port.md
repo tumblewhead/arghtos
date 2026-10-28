@@ -55,7 +55,7 @@ void arghtos_port_request_dispatch(void);
 void arghtos_port_start(void);
 void arghtos_port_idle_wait(void);
 
-uintptr_t arghtos_port_build_initial_psp(
+arghtos_context_t arghtos_port_build_initial_context(
     void *stack_base,
     uint32_t stack_size,
     void (*thread_start)(void),
@@ -130,17 +130,17 @@ PendSV must execute at the least urgent scheduler-relevant exception priority so
 PendSV calls the C kernel through:
 
 ```c
-uintptr_t arghtos_kernel_dispatch(uintptr_t outgoing_saved_psp);
+arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context);
 ```
 
 Argument semantics:
 
-* nonzero: saved PSP of the task that was executing before this dispatch;
-* zero: no new outgoing context to save, used for first dispatch and re-selection after idle.
+* nonzero: opaque context token for the task that was executing before this dispatch;
+* zero: no outgoing task context, used for first dispatch and idle re-selection.
 
 Return semantics:
 
-* nonzero: saved PSP of the task selected to run;
+* nonzero: opaque context token for the selected task;
 * zero: no task is READY.
 
 If zero is returned, the port calls `arghtos_port_idle_wait()` and then calls `arghtos_kernel_dispatch(0)` again.
@@ -257,7 +257,7 @@ The stacked xPSR alignment indicator governs hardware unstacking; the software R
 
 # Initial context
 
-`arghtos_port_build_initial_psp()`:
+`arghtos_port_build_initial_context()`:
 
 1. computes the highest 8-byte-aligned address within the provided stack;
 2. verifies the configured stack satisfies the 68-byte worst-case scheduler context reserve, even though the synthesized initial frame itself uses 64 bytes;
