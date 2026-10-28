@@ -45,149 +45,115 @@ R4q no jump tables                     2410 B
 R4s split task metadata                2402 B
 R4u entry/next-time lifetime overlay   2322 B
 R4v compact PendSV assembly             2298 B
+R4y direct SVC EXC_RETURN branch        2294 B
 ---------------------------------------------
-current accepted minimum               2298 B
+current accepted minimum               2294 B
 soft target                            1536 B
-remaining gap                           762 B
+remaining gap                           758 B
 ```
 
-R4u:
+R4y:
 
 ```text
-linked before MSP  2242 B
+linked before MSP  2214 B
 MSP                  80 B
-total               2322 B
+total               2294 B
 ```
 
-Authoritative R4u CI:
+Authoritative R4y CI evidence is recorded in
+[implementation/R4y-direct-svc-return.md](implementation/R4y-direct-svc-return.md).
+
+## Selective inlining/outlining conclusion
+
+R4w global no-inline was strongly negative:
 
 ```text
-40665626084  success
-```
-
-R4v:
-
-```text
-linked before MSP  2218 B
-MSP                  80 B
-total               2298 B
-```
-
-Authoritative R4v CI:
-
-```text
-40666295535  success
-```
-
-R4v compacts only the Cortex-M23 PendSV assembly:
-
-```text
-PendSV_Handler   130 -> 108 B
-context assembly 188 -> 162 B
-physical total   2322 -> 2298 B
-```
-
-The saved R4-R11 software frame remains 32 B in the same order, the outgoing
-context token still points at saved R4, PSP advances exactly 32 B on restore,
-and first-dispatch MSP reclamation, PRIMASK handling, and the idle protocol are
-unchanged. The 80 B static MSP bound remains valid.
-
-See [implementation/R4v-compact-pendsv.md](implementation/R4v-compact-pendsv.md).
-
-R4u changes task metadata:
-
-```text
-R4s 432 B
-R4u 336 B
-raw saving 96 B
-code-growth tax 16 B
-net saving 80 B
-```
-
-The overlaid word contains task entry before init and runtime `next_time`
-after init. The Cortex-M23 initial frame carries entry in stacked R0. The
-trampoline retains entry in R4, already covered by the normal R4-R11 context,
-so there is no extra PSP context/frame storage.
-
-See [implementation/R4u-entry-next-overlay.md](implementation/R4u-entry-next-overlay.md).
-
-## Rejected / neutral experiments
-
-```text
-R4c looped crash copy              +8 B
-R4d whole-prefix crash clear        0 B
-R4e timer sentinel                 +4 B
-R4f specialized startup timer       0 B
-R4i service if-chain                0 B
-R4j fault-range source rewrite      0 B
-R4k two-pass time engine           +4 B
-R4l wake-result hoist               0 B
-R4o lld --icf=safe                  0 B
-R4r forced machine outliner         0 B
-R4t ID-native metadata indexing     0 B
-R4w global no-inline              +296 B
-```
-
-R4t CI: 40665299726, success, R4s=R4t=2402 B.
-
-## R4w rejected result
-
-R4w disabled inlining globally with:
-
-```text
--fno-inline-functions
-```
-
-Authoritative CI:
-
-```text
-40666555827  success
-
 R4v 2298 B
 R4w 2594 B
 delta +296 B
 ```
 
-Reject R4w. Global no-inline materializes too many helpers and call paths.
+R4x then tested the strongest selective-outlining candidates while retaining
+normal full LTO everywhere else.
 
-However, the symbol split exposed one promising selective experiment:
+Authoritative selective sweep:
 
 ```text
-R4v arghtos_fatal                 232 B
+CI 40667730031  success
 
-R4w arghtos_fatal                 164 B
-R4w task_fault_attributed          24 B
-combined                          188 B
-potential local opportunity       ~44 B
+candidate                  total      delta vs R4y
+R4y baseline               2294 B       0 B
+fault attribution          2314 B     +20 B
+time_due                   2310 B     +16 B
+task_is_async              2326 B     +32 B
 ```
 
-This does not prove a 44 B win because global no-inline changes surrounding
-codegen, but it is a strong targeted hypothesis.
+All host, sanitizer, portability, and Cortex-M23 gates passed.
 
-See [implementation/R4w-no-inline.md](implementation/R4w-no-inline.md).
+Conclusion: for these candidates, Clang/LLVM `-Oz` + full LTO already makes
+better size decisions than manual out-of-line boundaries.
 
-## Exact next action: R4x selective fault-helper noinline
+Do not repeat these three helpers without a materially different ABI or
+algorithmic hypothesis.
 
-Keep R4v as the accepted control at 2298 B.
+See [implementation/R4x-fault-helper.md](implementation/R4x-fault-helper.md).
 
-R4x should apply `noinline` only to the private
-`task_fault_attributed()` helper while leaving normal LTO/inlining enabled
-everywhere else.
+## R4z timer-delta recomputation
 
-Acceptance procedure:
+R4z traded retained `best_delta` state for recomputation.
 
-1. Add the attribute behind an R4x-only build define.
-2. Keep every other R4v flag and source specialization unchanged.
-3. Run all host, sanitizer, portability, and Cortex-M23 gates.
-4. Compare:
-   * `arghtos_fatal`;
-   * `task_fault_attributed`;
-   * total linked bytes;
-   * call-frame/MSP impact.
-5. Accept only if the adjusted total is <2298 B.
-6. If accepted, retain the helper only in the minimum-size profile; generic
-   and debug source shape should remain unchanged.
-7. Record the result and refresh this file.
+```text
+R4y 2294 B
+R4z 2294 B
+delta   0 B
+```
+
+Reject as neutral.
+
+See
+[implementation/R4z-timer-delta-recompute.md](implementation/R4z-timer-delta-recompute.md).
+
+## Rejected / neutral experiments
+
+```text
+R4c looped crash copy                 +8 B
+R4d whole-prefix crash clear           0 B
+R4e timer sentinel                    +4 B
+R4f specialized startup timer          0 B
+R4i service if-chain                   0 B
+R4j fault-range source rewrite         0 B
+R4k two-pass time engine              +4 B
+R4l wake-result hoist                  0 B
+R4o lld --icf=safe                     0 B
+R4r forced machine outliner            0 B
+R4t ID-native metadata indexing        0 B
+R4w global no-inline                +296 B
+R4x fault helper                     +20 B
+R4x time_due helper                  +16 B
+R4x task_is_async helper             +32 B
+R4z timer-delta recomputation          0 B
+```
+
+## Exact next action: freeze/clean PR #3 before merge
+
+PR #3 now contains a large accepted R4 progression plus many rejected
+experimental build switches and stale historical target names.
+
+Before merging:
+
+1. Keep the accepted minimum-size path through R4y.
+2. Keep generic/debug and useful reference profiles needed for regression.
+3. Remove or quarantine rejected experimental build targets/switches that are
+   not part of the supported product surface.
+4. Preserve implementation checkpoint documents for the experiment history.
+5. Update PR #3 title/body to describe the full R4 footprint-specialization
+   work rather than the old R4a-only description.
+6. Refresh this file to the frozen branch head.
+7. Run one final clean CI on that frozen branch.
+8. If green and mergeable, merge PR #3, preferably as a squash merge.
+
+Do not start another footprint experiment before this cleanup unless the user
+explicitly chooses to continue research instead of freezing R4.
 
 ## Architecture rules
 
@@ -206,9 +172,9 @@ Acceptance procedure:
 * [agents.md](agents.md)
 * this file
 * [implementation/R4u-entry-next-overlay.md](implementation/R4u-entry-next-overlay.md)
-* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
-* [design-elements/D06-cortex-m23-port.md](design-elements/D06-cortex-m23-port.md)
-* [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
-* `port/cortex_m23/arghtos_context.S`
+* [implementation/R4v-compact-pendsv.md](implementation/R4v-compact-pendsv.md)
+* [implementation/R4y-direct-svc-return.md](implementation/R4y-direct-svc-return.md)
+* [implementation/R4x-fault-helper.md](implementation/R4x-fault-helper.md)
+* [implementation/R4z-timer-delta-recompute.md](implementation/R4z-timer-delta-recompute.md)
 * `Makefile`
 * `.github/workflows/ci.yml`
