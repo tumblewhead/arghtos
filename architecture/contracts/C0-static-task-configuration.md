@@ -123,7 +123,7 @@ For every descriptor:
 * `entry != NULL`;
 * the top-level `crash_record` pointer is non-NULL and points to one writable 64-byte C5 record;
 * `stack_base != NULL`;
-* `stack_size >= 68` and satisfies the stricter C4 port check; the 68-byte minimum covers worst-case scheduler context overhead including one hardware alignment word;
+* `stack_size > 0` and the complete target-specific region is accepted by `arghtos_port_stack_valid(stack_base, stack_size)`; minimum context reserve and alignment are port properties, not generic scheduler constants;
 * stack regions are pairwise non-overlapping;
 * `flags == 0`.
 
@@ -148,7 +148,7 @@ Before returning `ARGHTOS_OK`:
 4. call `arghtos_port_init()` only after the external configuration is known valid;
 5. copy persistent configuration pointers/count into C9;
 6. initialize C8 runtime state;
-7. build every initial PSP frame through C4;
+7. build every initial opaque task context through C4;
 8. leave the scheduler timer disarmed until start.
 
 This ordering prevents a bad application descriptor from causing persistent port/hardware side effects before configuration validation completes.
@@ -183,7 +183,7 @@ The required 64-byte crash record is ArghtOS overhead.
 
 * Treating read-only data as free because it is `const`.
 * Overlapping stacks.
-* Stack sizes too small for a saved frame plus task execution.
+* Stack regions that pass generic scalar checks but fail the selected port's context/alignment requirements.
 * Reintroducing phase/deadline/budget fields without accounting their per-task SRAM cost.
 * Treating task activation as allocation.
 
