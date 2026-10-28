@@ -28,85 +28,41 @@ jobs:
       - name: Host profiling-enabled R3c reference
         run: make host-test-r3c
 
-      - name: Host current non-LTO minimum profile R4h
-        run: make host-test-r4h
-
-      - name: Host accepted split-metadata profile R4s
-        run: make host-test-r4s
-
-      - name: Host accepted entry-overlay profile R4u
+      - name: Host accepted minimum-source profile R4u
         run: make host-test-r4u
-
-      - name: Host live timer-delta recomputation profile R4z
-        run: make host-test-r4z
-
-      - name: Host selective time_due profile R4x-time
-        run: make host-test-r4x-time
-
-      - name: Host selective task_is_async profile R4x-async
-        run: make host-test-r4x-async
 
       - name: Host sanitizers
         run: make host-sanitize
 
-      - name: Cortex-M23 compile
+      - name: Cortex-M23 generic compile
         run: make m23-compile
 
-      - name: Cortex-M23 footprint profiling-enabled reference R3c
+      - name: Cortex-M23 profiling-enabled reference R3c
         run: make m23-footprint-r3c
 
-      - name: Cortex-M23 accepted minimum R4q
-        run: make m23-footprint-r4q
-
-      - name: Cortex-M23 accepted compact-PendSV profile R4v
-        run: make m23-footprint-r4v
-
-      - name: Cortex-M23 accepted direct-SVC-return profile R4y
+      - name: Cortex-M23 accepted minimum R4y
         run: make m23-footprint-r4y
-
-      - name: Cortex-M23 live timer-delta recomputation profile R4z
-        run: make m23-footprint-r4z
-
-      - name: Cortex-M23 selective time_due profile R4x-time
-        run: make m23-footprint-r4x-time
-
-      - name: Cortex-M23 selective task_is_async profile R4x-async
-        run: make m23-footprint-r4x-async
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r4z r4x-time r4x-async; do
+          for p in r3c r4y; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
-          done
-          for p in r3c r4y r4z r4x-time r4x-async; do
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
             echo "--- largest $p symbols ---"
             tail -100 "build/m23-$p-symbols.txt" || true
           done
 
-      - name: Upload active footprint evidence
+      - name: Upload frozen R4 footprint evidence
         uses: actions/upload-artifact@v4
         with:
-          name: arghtos-r4-footprint
+          name: arghtos-r4-frozen-footprint
           path: |
             build/footprint-r3c.json
             build/footprint-r4y.json
-            build/footprint-r4z.json
-            build/footprint-r4x-time.json
-            build/footprint-r4x-async.json
             build/m23-r3c.map
             build/m23-r4y.map
-            build/m23-r4z.map
-            build/m23-r4x-time.map
-            build/m23-r4x-async.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
-            build/m23-r4z-symbols.txt
-            build/m23-r4x-time-symbols.txt
-            build/m23-r4x-async-symbols.txt
             build/m23-r4y.elf
-            build/m23-r4z.elf
-            build/m23-r4x-time.elf
-            build/m23-r4x-async.elf
             build/*.su
