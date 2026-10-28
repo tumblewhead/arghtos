@@ -44,6 +44,12 @@ arghtos_crash_record_t arghtos_static_crash_record;
 static void reset_all(void)
 {
     arghtos_test_reset();
+#if ARGHTOS_UNIFIED_SLOT
+    arghtos_static_slots[0].context =
+        (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)];
+    arghtos_static_slots[1].context =
+        (arghtos_context_t)(uintptr_t)&stack1[sizeof(stack1)];
+#endif
     arghtos_host_reset();
     memset(&arghtos_static_crash_record, 0, sizeof(arghtos_static_crash_record));
 }
