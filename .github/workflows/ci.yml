@@ -37,8 +37,8 @@ jobs:
       - name: Host accepted entry-overlay profile R4u
         run: make host-test-r4u
 
-      - name: Host live selective fault-helper profile R4x
-        run: make host-test-r4x
+      - name: Host live timer-delta recomputation profile R4z
+        run: make host-test-r4z
 
       - name: Host sanitizers
         run: make host-sanitize
@@ -58,15 +58,15 @@ jobs:
       - name: Cortex-M23 accepted direct-SVC-return profile R4y
         run: make m23-footprint-r4y
 
-      - name: Cortex-M23 live selective fault-helper profile R4x
-        run: make m23-footprint-r4x
+      - name: Cortex-M23 live timer-delta recomputation profile R4z
+        run: make m23-footprint-r4z
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r4x; do
+          for p in r3c r4y r4z; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
           done
-          for p in r3c r4y r4x; do
+          for p in r3c r4y r4z; do
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
             echo "--- largest $p symbols ---"
@@ -80,13 +80,13 @@ jobs:
           path: |
             build/footprint-r3c.json
             build/footprint-r4y.json
-            build/footprint-r4x.json
+            build/footprint-r4z.json
             build/m23-r3c.map
             build/m23-r4y.map
-            build/m23-r4x.map
+            build/m23-r4z.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
-            build/m23-r4x-symbols.txt
+            build/m23-r4z-symbols.txt
             build/m23-r4y.elf
-            build/m23-r4x.elf
+            build/m23-r4z.elf
             build/*.su
