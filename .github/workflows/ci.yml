@@ -34,6 +34,9 @@ jobs:
       - name: Host R2b compact-descriptor tests
         run: make host-test-r2b
 
+      - name: Host R2c unified-slot tests
+        run: make host-test-r2c
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -55,6 +58,9 @@ jobs:
       - name: Cortex-M23 footprint compact descriptor R2b
         run: make m23-footprint-r2b
 
+      - name: Cortex-M23 footprint unified slot R2c
+        run: make m23-footprint-r2c
+
       - name: Symbol-size report
         run: |
           nm -S --size-sort --radix=d build/m23.elf > build/m23-symbols.txt || true
@@ -62,6 +68,7 @@ jobs:
           nm -S --size-sort --radix=d build/m23-static.elf > build/m23-static-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-r2a.elf > build/m23-r2a-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-r2b.elf > build/m23-r2b-symbols.txt || true
+          nm -S --size-sort --radix=d build/m23-r2c.elf > build/m23-r2c-symbols.txt || true
           echo '--- baseline ---'
           cat build/footprint.json
           echo '--- compact R1a ---'
@@ -74,8 +81,12 @@ jobs:
           cat build/footprint-r2a.json
           echo '--- compact descriptor R2b ---'
           cat build/footprint-r2b.json
-          echo '--- largest R2b symbols ---'
-          tail -80 build/m23-r2b-symbols.txt || true
+          echo '--- compact descriptor R2b ---'
+          cat build/footprint-r2b.json
+          echo '--- unified slot R2c ---'
+          cat build/footprint-r2c.json
+          echo '--- largest R2c symbols ---'
+          tail -80 build/m23-r2c-symbols.txt || true
 
       - name: Upload footprint evidence
         uses: actions/upload-artifact@v4
@@ -87,14 +98,17 @@ jobs:
             build/footprint-static.json
             build/footprint-r2a.json
             build/footprint-r2b.json
+            build/footprint-r2c.json
             build/m23.map
             build/m23-compact.map
             build/m23-static.map
             build/m23-r2a.map
             build/m23-r2b.map
+            build/m23-r2c.map
             build/m23-symbols.txt
             build/m23-compact-symbols.txt
             build/m23-static-symbols.txt
             build/m23-r2a-symbols.txt
             build/m23-r2b-symbols.txt
+            build/m23-r2c-symbols.txt
             build/*.su
