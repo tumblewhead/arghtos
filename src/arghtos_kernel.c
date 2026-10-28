@@ -104,7 +104,9 @@ static arghtos_result_t validate_descriptor(const arghtos_task_config_t *d)
     }
 
     if (d->period == 0u) {
-        if (d->async_priority >= ARGHTOS_ASYNC_PRIORITY_LEVELS) {
+        if ((d->async_priority == ARGHTOS_PRIORITY_NONE) ||
+            (d->async_priority > ARGHTOS_ASYNC_PRIORITY_MAX) ||
+            (d->async_priority == ARGHTOS_PRIORITY_INVALID)) {
             return ARGHTOS_ERR_BAD_CONFIG;
         }
     } else {
@@ -633,7 +635,7 @@ arghtos_task_id_t arghtos_select_next(void)
         if (task_is_async(id) &&
             (controls[id].state == ARGHTOS_TASK_READY)) {
             const uint8_t ceiling =
-                (uint8_t)(ARGHTOS_ASYNC_PRIORITY_LEVELS - 1u);
+                (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX;
             uint16_t raised;
             uint8_t effective;
 
@@ -649,7 +651,7 @@ arghtos_task_id_t arghtos_select_next(void)
                 best = id;
             } else {
                 const uint8_t best_ceiling =
-                    (uint8_t)(ARGHTOS_ASYNC_PRIORITY_LEVELS - 1u);
+                    (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX;
                 const uint16_t best_raised =
                     (uint16_t)ARGHTOS_TASK_TABLE[best].async_priority +
                     (uint16_t)controls[best].age_credit;
