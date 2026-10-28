@@ -230,3 +230,41 @@ four bytes per task because `entry` and `schedule` retain 32-bit alignment.
 This representation is legal only for the minimum-size production profile.
 Missed-release count remains encoded in `status`; age credit remains scheduler
 state and is not optional.
+
+# Minimum-size R4u lifetime overlay
+
+The minimum-size R4u representation exploits non-overlapping lifetimes of
+generated task entry and runtime timing state.
+
+Per task:
+
+```text
+context_or_initial_stack_top   4 B
+entry_or_next_time             4 B
+schedule                       4 B
+----------------------------------
+core                          12 B
+
+age_credit                     1 B
+packed status                  1 B
+----------------------------------
+total                         14 B/task
+```
+
+At the 24-task default:
+
+```text
+14 * 24 = 336 B
+```
+
+Before initialization, the overlaid word contains the immutable application
+entry pointer. During initialization, the port copies that entry into the
+initial task context. The kernel then reuses the same resident word as
+`next_time`.
+
+The scheduler must never read the entry member after the overlay has transitioned
+to runtime timing state. The trampoline retains the entry value in task
+execution context instead.
+
+All 32-bit core fields remain naturally aligned. The two-byte age/status
+metadata remains in the separate R4s metadata array.
