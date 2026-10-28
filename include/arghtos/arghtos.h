@@ -13,19 +13,19 @@ extern "C" {
 #endif
 
 #ifndef ARGHTOS_MAX_TASKS
-#define ARGHTOS_MAX_TASKS 32u
+#define ARGHTOS_MAX_TASKS 24u
 #endif
 
-#ifndef ARGHTOS_ASYNC_PRIORITY_LEVELS
-#define ARGHTOS_ASYNC_PRIORITY_LEVELS 8u
+#ifndef ARGHTOS_ASYNC_PRIORITY_MAX
+#define ARGHTOS_ASYNC_PRIORITY_MAX 8u
 #endif
 
 #if ARGHTOS_MAX_TASKS < 1u || ARGHTOS_MAX_TASKS > 254u
 #error "ARGHTOS_MAX_TASKS must be in [1,254]"
 #endif
 
-#if ARGHTOS_ASYNC_PRIORITY_LEVELS < 1u || ARGHTOS_ASYNC_PRIORITY_LEVELS > 255u
-#error "ARGHTOS_ASYNC_PRIORITY_LEVELS must be in [1,255]"
+#if ARGHTOS_ASYNC_PRIORITY_MAX < 1u || ARGHTOS_ASYNC_PRIORITY_MAX > 254u
+#error "ARGHTOS_ASYNC_PRIORITY_MAX must be in [1,254]"
 #endif
 
 typedef uint8_t  arghtos_task_id_t;
@@ -38,6 +38,8 @@ typedef uint16_t arghtos_fault_reason_t;
 typedef void (*arghtos_task_fn_t)(void);
 
 #define ARGHTOS_TASK_ID_INVALID ((arghtos_task_id_t)UINT8_MAX)
+#define ARGHTOS_PRIORITY_NONE    ((arghtos_priority_t)0u)
+#define ARGHTOS_PRIORITY_INVALID ((arghtos_priority_t)UINT8_MAX)
 #define ARGHTOS_TIME_HALF_RANGE ((arghtos_duration_t)0x80000000u)
 
 enum {
