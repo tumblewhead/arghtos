@@ -4,73 +4,39 @@ Last refreshed: 2026-10-28
 
 Read [agents.md](agents.md) first. Repository state is authoritative.
 
-## Canonical repository
+## Repository / active work
 
 ```text
-https://github.com/tumblewhead/arghtos
-```
-
-Canonical base:
-
-```text
-main @ dcf188aae8765d0d65d729af706da4bdaa922474
-PR #2 merged: R3 production-profile validation and service specialization
-```
-
-## Active work
-
-```text
+repo:   https://github.com/tumblewhead/arghtos
+base:   main @ dcf188aae8765d0d65d729af706da4bdaa922474
 branch: implementation/r4-feature-specialization-001
-draft PR: #3
-https://github.com/tumblewhead/arghtos/pull/3
+PR:     #3 (draft)
 ```
 
-Current accepted minimum-size profile:
+## Objective
 
 ```text
-R4q = 2410 B
+soft target: 1536 B complete ArghtOS resident footprint
+tasks:       24
 ```
-
-Soft target:
-
-```text
-1536 B
-remaining gap = 874 B
-```
-
-## Accounting authority
 
 All ArghtOS-induced resident bytes count: code, constants/literals, data,
-BSS/noinit, generated scheduler metadata, crash state, port C, assembly,
+BSS/noinit, generated scheduler metadata, crash state, target port, assembly,
 linker metadata/alignment, and ArghtOS-only MSP.
 
-The footprint reporter uses physical linker output-section occupancy and
-subtracts only explicit application-owned `.app_*` inputs.
+Physical linker output-section occupancy is authoritative. Only explicit
+application-owned `.app_*` inputs are excluded from the ArghtOS subtotal.
 
-Historical R3c physical total is 3080 B.
+## Minimum-size production policy
 
-Application task bodies and PSP stacks are outside the ArghtOS-overhead subtotal
-but still count in total MCU SRAM.
-
-## Minimum-size policy
-
-Runtime profiling is optional in minimum-size production and default-on
-elsewhere.
+Runtime profiling is optional in the minimum-size profile and remains enabled
+by default elsewhere.
 
 Minimum-size work may trade cycles/runtime for resident bytes, but must
-preserve:
+preserve scheduler semantics, C11 defined behavior, portability boundaries,
+bounded work, crash integrity, wake/wait correctness, and required invariants.
 
-* scheduler semantics;
-* C11 defined behavior;
-* portable-kernel boundary;
-* bounded work required by P7;
-* crash integrity;
-* wake/wait race behavior;
-* required internal invariants unless upstream contracts/proofs change.
-
-Only linked Cortex-M23 evidence is authoritative.
-
-## Accepted R4 chain
+## Accepted footprint chain
 
 ```text
 physical R3c                           3080 B
@@ -81,47 +47,44 @@ R4g remove dead dispatch clock read      -8 B
 R4h remove unused start epoch            -3 B
 
 R4h corrected physical baseline        2778 B
-
-R4m full LTO, MSP requalified to 88 B  2530 B
-R4n omit frame pointer, MSP = 80 B      2450 B
-R4p discard unused ARM unwind index     2434 B
-R4q -fno-jump-tables                    2410 B
-----------------------------------------------
-current accepted minimum                2410 B
-soft target                             1536 B
-remaining gap                            874 B
+R4m full LTO, MSP 88 B                 2530 B
+R4n omit frame pointer, MSP 80 B       2450 B
+R4p discard unused unwind index        2434 B
+R4q -fno-jump-tables                   2410 B
+R4s split task metadata                2402 B
+---------------------------------------------
+current accepted minimum               2402 B
+soft target                            1536 B
+remaining gap                           866 B
 ```
 
-R4q linked before MSP:
+R4s:
 
 ```text
-2330 B
+linked before MSP  2322 B
+MSP                  80 B
+total               2402 B
 ```
 
-R4q MSP lower bound:
+Authoritative R4s CI:
 
 ```text
-80 B
+40664462833  success
 ```
 
-R4q authoritative CI:
+Task metadata changed:
 
 ```text
-40663959695  success
+R4q 480 B
+R4s 432 B
+raw saving 48 B
+code-growth tax 40 B
+net saving 8 B
 ```
 
-R4q saving is concentrated in:
-
-```text
-wake_locked              108 ->  96 B
-arghtos_kernel_service   228 -> 216 B
-```
-
-See [implementation/R4q-no-jump-tables.md](implementation/R4q-no-jump-tables.md).
+See [implementation/R4s-split-meta.md](implementation/R4s-split-meta.md).
 
 ## Rejected / neutral experiments
-
-Do not repeat without a materially different hypothesis:
 
 ```text
 R4c looped crash copy              +8 B
@@ -133,112 +96,111 @@ R4j fault-range source rewrite      0 B
 R4k two-pass time engine           +4 B
 R4l wake-result hoist               0 B
 R4o lld --icf=safe                  0 B
+R4r forced machine outliner         0 B
 ```
 
-## R4r rejected result
+## Exact next action: R4t entry/next-time overlay experiment
 
-R4r forced LLVM machine outlining on accepted R4q.
-
-Authoritative CI:
+The accepted R4s core is:
 
 ```text
-40664239986  success
-R4q 2410 B
-R4r 2410 B
-delta   0 B
+context    4 B
+next_time  4 B
+entry      4 B
+schedule   4 B
+----------------
+core      16 B/task
+
+parallel age/status metadata = 2 B/task
+total                         = 18 B/task
 ```
 
-Symbol sizes are identical. Reject R4r and keep the simpler R4q compiler
-command.
+Observation: `entry` is needed only when the task begins. `next_time` is
+runtime state and is not needed before initialization has built the initial
+task context.
 
-See [implementation/R4r-machine-outliner.md](implementation/R4r-machine-outliner.md).
+R4t hypothesis:
 
-## Live experiment: R4s split task metadata
+1. Reuse one 4-byte core field as:
+   * pre-init: task entry pointer;
+   * post-init: `next_time`.
+2. Pass the entry pointer into the initial task context in the Cortex-M23
+   hardware frame R0 slot.
+3. Change the common portable trampoline to accept the entry function as its
+   initial argument and retain/use that argument for periodic re-entry.
+4. Keep `context/initial_stack_top` and `schedule` as the other two 4-byte
+   core fields.
 
-R4s activates the previously dormant:
+Target R4t core:
 
 ```text
-ARGHTOS_SPLIT_META=1
+context_or_initial_stack_top   4 B
+entry_or_next_time             4 B
+schedule                       4 B
+----------------------------------
+core                          12 B/task
+parallel metadata              2 B/task
+----------------------------------
+total                         14 B/task
 ```
 
-The code was initially developed while the R4q label was still free; R4q is now
-the accepted no-jump-tables profile, so the split-metadata experiment is R4s.
-
-Its hypothesis is:
+Raw metadata opportunity versus R4s:
 
 ```text
-current unified slot: 20 B/task * 24 = 480 B
-
-split core:
-  context + next_time + entry + schedule = 16 B/task
-parallel metadata:
-  age_credit + status                    =  2 B/task
-
-raw metadata total = 18 B/task
-raw opportunity    = 48 B
+(18 - 14) * 24 = 96 B
 ```
 
-The representation keeps 32-bit fields naturally aligned. It intentionally may
-increase address calculations.
+This is an architecture/representation experiment, not a silent canonical
+change.
 
-The split code is dormant unless `ARGHTOS_SPLIT_META=1`; accepted R4q does
-not define that switch.
+Before accepting R4t:
 
-## Exact next action
+* preserve R4s as same-revision control;
+* update/extend the architecture-neutral port ABI only if required;
+* keep target-specific frame construction under `port/cortex_m23/`;
+* verify task-entry argument survives initial dispatch and repeated periodic
+  jobs;
+* verify async-return fatal behavior;
+* verify no extra ArghtOS-resident table appears;
+* report any PSP stack/register impact separately;
+* re-audit MSP;
+* update C4/C8/D06/D08 or other owning contracts/design docs before promotion.
 
-Finish R4s measurement against same-revision accepted R4q.
+If R4t is not smaller than 2402 B, reject and remove the experimental path.
 
-R4s build configuration:
+## Architecture rules
 
-```text
-full LTO
--fomit-frame-pointer
--fno-jump-tables
-minimum linker script without .ARM.exidx/.ARM.extab
-accepted size-first source switches
-ARGHTOS_SPLIT_META=1
-```
-
-Host R4s must pass the static/unified-slot tests, including state and age-credit
-access through the parallel metadata array.
-
-Acceptance rule:
-
-```text
-raw task metadata opportunity = 48 B
-accept only if total resident footprint < 2410 B
-```
-
-If R4s wins, inspect symbol growth and verify the 80 B MSP bound remains valid.
-Then document and refresh this file before starting another experiment.
-
-## Important architecture rules
-
-* `src/arghtos_kernel.c` remains portable C11.
-* Cortex-M23 mechanisms belong under `port/cortex_m23/`.
+* Portable kernel remains target-independent C11.
+* Cortex-M23 details remain under `port/cortex_m23/`.
 * No dynamic allocation.
-* Periodic tasks are synchronous RMS, phase 0, D=T, one active instance.
-* Async work never outranks READY periodic work.
-* Async age credit remains scheduler state.
-* Wake/wait retains the one-bit pending-wake handshake.
-* Delayed periodic release uses arithmetic catch-up.
+* Periodic tasks: synchronous RMS, phase 0, D=T, one active instance.
+* Async tasks never outrank READY periodic work.
+* Age credit remains scheduler state.
+* Wake/wait uses the one-bit pending-wake handshake.
+* Periodic missed-release catch-up remains arithmetic.
 * Required 64-byte crash record remains.
-* Do not hide scheduler-required state in application-owned exclusions.
+* Do not hide scheduler-required resident state in application-owned exclusions.
 * Do not remove internal invariants merely for bytes.
 
 ## Useful files
 
 * [agents.md](agents.md)
 * this file
-* [implementation/R4m-lto.md](implementation/R4m-lto.md)
-* [implementation/R4n-omit-frame-pointer.md](implementation/R4n-omit-frame-pointer.md)
-* [implementation/R4p-no-exidx.md](implementation/R4p-no-exidx.md)
 * [implementation/R4q-no-jump-tables.md](implementation/R4q-no-jump-tables.md)
+* [implementation/R4s-split-meta.md](implementation/R4s-split-meta.md)
+* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
+* [architecture/contracts/C8-task-control-record.md](architecture/contracts/C8-task-control-record.md)
+* [design-elements/D06-cortex-m23-port.md](design-elements/D06-cortex-m23-port.md)
+* [design-elements/D08-task-trampoline.md](design-elements/D08-task-trampoline.md)
 * [design-elements/D10-build-footprint.md](design-elements/D10-build-footprint.md)
+* [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
 * [proof/P7-bounded-memory-and-work.md](proof/P7-bounded-memory-and-work.md)
 * `src/arghtos_internal.h`
 * `src/arghtos_kernel.c`
+* `src/arghtos_kernel_port.h`
+* `include/arghtos/arghtos_port.h`
+* `port/cortex_m23/arghtos_port.c`
+* `footprint/m23_footprint.c`
+* `tests/test_static_profile.c`
 * `Makefile`
 * `.github/workflows/ci.yml`
-* `footprint/m23_min_no_exidx.ld`
-* `tools/footprint_report.py`
