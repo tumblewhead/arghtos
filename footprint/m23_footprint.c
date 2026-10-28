@@ -21,11 +21,15 @@ static void task_stub(void)
 
 #if ARGHTOS_STATIC_CONFIG
 #if ARGHTOS_UNIFIED_SLOT
+#if ARGHTOS_RUNTIME_PROFILING
+#define ARGHTOS_PROFILE_SLOT_INIT .total_cpu_ticks = 0u, .max_run_ticks = 0u,
+#else
+#define ARGHTOS_PROFILE_SLOT_INIT
+#endif
 #define SLOT(i, p) { \
     .context = (arghtos_context_t)(uintptr_t)&app_stacks[(i)][sizeof(app_stacks[(i)])], \
     .next_time = 0u, \
-    .total_cpu_ticks = 0u, \
-    .max_run_ticks = 0u, \
+    ARGHTOS_PROFILE_SLOT_INIT \
     .age_credit = 0u, \
     .status = 0u, \
     .entry = task_stub, \
@@ -105,7 +109,9 @@ void footprint_entry(void)
     anchor_sink = (uintptr_t)&arghtos_sleep_for;
     anchor_sink = (uintptr_t)&arghtos_wake;
     anchor_sink = (uintptr_t)&arghtos_wake_from_interrupt;
+#if ARGHTOS_RUNTIME_PROFILING
     anchor_sink = (uintptr_t)&arghtos_profile_get;
+#endif
     anchor_sink = (uintptr_t)&arghtos_kernel_dispatch;
     anchor_sink = (uintptr_t)&arghtos_kernel_service;
     anchor_sink = (uintptr_t)&arghtos_timer_interrupt;
