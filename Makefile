@@ -220,19 +220,6 @@ host-test-r4u: | $(BUILD)
 		-o $(BUILD)/host-tests-r4u
 	$(BUILD)/host-tests-r4u
 
-host-test-r4u: | $(BUILD)
-	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
-		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=2 \
-		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
-		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
-		-DARGHTOS_SPECIALIZED_SERVICES=1 -DARGHTOS_MINIMAL_VALIDATION=1 \
-		-DARGHTOS_RUNTIME_PROFILING=0 -DARGHTOS_SIZE_FIRST_SELECTOR=1 \
-		-DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 -DARGHTOS_SIZE_FIRST_NO_START_TIME=1 \
-		-DARGHTOS_SPLIT_META=1 -DARGHTOS_ENTRY_NEXT_OVERLAY=1 \
-		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
-		-o $(BUILD)/host-tests-r4u
-	$(BUILD)/host-tests-r4u
-
 host-sanitize: | $(BUILD)
 	$(HOST_CC) -std=c11 -Wall -Wextra -Werror -O1 -g \
 		-fsanitize=address,undefined -fno-omit-frame-pointer \
