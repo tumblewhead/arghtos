@@ -1,9 +1,5 @@
 #include "arghtos_port_private.h"
 
-#ifndef ARGHTOS_SIZE_FIRST_CRASH_COPY
-#define ARGHTOS_SIZE_FIRST_CRASH_COPY 0
-#endif
-
 static inline uint32_t m23_read_primask(void)
 {
     uint32_t v;
@@ -255,16 +251,6 @@ void arghtos_port_crash_fill(
     record->port_state[2] = ctx->exc_return;
 
     if (ctx->basic_frame != NULL) {
-#if ARGHTOS_SIZE_FIRST_CRASH_COPY
-        unsigned i;
-
-        for (i = 0u; i < 4u; ++i) {
-            record->port_state[3u + i] = ctx->basic_frame[i];
-        }
-        for (i = 5u; i < 8u; ++i) {
-            record->port_state[2u + i] = ctx->basic_frame[i];
-        }
-#else
         record->port_state[3] = ctx->basic_frame[0];
         record->port_state[4] = ctx->basic_frame[1];
         record->port_state[5] = ctx->basic_frame[2];
@@ -272,7 +258,6 @@ void arghtos_port_crash_fill(
         record->port_state[7] = ctx->basic_frame[5];
         record->port_state[8] = ctx->basic_frame[6];
         record->port_state[9] = ctx->basic_frame[7];
-#endif
         record->port_words = 10u;
     } else {
         record->port_words = 3u;
