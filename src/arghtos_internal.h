@@ -78,6 +78,17 @@
 #error "R5e age/deadline overlay requires no-profile split entry/next profile"
 #endif
 
+#ifndef ARGHTOS_R5F_COMPRESSED_SCHEDULE
+#define ARGHTOS_R5F_COMPRESSED_SCHEDULE 0
+#endif
+
+#if ARGHTOS_R5F_COMPRESSED_SCHEDULE && \
+    (!ARGHTOS_UNIFIED_SLOT || !ARGHTOS_ENTRY_NEXT_OVERLAY || !ARGHTOS_SPLIT_META)
+#error "R5f compressed schedule requires unified split entry/next profile"
+#endif
+
+#define ARGHTOS_R5F_SCHEDULE_ESCAPE 0x7Fu
+
 #if ARGHTOS_COMPACT_DESCRIPTOR && !ARGHTOS_STATIC_CONFIG
 #error "ARGHTOS_COMPACT_DESCRIPTOR requires ARGHTOS_STATIC_CONFIG=1"
 #endif
@@ -175,7 +186,9 @@ typedef struct {
 #if !ARGHTOS_ENTRY_NEXT_OVERLAY
     arghtos_task_fn_t entry;
 #endif
+#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE
     uint32_t          schedule;
+#endif
 #endif
 } arghtos_task_control_t;
 
@@ -316,6 +329,9 @@ _Static_assert(sizeof(arghtos_crash_record_t) == 64u, "crash record ABI changed"
 #if ARGHTOS_UNIFIED_SLOT
 #if ARGHTOS_RUNTIME_PROFILING
 _Static_assert(sizeof(arghtos_task_control_t) == 24u, "32-bit unified task slot ABI changed");
+#elif ARGHTOS_R5F_COMPRESSED_SCHEDULE
+_Static_assert(sizeof(arghtos_task_control_t) == 8u, "32-bit R5f core slot ABI changed");
+_Static_assert(sizeof(arghtos_task_meta_t) == 1u, "R5f metadata ABI changed");
 #elif ARGHTOS_R5E_AGE_NEXT_OVERLAY
 _Static_assert(sizeof(arghtos_task_control_t) == 12u, "32-bit R5e core slot ABI changed");
 _Static_assert(sizeof(arghtos_task_meta_t) == 1u, "R5e metadata ABI changed");
