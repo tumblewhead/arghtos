@@ -47,10 +47,10 @@ Therefore C8 resident size is:
 20 * ARGHTOS_MAX_TASKS
 ```
 
-At the default capacity 32:
+At the default capacity 24:
 
 ```text
-32 * 20 B = 640 B
+24 * 20 B = 480 B
 ```
 
 Unused capacity slots remain resident SRAM; runtime `task_count` does not shrink the array.
