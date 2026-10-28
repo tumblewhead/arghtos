@@ -158,6 +158,22 @@
 #error "R5o minimum period must satisfy the scheduler half-range rule"
 #endif
 
+#ifndef ARGHTOS_R5P_GENERATED_ORDER
+#define ARGHTOS_R5P_GENERATED_ORDER 0
+#endif
+
+#ifndef ARGHTOS_R5P_PERIODIC_COUNT
+#define ARGHTOS_R5P_PERIODIC_COUNT 0u
+#endif
+
+#if ARGHTOS_R5P_GENERATED_ORDER && !ARGHTOS_R5O_GENERATED_START_TIMER
+#error "R5p generated ordering requires accepted R5o generated profile"
+#endif
+
+#if ARGHTOS_R5P_PERIODIC_COUNT > ARGHTOS_STATIC_TASK_COUNT
+#error "R5p periodic prefix exceeds configured task count"
+#endif
+
 #if ARGHTOS_R5N_PROVEN_DISPATCH && !ARGHTOS_R5M_PRISTINE_INIT
 #error "R5n proven dispatch requires the trusted R5m generated profile"
 #endif
