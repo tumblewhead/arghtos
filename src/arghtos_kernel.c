@@ -188,10 +188,12 @@ static bool duration_valid(arghtos_duration_t dt)
 }
 #endif
 
+#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT
 static bool task_id_valid(arghtos_task_id_t id)
 {
     return id < ARGHTOS_TASK_COUNT;
 }
+#endif
 
 #if ARGHTOS_R5P_GENERATED_ORDER
 #define task_is_periodic(id) ((arghtos_task_id_t)(id) < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT)
