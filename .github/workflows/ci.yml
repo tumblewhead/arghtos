@@ -40,22 +40,22 @@ jobs:
       - name: Cortex-M23 footprint profiling-enabled reference R3c
         run: make m23-footprint-r3c
 
-      - name: Cortex-M23 accepted minimum R4p
-        run: make m23-footprint-r4p
-
-      - name: Cortex-M23 live no-jump-tables experiment R4q
+      - name: Cortex-M23 accepted minimum R4q
         run: make m23-footprint-r4q
+
+      - name: Cortex-M23 live machine-outliner experiment R4r
+        run: make m23-footprint-r4r
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4p r4q; do
+          for p in r3c r4q r4r; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
           done
-          for p in r3c r4p r4q; do
+          for p in r3c r4q r4r; do
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
             echo "--- largest $p symbols ---"
-            tail -80 "build/m23-$p-symbols.txt" || true
+            tail -100 "build/m23-$p-symbols.txt" || true
           done
 
       - name: Upload active footprint evidence
@@ -64,14 +64,14 @@ jobs:
           name: arghtos-r4-footprint
           path: |
             build/footprint-r3c.json
-            build/footprint-r4p.json
             build/footprint-r4q.json
+            build/footprint-r4r.json
             build/m23-r3c.map
-            build/m23-r4p.map
             build/m23-r4q.map
+            build/m23-r4r.map
             build/m23-r3c-symbols.txt
-            build/m23-r4p-symbols.txt
             build/m23-r4q-symbols.txt
-            build/m23-r4p.elf
+            build/m23-r4r-symbols.txt
             build/m23-r4q.elf
+            build/m23-r4r.elf
             build/*.su
