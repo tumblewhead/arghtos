@@ -93,12 +93,14 @@ R4n + -fomit-frame-pointer           2450 B
      linked before MSP               2370 B
      MSP                               80 B
 -------------------------------------------
-current accepted minimum             2450 B
+R4p remove unused unwind index       -16 B
+-------------------------------------------
+current accepted minimum             2434 B
 soft target                          1536 B
-remaining gap                         914 B
+remaining gap                         898 B
 ```
 
-R4n is the current accepted minimum-size Cortex-M23 profile.
+R4p is the current accepted minimum-size Cortex-M23 profile.
 
 R4n CI evidence is recorded in
 [implementation/R4n-omit-frame-pointer.md](implementation/R4n-omit-frame-pointer.md).
@@ -147,37 +149,70 @@ crash record                    64 B
 
 The R4n linked symbol report and ELF are archived by CI.
 
-## Exact next action: R4p
+## R4p accepted result
 
-A prepared target already exists:
+R4p removes unused ARM unwind-index metadata with the minimum-size linker
+script.
+
+Authoritative CI:
 
 ```text
-make m23-footprint-r4p
-footprint/m23_min_no_exidx.ld
+40663752503  success
+
+R4n 2450 B
+R4p 2434 B
+saved  16 B
 ```
 
-R4p uses the accepted R4n compiler/profile configuration but discards
-`.ARM.exidx*` and `.ARM.extab*` in the minimum-size linker script.
+All code symbol sizes are unchanged. `.ARM.exidx/.ARM.extab` have no consumer
+in the freestanding minimum-size configuration, which already disables unwind
+table generation.
 
-The current R4n footprint contains 16 B of linker resident metadata, so the
-maximum direct opportunity is 16 B.
+See [implementation/R4p-no-exidx.md](implementation/R4p-no-exidx.md).
 
-Next agent must:
+## Exact next action: R4q split task metadata
 
-1. Keep R4n as the accepted same-revision control.
-2. Replace R4o as the one live CI experiment with R4p.
-3. Run generic host tests, accepted size-first selector tests, R3c reference,
-   R4h non-LTO reference, sanitizers, portability, Cortex-M23 compile, R4n, and
-   R4p.
-4. Record R4p footprint JSON/map/symbol evidence.
-5. Confirm the minimum profile has no exception-unwind consumer requiring
-   `.ARM.exidx`/`.ARM.extab`; the build is freestanding, C-only plus explicit
-   assembly, with unwind tables already disabled.
-6. Accept R4p only if physical resident size decreases with no semantic/build
-   regression.
-7. Update `implementation/` and this file before moving to the next experiment.
+The accepted task array still costs:
 
-Do not merge PR #3 unless the user asks.
+```text
+20 B/task * 24 = 480 B
+```
+
+The no-profile unified slot contains 16 B of naturally aligned 32-bit fields
+plus two one-byte mutable metadata fields and two bytes of alignment padding.
+
+R4q should experimentally split:
+
+```text
+core slot: context + next_time + entry + schedule = 16 B/task
+meta:      age_credit + packed status             =  2 B/task
+                                                      ---------
+                                                      18 B/task
+```
+
+Raw resident opportunity:
+
+```text
+(20 - 18) * 24 = 48 B
+```
+
+This intentionally may increase address calculations/runtime. Do not use
+unaligned packed 32-bit task records; keep 32-bit core fields naturally aligned
+and place the 2-byte metadata in a separate bounded array.
+
+Acceptance procedure:
+
+1. Keep R4p as same-revision control.
+2. Add R4q behind a compile-time experiment switch only.
+3. Preserve generic/debug/R3c behavior and accepted size-first selector tests.
+4. Add or retain host tests for status, wake bit, missed-release nibble, and
+   async age behavior through the split representation.
+5. Build R4q with the accepted R4p toolchain/linker configuration:
+   full LTO, `-fomit-frame-pointer`, no profiling, no start epoch, no dispatch
+   time read, size-first selector, no exidx.
+6. Measure task-metadata saving versus any code growth.
+7. Accept only if total physical resident footprint falls below 2434 B.
+8. Refresh implementation docs and this file.
 
 ## Important architecture rules
 
