@@ -85,6 +85,12 @@ Supported handler context must exclude at least:
 
 The board timer/device handler classes allowed to call interrupt wake must be documented by integration.
 
+## Port initialization hardening
+
+The Cortex-M23 reference `arghtos_port_init()` clears any stale pending PendSV before scheduler start, sets PendSV to the least urgent scheduler-relevant priority, and disarms the board timer.
+
+`arghtos_port_start()` pends the first dispatch and explicitly enables normal maskable interrupts before entering its non-returning wait loop. The portable start transaction has already committed STARTED and all periodic release-0 state before this point.
+
 ## D06-C: dispatch request
 
 ```c
@@ -217,7 +223,7 @@ This is a first-class correctness requirement.
 outgoing_context = 0
 ```
 
-The first task should not use a separate bespoke restore algorithm if the normal restore path can be reused.
+The first task reuses the normal restore path. The reference assembly additionally restores the pre-exception startup MSP before the first PSP exception return so the startup hardware frame is not stranded permanently.
 
 # Serialized dispatch and race-free idle path
 
