@@ -404,10 +404,56 @@ static bool process_time_locked(arghtos_time_t now)
 }
 
 #endif
+#if ARGHTOS_SIZE_FIRST_WAKE_RESULT_HOIST
 static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 {
     arghtos_task_control_t *c;
 
+#if !ARGHTOS_SPECIALIZED_SERVICES
+    if (!task_id_valid(id)) {
+        *result = ARGHTOS_ERR_BAD_TASK_ID;
+        return false;
+    }
+
+    if (!task_is_async(id)) {
+        *result = ARGHTOS_ERR_BAD_TASK_CLASS;
+        return false;
+    }
+#endif
+
+    c = &controls[id];
+    *result = ARGHTOS_OK;
+
+    switch (ARGHTOS_CTRL_STATE(c)) {
+    case ARGHTOS_TASK_DORMANT:
+    case ARGHTOS_TASK_WAITING:
+        ARGHTOS_CTRL_SET_STATE(c, ARGHTOS_TASK_READY);
+        c->age_credit = 0u;
+        ARGHTOS_CTRL_CLEAR_WAKE(c);
+        return true;
+
+    case ARGHTOS_TASK_READY:
+        return false;
+
+    case ARGHTOS_TASK_RUNNING:
+    case ARGHTOS_TASK_SLEEPING:
+        ARGHTOS_CTRL_SET_WAKE(c);
+        return false;
+
+    case ARGHTOS_TASK_FAULTED:
+        *result = ARGHTOS_ERR_BAD_STATE;
+        return false;
+
+    default:
+        arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+    }
+}
+#else
+static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
+{
+    arghtos_task_control_t *c;
+
+#endif
 #if !ARGHTOS_SPECIALIZED_SERVICES
     if (!task_id_valid(id)) {
         *result = ARGHTOS_ERR_BAD_TASK_ID;
