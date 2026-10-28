@@ -134,6 +134,14 @@
 #define ARGHTOS_R5N_PROVEN_DISPATCH 0
 #endif
 
+#ifndef ARGHTOS_R5O_TWO_PASS_TIME
+#define ARGHTOS_R5O_TWO_PASS_TIME 0
+#endif
+
+#if ARGHTOS_R5O_TWO_PASS_TIME && !ARGHTOS_R5N_PROVEN_DISPATCH
+#error "R5o two-pass time experiment requires the R5n trusted profile"
+#endif
+
 #ifndef ARGHTOS_R5O_GENERATED_START_TIMER
 #define ARGHTOS_R5O_GENERATED_START_TIMER 0
 #endif
