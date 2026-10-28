@@ -123,6 +123,20 @@ The target port does not declare kernel callbacks in this header; those live in 
 
 This header is architecture-neutral and may be included by a selected port implementation. It declares only callbacks from the port into the portable kernel:
 
+Private service IDs are part of this kernel-port ABI:
+
+```c
+typedef uint8_t arghtos_service_id_t;
+
+enum {
+    ARGHTOS_SERVICE_YIELD       = 0u,
+    ARGHTOS_SERVICE_WAIT        = 1u,
+    ARGHTOS_SERVICE_SLEEP_UNTIL = 2u,
+    ARGHTOS_SERVICE_WAKE        = 3u,
+    ARGHTOS_SERVICE_TASK_RETURN = 4u
+};
+```
+
 ```c
 arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context);
 
