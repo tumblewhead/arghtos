@@ -53,6 +53,10 @@
 #define ARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME 0
 #endif
 
+#ifndef ARGHTOS_SIZE_FIRST_NO_START_TIME
+#define ARGHTOS_SIZE_FIRST_NO_START_TIME 0
+#endif
+
 #if ARGHTOS_COMPACT_DESCRIPTOR && !ARGHTOS_STATIC_CONFIG
 #error "ARGHTOS_COMPACT_DESCRIPTOR requires ARGHTOS_STATIC_CONFIG=1"
 #endif
@@ -76,6 +80,11 @@
 
 #if !ARGHTOS_RUNTIME_PROFILING && !ARGHTOS_MINIMAL_VALIDATION
 #error "profiling may be disabled only in the minimum-size production profile"
+#endif
+
+#if ARGHTOS_SIZE_FIRST_NO_START_TIME && \
+    (!ARGHTOS_MINIMAL_VALIDATION || ARGHTOS_RUNTIME_PROFILING)
+#error "start_time may be removed only in the no-profile minimum-size profile"
 #endif
 
 #if ARGHTOS_STATIC_CONFIG
@@ -195,7 +204,9 @@ typedef struct {
     const arghtos_task_config_t *tasks;
     arghtos_crash_record_t      *crash_record;
 #endif
+#if !ARGHTOS_SIZE_FIRST_NO_START_TIME
     arghtos_time_t               start_time;
+#endif
 #if ARGHTOS_RUNTIME_PROFILING
     arghtos_time_t               run_start;
 #endif
@@ -233,6 +244,8 @@ _Static_assert(sizeof(arghtos_task_control_t) == 20u, "32-bit task control ABI c
 #if ARGHTOS_STATIC_CONFIG
 #if ARGHTOS_RUNTIME_PROFILING
 _Static_assert(sizeof(arghtos_kernel_state_t) == 12u, "32-bit static-profile kernel state ABI changed");
+#elif ARGHTOS_SIZE_FIRST_NO_START_TIME
+_Static_assert(sizeof(arghtos_kernel_state_t) == 4u, "32-bit minimum-size kernel state ABI changed");
 #else
 _Static_assert(sizeof(arghtos_kernel_state_t) == 8u, "32-bit no-profile static kernel state ABI changed");
 #endif
