@@ -4,6 +4,16 @@
 #define ARGHTOS_R5K_ASM_CRASH_FILL 0
 #endif
 
+#ifndef ARGHTOS_R5X_FORCE_CRASH_INLINE
+#define ARGHTOS_R5X_FORCE_CRASH_INLINE 0
+#endif
+
+#if ARGHTOS_R5X_FORCE_CRASH_INLINE
+#define ARGHTOS_R5X_ALWAYS_INLINE __attribute__((always_inline))
+#else
+#define ARGHTOS_R5X_ALWAYS_INLINE
+#endif
+
 static inline uint32_t m23_read_primask(void)
 {
     uint32_t v;
@@ -237,7 +247,7 @@ arghtos_context_t arghtos_port_build_initial_context_top_arg(
 #endif
 
 #if !ARGHTOS_R5K_ASM_CRASH_FILL
-void arghtos_port_crash_fill(
+ARGHTOS_R5X_ALWAYS_INLINE void arghtos_port_crash_fill(
     arghtos_crash_record_t *record,
     const void *port_fault_context)
 {
