@@ -31,6 +31,9 @@ jobs:
       - name: Host accepted minimum-source profile R4u
         run: make host-test-r4u
 
+      - name: Host live R5c compact wake result
+        run: make host-test-r5c
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -49,9 +52,12 @@ jobs:
       - name: Cortex-M23 live R5b compact EXC_RETURN tests
         run: make m23-footprint-r5b
 
+      - name: Cortex-M23 live R5c compact wake result
+        run: make m23-footprint-r5c
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5a r5b; do
+          for p in r3c r4y r5a r5b r5c; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -68,15 +74,19 @@ jobs:
             build/footprint-r4y.json
             build/footprint-r5a.json
             build/footprint-r5b.json
+            build/footprint-r5c.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5a.map
             build/m23-r5b.map
+            build/m23-r5c.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5a-symbols.txt
             build/m23-r5b-symbols.txt
+            build/m23-r5c-symbols.txt
             build/m23-r4y.elf
             build/m23-r5a.elf
             build/m23-r5b.elf
+            build/m23-r5c.elf
             build/*.su
