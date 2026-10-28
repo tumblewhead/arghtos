@@ -44,7 +44,7 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
  * Exercise both decoder forms while preserving the existing test semantics:
  * task 0 uses escape + exact 32-bit period 10, task 1 uses one-byte async 3.
  */
-const uint8_t arghtos_static_schedule_stream[] = {
+uint8_t arghtos_static_schedule_stream[] = {
     ARGHTOS_R5F_SCHEDULE_ESCAPE, 10u, 0u, 0u, 0u,
     0x83u
 };
