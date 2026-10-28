@@ -138,21 +138,22 @@ ARGHTOS_NORETURN void arghtos_port_start(void)
 
 void arghtos_port_idle_wait(void)
 {
+    /*
+     * Called from the PendSV idle loop with PRIMASK=1.
+     *
+     * WFI wake qualification ignores PRIMASK for an otherwise eligible
+     * asynchronous exception. After WFI completes, briefly restore normal
+     * interrupt recognition so a pending higher-priority handler can run.
+     * On return from that handler, mask again before the next scheduler
+     * readiness check. Do not execute a second WFI after the handler has
+     * had a chance to make work READY.
+     */
     __asm volatile(
-        "dsb
-"
-        "wfi
-"
-        "cpsie i
-"
-        "dsb
-"
-        "isb
-"
-        "wfi
-"
-        "cpsid i
-"
+        "dsb\n"
+        "wfi\n"
+        "cpsie i\n"
+        "isb\n"
+        "cpsid i\n"
         ::: "memory");
 }
 
