@@ -15,6 +15,15 @@
 
 #if ARGHTOS_STATIC_CONFIG
 #if ARGHTOS_COMPACT_DESCRIPTOR
+#if ARGHTOS_UNIFIED_SLOT
+extern arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS];
+#define ARGHTOS_TASK_ENTRY(id)    (arghtos_static_slots[(id)].entry)
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((arghtos_static_slots[(id)].schedule & ARGHTOS_STATIC_ASYNC_TAG) != 0u) ? \
+        0u : arghtos_static_slots[(id)].schedule)
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(arghtos_static_slots[(id)].schedule & ARGHTOS_STATIC_ASYNC_MASK))
+#else
 extern const arghtos_static_task_t arghtos_static_tasks[ARGHTOS_STATIC_TASK_COUNT];
 #define ARGHTOS_TASK_ENTRY(id)    (arghtos_static_tasks[(id)].entry)
 #define ARGHTOS_TASK_PERIOD(id) \
@@ -22,6 +31,7 @@ extern const arghtos_static_task_t arghtos_static_tasks[ARGHTOS_STATIC_TASK_COUN
         0u : arghtos_static_tasks[(id)].schedule)
 #define ARGHTOS_TASK_PRIORITY(id) \
     ((uint8_t)(arghtos_static_tasks[(id)].schedule & ARGHTOS_STATIC_ASYNC_MASK))
+#endif
 #else
 extern const arghtos_task_config_t arghtos_static_tasks[ARGHTOS_STATIC_TASK_COUNT];
 #define ARGHTOS_TASK_ENTRY(id)    (arghtos_static_tasks[(id)].entry)
@@ -39,7 +49,11 @@ extern arghtos_crash_record_t arghtos_static_crash_record;
 #define ARGHTOS_CRASH_RECORD      (kernel.crash_record)
 #endif
 
+#if ARGHTOS_UNIFIED_SLOT
+#define controls arghtos_static_slots
+#else
 static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
+#endif
 static arghtos_kernel_state_t kernel;
 
 static bool time_due(arghtos_time_t now, arghtos_time_t t)
@@ -372,13 +386,21 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
     }
 
     for (id = 0u; id < init_count; ++id) {
+#if ARGHTOS_UNIFIED_SLOT
+        void *const stack_top = (void *)(uintptr_t)controls[id].context;
         control_clear(&controls[id]);
-#if ARGHTOS_COMPACT_DESCRIPTOR
+        controls[id].context = arghtos_port_build_initial_context_top(
+            stack_top,
+            arghtos_task_start_trampoline,
+            arghtos_task_return_guard);
+#elif ARGHTOS_COMPACT_DESCRIPTOR
+        control_clear(&controls[id]);
         controls[id].context = arghtos_port_build_initial_context_top(
             arghtos_static_tasks[id].stack_top,
             arghtos_task_start_trampoline,
             arghtos_task_return_guard);
 #else
+        control_clear(&controls[id]);
         controls[id].context = arghtos_port_build_initial_context(
             init_tasks[id].stack_base,
             init_tasks[id].stack_size,
