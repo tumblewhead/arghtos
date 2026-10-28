@@ -47,9 +47,12 @@ PendSV_Handler:
     str r1, [r0, #24]
     mov r1, r11
     str r1, [r0, #28]
+    movs r5, #0
     b 2f
 
 1:
+    mrs r5, msp
+    adds r5, #32
     movs r0, #0
 
 2:
