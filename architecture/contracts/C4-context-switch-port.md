@@ -1,7 +1,7 @@
 ---
 type: Contract
-title: "C4 - Cortex-M23 execution and context port"
-description: "Concrete MSP/PSP, SVC, PendSV, critical-section, initial-frame, and dispatch boundary."
+title: "C4 - Abstract execution port with Cortex-M23 reference profile"
+description: "Architecture-neutral execution-port ABI plus the Cortex-M23 reference realization."
 tags: [architecture, contract, cortex-m23, context, psp, msp, pendsv, svc]
 status: draft
 sources:
@@ -12,6 +12,23 @@ sources:
     title: "Armv8-M Architecture Reference Manual"
     resource: https://documentation-service.arm.com/static/5f8eff92f86e16515cdbe5e0
 ---
+
+# Architecture-neutral port ABI
+
+The portable kernel sees an opaque continuation token:
+
+```c
+typedef uintptr_t arghtos_context_t;
+#define ARGHTOS_CONTEXT_NONE ((arghtos_context_t)0)
+```
+
+The portable kernel may use only the abstract operations declared by `arghtos_port.h`: port initialization and stack validation; scheduler serialization; task/handler context queries; task service calls; dispatch request/start/idle; initial-context construction; crash payload capture/terminal handoff; and time/timer operations.
+
+The portable kernel must not know how context switching, system calls, interrupt masking, low-power wait, crash-register capture, or timer hardware are implemented.
+
+# Cortex-M23 reference profile
+
+The remainder of C4 describes the Cortex-M23 realization of that architecture-neutral ABI.
 
 # Key goals
 
