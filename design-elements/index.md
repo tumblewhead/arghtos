@@ -19,3 +19,4 @@ All design elements depend on the audited contract baseline in [../architecture/
 
 The **dangerous code** section in each element is normative for verification planning: testers should use the listed failure examples as deliberate fault-injection or adversarial test cases where practical.
 * [D12 - Code-module design consistency audit](D12-design-consistency-audit.md) - Design freeze/gate before implementation.
+* [D13 - Porting guide](D13-porting-guide.md) - Architecture-neutral port ABI, new-target checklist, and acceptance tests.
