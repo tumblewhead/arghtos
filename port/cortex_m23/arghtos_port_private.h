@@ -24,4 +24,10 @@ void arghtos_m23_board_timer_arm(arghtos_time_t absolute_deadline);
 void arghtos_m23_board_timer_disarm(void);
 ARGHTOS_NORETURN void arghtos_m23_board_fault_terminal(void);
 
+ARGHTOS_NORETURN void arghtos_m23_hardfault_entry(
+    uint32_t exc_return,
+    const uint32_t *basic_frame,
+    uint32_t msp_at_entry,
+    uint32_t psp_at_entry);
+
 #endif
