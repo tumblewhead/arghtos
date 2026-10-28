@@ -760,7 +760,7 @@ ARGHTOS_NORETURN void arghtos_fatal(
             r->flags |= ARGHTOS_CRASH_F_PORT_STATE_VALID;
         }
 
-        atomic_signal_fence(memory_order_seq_cst);
+        atomic_thread_fence(memory_order_release);
         r->commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC;
     }
 
