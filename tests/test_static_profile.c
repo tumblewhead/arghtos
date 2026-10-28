@@ -150,6 +150,9 @@ arghtos_crash_record_t arghtos_static_crash_record = {
     .version = ARGHTOS_CRASH_VERSION,
     .size = (uint16_t)sizeof(arghtos_crash_record_t),
     .task_id = ARGHTOS_TASK_ID_INVALID
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+    ,.flags = ARGHTOS_CRASH_F_PORT_STATE_VALID
+#endif
 };
 #else
 arghtos_crash_record_t arghtos_static_crash_record;
@@ -199,6 +202,9 @@ static void reset_all(void)
     arghtos_static_crash_record.version = ARGHTOS_CRASH_VERSION;
     arghtos_static_crash_record.size = (uint16_t)sizeof(arghtos_crash_record_t);
     arghtos_static_crash_record.task_id = ARGHTOS_TASK_ID_INVALID;
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+    arghtos_static_crash_record.flags = ARGHTOS_CRASH_F_PORT_STATE_VALID;
+#endif
 #else
     memset(&arghtos_static_crash_record, 0, sizeof(arghtos_static_crash_record));
 #endif
@@ -297,7 +303,11 @@ static void test_static_crash_record_symbol_is_used(void)
     assert(arghtos_static_crash_record.version == ARGHTOS_CRASH_VERSION);
     assert(arghtos_static_crash_record.size == sizeof(arghtos_crash_record_t));
     assert(arghtos_static_crash_record.task_id == ARGHTOS_TASK_ID_INVALID);
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+    assert(arghtos_static_crash_record.flags == ARGHTOS_CRASH_F_PORT_STATE_VALID);
+#else
     assert(arghtos_static_crash_record.flags == 0u);
+#endif
     assert(arghtos_static_crash_record.port_words == 0u);
     assert(arghtos_static_crash_record.commit_magic == 0u);
 #endif
@@ -316,6 +326,12 @@ static void test_static_crash_record_symbol_is_used(void)
            ARGHTOS_FAULT_KERNEL_INVARIANT);
     assert(arghtos_static_crash_record.commit_magic ==
            ARGHTOS_CRASH_COMMIT_MAGIC);
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+    assert(arghtos_static_crash_record.port_words >= 1u);
+    assert(arghtos_static_crash_record.port_words <= 10u);
+    assert((arghtos_static_crash_record.flags &
+            ARGHTOS_CRASH_F_PORT_STATE_VALID) != 0u);
+#endif
 }
 
 #if ARGHTOS_COMPACT_RUNTIME
