@@ -20,9 +20,9 @@ extern arghtos_crash_record_t arghtos_static_crash_record;
 #define ARGHTOS_TASK_COUNT   ((uint8_t)ARGHTOS_STATIC_TASK_COUNT)
 #define ARGHTOS_CRASH_RECORD (&arghtos_static_crash_record)
 #else
-#define ARGHTOS_TASK_TABLE   (ARGHTOS_TASK_TABLE)
-#define ARGHTOS_TASK_COUNT   (ARGHTOS_TASK_COUNT)
-#define ARGHTOS_CRASH_RECORD (ARGHTOS_CRASH_RECORD)
+#define ARGHTOS_TASK_TABLE   (kernel.tasks)
+#define ARGHTOS_TASK_COUNT   (kernel.task_count)
+#define ARGHTOS_CRASH_RECORD (kernel.crash_record)
 #endif
 
 static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
