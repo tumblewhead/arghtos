@@ -61,6 +61,14 @@
 #error "R5c compact wake result requires specialized production services"
 #endif
 
+#ifndef ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+#define ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME 0
+#endif
+
+#if ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME && !ARGHTOS_SPECIALIZED_SERVICES
+#error "R5d compact service outcome requires specialized production services"
+#endif
+
 #if ARGHTOS_COMPACT_DESCRIPTOR && !ARGHTOS_STATIC_CONFIG
 #error "ARGHTOS_COMPACT_DESCRIPTOR requires ARGHTOS_STATIC_CONFIG=1"
 #endif
