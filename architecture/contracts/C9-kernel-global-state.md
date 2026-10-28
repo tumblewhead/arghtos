@@ -207,3 +207,17 @@ Once code exists, every size-reporting build must retain:
 # Boundary specification
 
 C9 defines what "scheduler SRAM footprint" means. P0/P7 prove boundedness; the linker map later determines the actual value.
+# Minimum-size production no-profile global state
+
+The minimum-size production profile may compile runtime profiling out with
+`ARGHTOS_RUNTIME_PROFILING=0`.
+
+In that profile the global `run_start` timestamp is absent because it exists
+only to support C5 execution-time accounting. The static-profile kernel state
+therefore shrinks from 12 B to 8 B in the current 32-bit implementation.
+
+No crash, scheduler-state, release-time, or wake/wait state is removed by this
+option.
+
+R4a linker evidence records a complete resident-footprint reduction from
+3072 B to 2845 B at the 24-task default.
