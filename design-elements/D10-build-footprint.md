@@ -460,3 +460,25 @@ CI evidence: run 40658079082.
 The minimum-size baseline for subsequent size experiments is therefore 2845 B.
 The generic/debug and profiling-enabled production builds remain in CI as
 behavioral/reference profiles.
+
+# R4u accepted minimum-size result
+
+R4u overlays generated task entry with runtime `next_time`.
+
+Measured physical result:
+
+```text
+R4s  2402 B
+R4u  2322 B
+-----------
+saved   80 B
+```
+
+The task-resident allocation falls by 96 B, from 432 B to 336 B. Linked code
+grows by 16 B, producing an 80 B net saving.
+
+The audited ArghtOS-only MSP lower bound remains 80 B.
+
+CI evidence: run 40665626084.
+
+R4u is the current minimum-size Cortex-M23 production baseline.
