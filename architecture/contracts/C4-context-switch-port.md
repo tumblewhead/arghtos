@@ -80,6 +80,7 @@ On `ARGHTOS_OK`, it guarantees:
 
 * the scheduler-visible timebase is ready;
 * the scheduler timer source is disarmed;
+* any stale pending scheduler-dispatch exception is cleared;
 * PendSV is configured at the least urgent scheduler-relevant exception priority;
 * SVC/PendSV integration is usable;
 * no scheduler task has been started.
@@ -308,9 +309,11 @@ word 9  stacked xPSR
 
 `arghtos_port_start()`:
 
-* is called once after successful C0 initialization;
+* is called once after successful C0 initialization/start-state commit;
+* takes ownership of the scheduler's normal interrupt/event-enable state because the call never returns;
+* ensures scheduler-relevant maskable events can be serviced;
 * switches kernel execution into the dispatch mechanism;
-* invokes `arghtos_kernel_dispatch(0)`;
+* invokes `arghtos_kernel_dispatch(0)` through the target dispatch path;
 * never returns during normal operation.
 
 # Privilege model and trusted-task restriction
