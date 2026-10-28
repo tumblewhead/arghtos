@@ -345,9 +345,27 @@ The GitHub Actions workflow is:
 .github/workflows/ci.yml
 ```
 
-It currently runs generic, R1, R2, and R3 profile comparisons plus sanitizer, portability, Cortex-M23 build, footprint, map, and symbol evidence.
+The frozen R4 merge matrix intentionally keeps only supported/reference
+surfaces:
 
-When adding a new experimental profile, preserve the prior best profile in the matrix so the delta is measured in the same source revision.
+* portable-source boundary;
+* generic host kernel tests;
+* accepted size-first selector host regression;
+* profiling-enabled R3c reference;
+* accepted minimum-source R4u host profile;
+* ASan/UBSan;
+* generic Cortex-M23 compile;
+* R3c physical footprint reference;
+* final R4y minimum footprint;
+* R3c/R4y map and symbol evidence.
+
+Historical R4 experiments are documented under `implementation/`; rejected
+experiment profiles are not part of the supported Makefile/CI surface after
+the R4 freeze.
+
+When starting a new post-R4 experiment phase, branch from canonical `main`
+after PR #3 is merged and add one live challenger beside the frozen R4y
+control.
 
 ## User preferences
 
