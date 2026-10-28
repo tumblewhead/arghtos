@@ -73,16 +73,10 @@ PendSV_Handler:
      */
     mrs r5, msp
     ldr r1, [r5, #28]
-#if ARGHTOS_R5_COMPACT_PENDSV
-    lsrs r1, r1, #7
-    movs r2, #4
-    ands r1, r2
-#else
     lsrs r1, r1, #9
     movs r2, #1
     ands r1, r2
     lsls r1, r1, #2
-#endif
     adds r5, #32
     adds r5, r5, r1
     msr msp, r5
@@ -132,12 +126,8 @@ PendSV_Handler:
     msr primask, r1
     ldr r2, =0xFFFFFFFD
 #endif
-#if ARGHTOS_R5_COMPACT_PENDSV
-    bx r2
-#else
     mov lr, r2
     bx lr
-#endif
 .size PendSV_Handler, .-PendSV_Handler
 
 
