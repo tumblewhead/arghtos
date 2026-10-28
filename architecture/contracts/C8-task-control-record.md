@@ -268,3 +268,22 @@ execution context instead.
 
 All 32-bit core fields remain naturally aligned. The two-byte age/status
 metadata remains in the separate R4s metadata array.
+
+# R5r age-credit storage refinement
+
+The trusted generated minimum-size profile may implement the C6 zero-credit
+transition rules by invariant rather than by repeated stores.
+
+R5r requires:
+
+```text
+nonzero age_credit is reachable only in READY async state
+```
+
+and retains the mandatory zero store when a READY async task is selected into
+RUNNING.
+
+Therefore transitions from RUNNING, WAITING, SLEEPING, or DORMANT that require
+zero credit by contract need not rewrite the field when the invariant already
+proves it is zero. This is a write-elision refinement only; the logical
+age-credit value and public scheduling semantics are unchanged.
