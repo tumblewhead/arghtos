@@ -68,6 +68,21 @@ static void test_init_rejects_overlap(void)
     assert((arghtos_test_kernel()->flags & ARGHTOS_KF_INITIALIZED) == 0u);
 }
 
+static void test_prestart_interrupt_wake_is_rejected(void)
+{
+    arghtos_task_config_t task = {
+        task0, stack0, 0u, sizeof(stack0), 1u, 0u
+    };
+    arghtos_config_t cfg = make_config(&task, 1u);
+
+    reset_all();
+    assert(arghtos_init(&cfg) == ARGHTOS_OK);
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    assert(arghtos_wake_from_interrupt(0u) == ARGHTOS_ERR_BAD_STATE);
+    assert(arghtos_test_controls()[0].state == ARGHTOS_TASK_DORMANT);
+    assert(arghtos_host_dispatch_request_count() == 0u);
+}
+
 static void test_start_releases_all_periodic_at_one_epoch(void)
 {
     arghtos_task_config_t tasks[3] = {
@@ -82,6 +97,7 @@ static void test_start_releases_all_periodic_at_one_epoch(void)
     arghtos_host_set_time(1000u);
     assert(arghtos_init(&cfg) == ARGHTOS_OK);
     start_and_escape();
+    assert(!arghtos_host_interrupts_masked());
 
     c = arghtos_test_controls();
     assert(c[0].state == ARGHTOS_TASK_READY);
@@ -290,6 +306,7 @@ static void test_async_aging_eventually_beats_high_base_peer(void)
 
     reset_all();
     assert(arghtos_init(&cfg) == ARGHTOS_OK);
+    start_and_escape();
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     assert(arghtos_wake_from_interrupt(0u) == ARGHTOS_OK);
     assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
@@ -393,6 +410,7 @@ int main(void)
 {
     test_public_fixed_sizes();
     test_init_rejects_overlap();
+    test_prestart_interrupt_wake_is_rejected();
     test_start_releases_all_periodic_at_one_epoch();
     test_periodic_rms_and_same_task_reselect_accounting();
     test_wake_wait_handshake();
