@@ -66,8 +66,10 @@ For asynchronous tasks:
 
 ```text
 period == 0
-async_priority < ARGHTOS_ASYNC_PRIORITY_LEVELS
+1 <= async_priority <= ARGHTOS_ASYNC_PRIORITY_MAX <= 254
 ```
+
+`0x00` and `0xFF` are reserved and invalid for async tasks.
 
 For periodic tasks, `async_priority` must be zero.
 
@@ -192,3 +194,25 @@ The required 64-byte crash record is ArghtOS overhead.
 # Boundary specification
 
 C0 defines immutable application-supplied scheduler metadata. It is read-only after initialization but is resident SRAM and is included in the scheduler-footprint accounting.
+
+# Minimum-footprint generated profile
+
+The generic 16-byte descriptor above remains the public/runtime-config ABI.
+
+The active R2c minimum-footprint implementation uses generated build-time task
+slots instead of retaining a separate generic descriptor array. In that profile,
+configuration validity, stack layout, and task count are build/generator
+evidence.
+
+The R2c schedule encoding is:
+
+```text
+high bit clear  => periodic; low 31 bits are period
+high bit set    => async; low byte is priority
+```
+
+The generated stack top is stored temporarily in the task slot's context field
+and is overwritten by the target context token during initialization.
+
+This specialization does not change task IDs, RMS ordering, async priority
+semantics, or lifecycle behavior.
