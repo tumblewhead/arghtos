@@ -212,6 +212,28 @@ arghtos_context_t arghtos_port_build_initial_context_top(
         (uintptr_t)stack_top, thread_start, return_guard);
 }
 
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+arghtos_context_t arghtos_port_build_initial_context_top_arg(
+    void *stack_top,
+    void (*thread_start)(arghtos_task_fn_t),
+    void (*return_guard)(void),
+    arghtos_task_fn_t initial_arg)
+{
+    const arghtos_context_t context = m23_build_context_at_top(
+        (uintptr_t)stack_top,
+        (void (*)(void))thread_start,
+        return_guard);
+
+    if ((context != ARGHTOS_CONTEXT_NONE) && (initial_arg != NULL)) {
+        ((uint32_t *)(uintptr_t)context)[8] =
+            (uint32_t)(uintptr_t)initial_arg;
+        return context;
+    }
+
+    return ARGHTOS_CONTEXT_NONE;
+}
+#endif
+
 void arghtos_port_crash_fill(
     arghtos_crash_record_t *record,
     const void *port_fault_context)
