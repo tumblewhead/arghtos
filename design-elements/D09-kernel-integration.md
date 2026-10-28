@@ -59,7 +59,7 @@ The port needs only a small number of C entry points.
 Required:
 
 ```c
-uintptr_t arghtos_kernel_dispatch(uintptr_t outgoing_saved_psp);
+arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context);
 
 arghtos_result_t arghtos_kernel_service(
     uint8_t service_id,
@@ -72,8 +72,7 @@ _Noreturn void arghtos_task_return_guard(void);
 
 _Noreturn void arghtos_fatal(
     arghtos_fault_reason_t reason,
-    const arghtos_exception_frame_t *frame,
-    uint32_t exc_return);
+    const void *port_fault_context);
 ```
 
 Everything else should be `static` unless a measured port need proves otherwise.
@@ -95,12 +94,12 @@ Reference semantics:
 ```text
 now = port_time_now()
 
-if outgoing_saved_psp != 0:
+if outgoing_context != 0:
     if current_task == INVALID:
         fatal BAD_DISPATCH
 
     current = controls[current_task]
-    current.saved_psp = outgoing_saved_psp
+    current.context = outgoing_context
 
     elapsed = now - kernel.run_start
     current.total_cpu_ticks += elapsed
@@ -116,7 +115,7 @@ if outgoing_saved_psp != 0:
 
 else:
     if current_task != INVALID:
-        # outgoing_saved_psp=0 is legal only for first dispatch / idle re-entry
+        # outgoing_context=0 is legal only for first dispatch / idle re-entry
         fatal BAD_DISPATCH
 
 next = select_next()
@@ -136,7 +135,7 @@ if next is async:
 kernel.current_task = next
 kernel.run_start = now
 
-return controls[next].saved_psp
+return controls[next].context
 ```
 
 # Why outgoing state is checked after accounting
@@ -205,7 +204,7 @@ service ID:
     other       -> fatal BAD_SERVICE
 ```
 
-Unknown service ID is not an ordinary application error because only ArghtOS wrappers are supposed to emit SVC numbers. It indicates corrupted/private ABI state and enters fatal handling.
+Unknown service ID is not an ordinary application error because only ArghtOS wrappers/ports are supposed to issue private kernel service IDs. It indicates corrupted private ABI state and enters fatal handling.
 
 # Interrupt wake path
 
@@ -231,8 +230,8 @@ It only makes state READY, rearms time, and requests PendSV.
 flowchart TB
   INIT["arghtos_init/start"] --> D02["D02 config/state"]
 
-  TASK["Task API"] --> SVC["D06 SVC"]
-  SVC --> KS["kernel_service"]
+  TASK["Task API"] --> PCALL["abstract port service call"]
+  PCALL --> KS["kernel_service"]
   KS --> D03["D03 lifecycle"]
 
   IRQ["Device interrupt"] --> WAKE["wake_from_interrupt"]
@@ -301,12 +300,12 @@ All design elements D01-D08 and contracts C0-C10.
 
 # Dangerous code sections and tester guidance
 
-## 1. outgoing_saved_psp and current_task disagree
+## 1. outgoing_context and current_task disagree
 
 **Failure scenario A:**
 
 ```text
-outgoing_saved_psp != 0
+outgoing_context != 0
 current_task == INVALID
 ```
 
@@ -315,7 +314,7 @@ Saving that PSP into a guessed slot corrupts an unrelated task.
 **Failure scenario B:**
 
 ```text
-outgoing_saved_psp == 0
+outgoing_context == 0
 current_task != INVALID
 ```
 
@@ -410,7 +409,7 @@ External linkage can prevent optimizations and expands symbol/API surface.
 **Tester should:**
 
 * inspect ELF global symbol list;
-* only D01/D06 contract symbols and the few D09 port-callable entries should be globally visible;
+* only public API symbols, generic port ABI symbols, and the few `arghtos_kernel_port.h` callbacks should be globally visible;
 * fail a visibility test for unexpected `arghtos_` globals.
 
 # Test seam
@@ -425,8 +424,14 @@ This lets tests invoke:
 * dispatch;
 * profiling/fault paths;
 
-without Cortex instructions.
+against a non-Cortex host port without any target-specific instructions.
 
 # Boundary specification
 
 D09 defines how the logical modules compose in code. It does not change their contracts.
+
+# Portable-source prohibition
+
+`src/arghtos_kernel.c` must not include vendor/CMSIS headers, inline assembly, or target register/exception names.
+
+A source-level portability test should compile this exact file against both the host port and Cortex-M23 port without preprocessing branches that select the target.
