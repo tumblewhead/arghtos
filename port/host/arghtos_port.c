@@ -111,6 +111,7 @@ void arghtos_port_request_dispatch(void)
 
 ARGHTOS_NORETURN void arghtos_port_start(void)
 {
+    host_masked = false;
     if (host_start_env != NULL) {
         longjmp(*host_start_env, 1);
     }
