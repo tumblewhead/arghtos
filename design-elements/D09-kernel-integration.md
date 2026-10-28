@@ -79,11 +79,11 @@ Everything else should be `static` unless a measured port need proves otherwise.
 
 # Kernel dispatch serialization precondition
 
-D06 calls `arghtos_kernel_dispatch()` with normal scheduler-relevant interrupts masked by PRIMASK.
+D06 calls `arghtos_kernel_dispatch()` while the selected port's scheduler-serialization primitive is active.
 
 D09 therefore assumes C8/C9 mutation is serialized for the entire dispatch transaction and does not independently open a second critical section.
 
-If dispatch returns no winner, D06 keeps that serialization across the transition into the race-free WFI protocol described in C4/D06.
+If dispatch returns no winner, D06 keeps that serialization across the transition into the target port's race-free idle protocol described by C4.
 
 # Kernel dispatch algorithm
 
@@ -147,13 +147,13 @@ D03 may already have changed the current task:
 * sleep -> SLEEPING;
 * periodic return -> DORMANT.
 
-D09 must still save PSP/account elapsed runtime for that task, but it must not overwrite those lifecycle states with READY.
+D09 must still store the outgoing opaque context token and account elapsed runtime for that task, but it must not overwrite those lifecycle states with READY.
 
 Only a task still marked RUNNING is normalized to READY by dispatch reconsideration/preemption.
 
 # Same-task reselect
 
-A RUNNING async or periodic task can be preempted into PendSV and then remain the best winner.
+A RUNNING async or periodic task can enter the selected port's dispatch handoff and then remain the best winner.
 
 Sequence:
 
@@ -176,7 +176,7 @@ kernel.current_task = INVALID
 return 0
 ```
 
-D06 remains on MSP and performs its idle wait protocol.
+D06 remains in the target's kernel execution context and performs its idle protocol.
 
 When it later re-enters dispatch:
 
@@ -188,7 +188,7 @@ Current task must still be INVALID.
 
 # Kernel service dispatch
 
-D09 exposes one C service entry to SVC.
+D09 exposes one architecture-neutral C service entry to the selected port.
 
 Suggested structure:
 
@@ -208,7 +208,7 @@ Unknown service ID is not an ordinary application error because only ArghtOS wra
 
 # Interrupt wake path
 
-`arghtos_wake_from_interrupt()` does not route through SVC.
+`arghtos_wake_from_interrupt()` does not route through the task service-call mechanism.
 
 It:
 
@@ -222,7 +222,7 @@ D06 timer vector/adapter invokes D05 `arghtos_timer_interrupt()`.
 
 Timer processing does not call the selector directly.
 
-It only makes state READY, rearms time, and requests PendSV.
+It only makes state READY, rearms time, and requests a target dispatch handoff.
 
 # Call graph
 
@@ -239,7 +239,7 @@ flowchart TB
 
   TIMER["Timer interrupt"] --> D05["D05 time/release"]
 
-  D03 --> PEND["request PendSV"]
+  D03 --> PEND["request dispatch"]
   D05 --> PEND
 
   PEND --> DISP["kernel_dispatch"]
@@ -248,7 +248,7 @@ flowchart TB
   POL --> DISP
   DISP --> D06["D06 restore/idle"]
 
-  TR["D08 trampoline"] --> SVC
+  TR["D08 trampoline"] --> PCALL["port service call"]
   DISP --> TR
 
   FAULT["Invariant / CPU fault"] --> D07["D07 fatal"]
@@ -309,7 +309,7 @@ outgoing_context != 0
 current_task == INVALID
 ```
 
-Saving that PSP into a guessed slot corrupts an unrelated task.
+Saving that opaque context token into a guessed slot corrupts an unrelated task continuation.
 
 **Failure scenario B:**
 
@@ -334,7 +334,7 @@ The kernel could lose the current task continuation.
 current.state = READY;  // unconditional
 ```
 
-After `wait()`, PendSV turns WAITING back into READY and the task never blocks.
+After `wait()`, a faulty dispatch normalization turns WAITING back into READY and the task never blocks.
 
 **Tester should:**
 
@@ -372,13 +372,13 @@ If accounting uses one clock read and `run_start` another, a same-task reselect 
 * assert one dispatch transaction uses one captured `now` for outgoing elapsed and incoming `run_start`;
 * verify total elapsed across repeated switches equals golden time.
 
-## 6. Unknown SVC returns BAD_ARGUMENT instead of fatal
+## 6. Unknown private service ID returns BAD_ARGUMENT instead of fatal
 
 An unknown private service means execution did not come from a valid public wrapper or code is corrupted.
 
 **Tester should:**
 
-* inject all 256 service IDs in host SVC decoder;
+* inject all 256 service IDs through the host port service-call path;
 * known IDs follow contract;
 * every unknown ID yields `ARGHTOS_FAULT_BAD_SERVICE`.
 
@@ -398,7 +398,7 @@ If a timer/device handler can preempt D09 while it is normalizing state or runni
 
 **Tester should:**
 
-* instrument the target/host port to assert PRIMASK/serialization state at every `arghtos_kernel_dispatch()` entry;
+* instrument each target/host port to assert that its scheduler serialization is active at every `arghtos_kernel_dispatch()` entry;
 * deliberately attempt a handler wake during each dispatch phase in the host model;
 * require that the wake is deferred until after the serialized transaction.
 
