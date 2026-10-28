@@ -459,6 +459,33 @@ static void test_invalid_wake_id_does_not_mutate(void)
     assert(c[0].age_credit == before.age_credit);
 }
 
+static void assert_fault_attribution(
+    arghtos_fault_reason_t reason,
+    bool expected_faulted)
+{
+    jmp_buf env;
+
+    setup_one_async();
+    arghtos_host_set_fault_jmp(&env);
+    if (setjmp(env) == 0) {
+        arghtos_fatal(reason, NULL);
+        assert(!"fatal returned");
+    }
+    arghtos_host_set_fault_jmp(NULL);
+
+    assert((ARGHTOS_CTRL_STATE(&arghtos_test_controls()[0]) ==
+            ARGHTOS_TASK_FAULTED) == expected_faulted);
+}
+
+static void test_task_fault_attribution_set(void)
+{
+    assert_fault_attribution(ARGHTOS_FAULT_CONTEXT_CORRUPT, true);
+    assert_fault_attribution(ARGHTOS_FAULT_ASYNC_RETURNED, true);
+    assert_fault_attribution(ARGHTOS_FAULT_STACK_RANGE, true);
+    assert_fault_attribution(ARGHTOS_FAULT_CPU_EXCEPTION, true);
+    assert_fault_attribution(ARGHTOS_FAULT_BAD_SERVICE, false);
+}
+
 static void test_fatal_commits_generic_crash_record(void)
 {
     jmp_buf env;
@@ -505,6 +532,7 @@ int main(void)
     test_periodic_selection_does_not_age_async();
     test_profile_snapshot_is_committed_only();
     test_invalid_wake_id_does_not_mutate();
+    test_task_fault_attribution_set();
     test_fatal_commits_generic_crash_record();
 
     puts("arghtos host kernel tests: PASS");
