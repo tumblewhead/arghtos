@@ -3,7 +3,7 @@ type: ImplementationCheckpoint
 title: "R4 - Profiling-surface specialization"
 description: "Experimental measurement of the complete linked footprint attributable to runtime profiling, preserving R3c as the same-revision control."
 tags: [implementation, footprint, profiling, specialization, experiment]
-status: measured
+status: accepted
 ---
 
 # Baseline
@@ -142,3 +142,9 @@ arghtos_static_slots     576 -> 480 B
 ```
 
 The 227 B result is meaningful, but insufficient to reach the target. Profiling remains a documented v1 requirement, so R4a is not promoted canonically without an explicit user decision.
+
+# Decision
+
+The user accepted runtime profiling as optional for the minimum-size production configuration on 2026-10-28.
+
+R4a is therefore promoted as the baseline minimum-size production profile. Profiling remains enabled by default in generic/debug and ordinary production configurations.
