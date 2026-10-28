@@ -13,14 +13,6 @@
 #error "ARGHTOS_STATIC_CONFIG requires ARGHTOS_TRUSTED_CONFIG=1"
 #endif
 
-#ifndef ARGHTOS_EXTERNAL_TIME_DUE
-#define ARGHTOS_EXTERNAL_TIME_DUE 0
-#endif
-
-#ifndef ARGHTOS_EXTERNAL_ASYNC_PREDICATE
-#define ARGHTOS_EXTERNAL_ASYNC_PREDICATE 0
-#endif
-
 #if ARGHTOS_STATIC_CONFIG
 #if ARGHTOS_COMPACT_DESCRIPTOR
 #if ARGHTOS_UNIFIED_SLOT
@@ -65,13 +57,8 @@ static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
 static arghtos_kernel_state_t kernel;
 
 #if ARGHTOS_COMPACT_RUNTIME
-#if ARGHTOS_ID_NATIVE_META
-#define ARGHTOS_CTRL_AGE_ID(id)    (arghtos_static_meta[(id)].age_credit)
-#define ARGHTOS_CTRL_STATUS_ID(id) (arghtos_static_meta[(id)].status)
-#else
 #define ARGHTOS_CTRL_AGE_ID(id)    ARGHTOS_CTRL_AGE(&controls[(id)])
 #define ARGHTOS_CTRL_STATUS_ID(id) ARGHTOS_CTRL_STATUS(&controls[(id)])
-#endif
 
 #define ARGHTOS_CTRL_STATE_ID(id) \
     ((uint8_t)(ARGHTOS_CTRL_STATUS_ID(id) & ARGHTOS_CTRL_STATE_MASK))
@@ -109,15 +96,10 @@ static arghtos_kernel_state_t kernel;
     (controls[(id)].missed_release_count = (uint8_t)(v))
 #endif
 
-#if ARGHTOS_EXTERNAL_TIME_DUE
-bool arghtos_time_due_external(arghtos_time_t now, arghtos_time_t t);
-#define time_due arghtos_time_due_external
-#else
 static bool time_due(arghtos_time_t now, arghtos_time_t t)
 {
     return (int32_t)(now - t) >= 0;
 }
-#endif
 
 #if !ARGHTOS_MINIMAL_VALIDATION || !ARGHTOS_TRUSTED_CONFIG
 static bool duration_valid(arghtos_duration_t dt)
@@ -138,15 +120,10 @@ static bool task_is_periodic(arghtos_task_id_t id)
 }
 #endif
 
-#if ARGHTOS_EXTERNAL_ASYNC_PREDICATE
-bool arghtos_task_is_async_external(arghtos_task_id_t id);
-#define task_is_async arghtos_task_is_async_external
-#else
 static bool task_is_async(arghtos_task_id_t id)
 {
     return ARGHTOS_TASK_PERIOD(id) == 0u;
 }
-#endif
 
 static void control_clear(arghtos_task_id_t id, arghtos_task_control_t *c)
 {
@@ -293,21 +270,7 @@ static void missed_release_add(
 #endif
 }
 
-#if ARGHTOS_RECOMPUTE_TIMER_DELTA
-static void timer_consider(
-    arghtos_time_t now,
-    arghtos_time_t t,
-    bool *have,
-    arghtos_time_t *best)
-{
-    const uint32_t delta = t - now;
-
-    if ((!*have) || (delta < (uint32_t)(*best - now))) {
-        *have = true;
-        *best = t;
-    }
-}
-#elif ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
+#if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
 static void timer_consider(
     arghtos_time_t now,
     arghtos_time_t t,
@@ -416,9 +379,6 @@ static bool process_time_locked(arghtos_time_t now)
 #if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
     arghtos_time_t best_time = 0u;
     uint32_t best_delta = UINT32_MAX;
-#elif ARGHTOS_RECOMPUTE_TIMER_DELTA
-    bool have_timer = false;
-    arghtos_time_t best_time = 0u;
 #else
     bool have_timer = false;
     arghtos_time_t best_time = 0u;
@@ -456,8 +416,6 @@ static bool process_time_locked(arghtos_time_t now)
 
 #if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
             timer_consider(now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
-#elif ARGHTOS_RECOMPUTE_TIMER_DELTA
-            timer_consider(now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time);
 #else
             timer_consider(
                 now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
@@ -470,8 +428,6 @@ static bool process_time_locked(arghtos_time_t now)
             } else {
 #if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
                 timer_consider(now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
-#elif ARGHTOS_RECOMPUTE_TIMER_DELTA
-                timer_consider(now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time);
 #else
                 timer_consider(
                     now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
@@ -713,9 +669,6 @@ ARGHTOS_NORETURN void arghtos_start(void)
 #elif ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
     arghtos_time_t earliest = 0u;
     uint32_t earliest_delta = UINT32_MAX;
-#elif ARGHTOS_RECOMPUTE_TIMER_DELTA
-    bool have_timer = false;
-    arghtos_time_t earliest = 0u;
 #else
     bool have_timer = false;
     arghtos_time_t earliest = 0u;
@@ -753,9 +706,6 @@ ARGHTOS_NORETURN void arghtos_start(void)
 #if ARGHTOS_SIZE_FIRST_TIMER_SENTINEL
             timer_consider(start, ARGHTOS_CTRL_NEXT(&controls[id]),
                            &earliest, &earliest_delta);
-#elif ARGHTOS_RECOMPUTE_TIMER_DELTA
-            timer_consider(start, ARGHTOS_CTRL_NEXT(&controls[id]),
-                           &have_timer, &earliest);
 #else
             timer_consider(start, ARGHTOS_CTRL_NEXT(&controls[id]),
                            &have_timer, &earliest, &earliest_delta);
@@ -1304,10 +1254,6 @@ void arghtos_timer_interrupt(void)
     }
 }
 
-#if ARGHTOS_EXTERNAL_FAULT_PREDICATE
-bool arghtos_task_fault_attributed(arghtos_fault_reason_t reason);
-#define task_fault_attributed arghtos_task_fault_attributed
-#else
 static bool task_fault_attributed(arghtos_fault_reason_t reason)
 {
 #if ARGHTOS_SIZE_FIRST_FAULT_RANGE
@@ -1320,7 +1266,6 @@ static bool task_fault_attributed(arghtos_fault_reason_t reason)
            (reason == ARGHTOS_FAULT_CPU_EXCEPTION);
 #endif
 }
-#endif
 
 ARGHTOS_NORETURN void arghtos_fatal(
     arghtos_fault_reason_t reason,
