@@ -122,7 +122,7 @@ The order is deliberately designed so invalid external input cannot cause a poin
 
 If any validation fails before port_init, no persistent scheduler state or hardware-port state is committed.
 
-After descriptor and port validation succeeds, initial-context construction is required to be deterministic and infallible for those validated stacks. A zero/impossible saved PSP from the port is an internal integration fault: init must leave INITIALIZED clear and enter/report the deterministic fatal/configuration failure path rather than exposing a partially startable scheduler.
+After descriptor and port validation succeeds, initial-context construction is required to be deterministic and infallible for those validated stacks. A zero/impossible context token from the port is an internal integration fault: init must leave INITIALIZED clear and enter/report the deterministic fatal/configuration failure path rather than exposing a partially startable scheduler.
 
 # Pairwise stack overlap
 
@@ -249,7 +249,7 @@ If `stack_base` is near the top of address space, C pointer arithmetic itself ma
 
 ## 2. Partial initialization leaks valid-looking state
 
-**Failure example:** descriptor 14 is invalid, but controls[0..13] already contain saved PSPs and INITIALIZED was set early.
+**Failure example:** descriptor 14 is invalid, but controls[0..13] already contain saved context tokens and INITIALIZED was set early.
 
 A caller accidentally invokes start and executes a partially built table.
 
