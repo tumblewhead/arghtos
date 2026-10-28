@@ -256,3 +256,28 @@ trade is that the generated initial frame is load-initialized rather than
 
 The public runtime-config ABI and generic/debug initialization path are
 unchanged.
+
+# R5m pristine generated startup state
+
+The trusted generated prebuilt-context profile may also treat initial mutable
+scheduler state as build/startup evidence rather than rewrite it in
+`arghtos_init()`.
+
+This refinement requires:
+
+* `arghtos_init()` is called exactly once;
+* every active generated context token is valid before the call;
+* task next-time/age storage begins zero;
+* packed task status begins DORMANT with no pending wake or missed releases;
+* unused generated task slots, if any, begin zero/inactive;
+* C4 `arghtos_port_init()` succeeds before the scheduler is considered
+  initialized;
+* application code does not invoke scheduler APIs after a failed init.
+
+Under those premises, the R5m minimum profile does not rescan or clear generated
+task state at runtime. It still propagates port initialization failure and
+sets the live kernel current-task/initialized state after port initialization
+succeeds.
+
+The generic/debug initialization path continues to validate and initialize
+runtime state explicitly.
