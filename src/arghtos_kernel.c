@@ -193,6 +193,10 @@ static bool task_id_valid(arghtos_task_id_t id)
     return id < ARGHTOS_TASK_COUNT;
 }
 
+#if ARGHTOS_R5P_GENERATED_ORDER
+#define task_is_periodic(id) ((arghtos_task_id_t)(id) < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT)
+#define task_is_async(id)    ((arghtos_task_id_t)(id) >= (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT)
+#else
 static bool task_is_periodic(arghtos_task_id_t id)
 {
     return ARGHTOS_TASK_PERIOD(id) != 0u;
@@ -202,6 +206,7 @@ static bool task_is_async(arghtos_task_id_t id)
 {
     return ARGHTOS_TASK_PERIOD(id) == 0u;
 }
+#endif
 
 #if !ARGHTOS_R5M_PRISTINE_INIT || defined(ARGHTOS_TEST)
 static void control_clear(arghtos_task_id_t id, arghtos_task_control_t *c)
@@ -672,6 +677,12 @@ ARGHTOS_NORETURN void arghtos_start(void)
     kernel.start_time = start;
 #endif
 
+#if ARGHTOS_R5P_GENERATED_ORDER
+    for (id = 0u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
+        ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+        ARGHTOS_CTRL_NEXT(&controls[id]) = start + ARGHTOS_TASK_PERIOD(id);
+    }
+#else
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         if (task_is_periodic(id)) {
             ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
@@ -682,6 +693,7 @@ ARGHTOS_NORETURN void arghtos_start(void)
 #endif
         }
     }
+#endif
 
     kernel.flags |= ARGHTOS_KF_STARTED;
 
@@ -1042,24 +1054,35 @@ arghtos_task_id_t arghtos_select_next(void)
 {
 #if ARGHTOS_SIZE_FIRST_SELECTOR
     arghtos_task_id_t best = ARGHTOS_TASK_ID_INVALID;
-    uint32_t best_period = UINT32_MAX;
     uint8_t id;
 
-    /* Ascending ID order supplies the equal-period tie break for free. */
-    for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
-        const uint32_t period = ARGHTOS_TASK_PERIOD(id);
-
-        if ((period != 0u) &&
-            (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) &&
-            (period < best_period)) {
-            best = id;
-            best_period = period;
+#if ARGHTOS_R5P_GENERATED_ORDER
+    for (id = 0u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
+        if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) {
+            return id;
         }
     }
+#else
+    {
+        uint32_t best_period = UINT32_MAX;
 
-    if (best != ARGHTOS_TASK_ID_INVALID) {
-        return best;
+        /* Ascending ID order supplies the equal-period tie break for free. */
+        for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
+            const uint32_t period = ARGHTOS_TASK_PERIOD(id);
+
+            if ((period != 0u) &&
+                (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) &&
+                (period < best_period)) {
+                best = id;
+                best_period = period;
+            }
+        }
+
+        if (best != ARGHTOS_TASK_ID_INVALID) {
+            return best;
+        }
     }
+#endif
 
     {
         uint8_t best_effective = 0u;
@@ -1069,9 +1092,15 @@ arghtos_task_id_t arghtos_select_next(void)
          * Cache the incumbent score instead of recomputing it for every
          * challenger. Equal score/age keeps the first (lowest-ID) task.
          */
+#if ARGHTOS_R5P_GENERATED_ORDER
+        for (id = (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT;
+             id < ARGHTOS_TASK_COUNT; ++id) {
+            if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) {
+#else
         for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
             if (task_is_async(id) &&
                 (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY)) {
+#endif
                 uint8_t age = ARGHTOS_CTRL_AGE_ID(id);
                 const uint8_t ceiling =
                     (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX;
