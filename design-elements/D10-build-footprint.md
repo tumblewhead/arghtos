@@ -73,7 +73,7 @@ These numbers are intentionally uncomfortable.
 
 Their purpose is to reveal infeasibility immediately.
 
-I0 has now run this experiment. The current linked implementation is about 4012 B before MSP, so the 300 B residual envelope is decisively exceeded. The correct response is to revisit the soft target, task-capacity metadata, or feature representation rather than massage the accounting.
+I0 has now run this experiment. The current linked implementation is about 4098 B before MSP, so the 300 B residual envelope is decisively exceeded. The correct response is to revisit the soft target, task-capacity metadata, or feature representation rather than massage the accounting.
 
 # Budget attribution rules
 
@@ -233,20 +233,20 @@ Examples to scrutinize:
 The checkpoint has been executed. The current Cortex-M23 `-Oz` linked footprint report is:
 
 ```text
-portable kernel + resident state     2896 B
-Cortex-M23 port C                     376 B
-context assembly                      136 B
+portable kernel + resident state     2934 B
+Cortex-M23 port C                     396 B
+context + fault assembly              164 B
 board adapter                          12 B
 32 task descriptors                   512 B
 required crash record                  64 B
 linker resident metadata               16 B
 -------------------------------------------
-ArghtOS before MSP                   4012 B
+ArghtOS before MSP                   4098 B
 soft target                          1536 B
-excess                               2476 B
+excess                               2562 B
 ```
 
-Compiler sweep showed approximately 3176 B linked text at `-Os`, 2944 B at `-Oz`, and 2656 B with exploratory `-Oz + LTO`. This confirms a feature/architecture-scale gap rather than an optimization-flag problem.
+Compiler sweep showed 3284 B linked text at `-Os`, 3032 B at `-Oz`, and 2740 B with exploratory `-Oz + LTO`. This confirms a feature/architecture-scale gap rather than an optimization-flag problem.
 
 Evidence: [I0 footprint skeleton](../implementation/I0-footprint-skeleton.md).
 
