@@ -125,46 +125,69 @@ R4l wake-result hoist               0 B
 R4o lld --icf=safe                  0 B
 R4r forced machine outliner         0 B
 R4t ID-native metadata indexing     0 B
+R4w global no-inline              +296 B
 ```
 
 R4t CI: 40665299726, success, R4s=R4t=2402 B.
 
-## Exact next action: R4w no-inline compiler experiment
+## R4w rejected result
 
-R4v is the accepted control at 2298 B.
-
-R4w is already staged and live in CI. It applies:
+R4w disabled inlining globally with:
 
 ```text
 -fno-inline-functions
 ```
 
-to the accepted minimum-size LTO build while retaining:
+Authoritative CI:
 
 ```text
-full LTO
--fomit-frame-pointer
--fno-jump-tables
-entry/next-time overlay
-split task metadata
-compact PendSV
-minimum linker script without ARM unwind index
+40666555827  success
+
+R4v 2298 B
+R4w 2594 B
+delta +296 B
 ```
 
-Hypothesis: after aggressive LTO, some inlined helpers may duplicate enough
-code that forcing out-of-line calls reduces resident text, even if runtime cost
-rises.
+Reject R4w. Global no-inline materializes too many helpers and call paths.
+
+However, the symbol split exposed one promising selective experiment:
+
+```text
+R4v arghtos_fatal                 232 B
+
+R4w arghtos_fatal                 164 B
+R4w task_fault_attributed          24 B
+combined                          188 B
+potential local opportunity       ~44 B
+```
+
+This does not prove a 44 B win because global no-inline changes surrounding
+codegen, but it is a strong targeted hypothesis.
+
+See [implementation/R4w-no-inline.md](implementation/R4w-no-inline.md).
+
+## Exact next action: R4x selective fault-helper noinline
+
+Keep R4v as the accepted control at 2298 B.
+
+R4x should apply `noinline` only to the private
+`task_fault_attributed()` helper while leaving normal LTO/inlining enabled
+everywhere else.
 
 Acceptance procedure:
 
-1. Keep R4v as same-revision control.
-2. Run all host/sanitizer/portability gates and Cortex-M23 link.
-3. Compare R4v/R4w physical totals and symbol tables.
-4. Re-audit MSP if call depth/frame structure changes.
-5. Accept only if total physical footprint <2298 B after any MSP adjustment.
-6. Record the result and refresh this file.
-
-Current live workflow compares R4v against R4w.
+1. Add the attribute behind an R4x-only build define.
+2. Keep every other R4v flag and source specialization unchanged.
+3. Run all host, sanitizer, portability, and Cortex-M23 gates.
+4. Compare:
+   * `arghtos_fatal`;
+   * `task_fault_attributed`;
+   * total linked bytes;
+   * call-frame/MSP impact.
+5. Accept only if the adjusted total is <2298 B.
+6. If accepted, retain the helper only in the minimum-size profile; generic
+   and debug source shape should remain unchanged.
+7. Record the result and refresh this file.
 
 ## Architecture rules
 
