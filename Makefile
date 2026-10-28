@@ -12,12 +12,15 @@ M23_COMMON := --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -std=c11 \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -Oz \
 	-Wall -Wextra -Werror -Iinclude -Isrc -Iport/cortex_m23
 
-.PHONY: all host-test host-sanitize m23-compile m23-footprint footprint-report clean
+.PHONY: all portability-check host-test host-sanitize m23-compile m23-footprint footprint-report clean
 
-all: host-test m23-compile
+all: portability-check host-test m23-compile
 
 $(BUILD):
 	mkdir -p $(BUILD)
+
+portability-check:
+	$(PYTHON) tools/check_portable_source.py
 
 host-test: | $(BUILD)
 	$(HOST_CC) $(HOST_CFLAGS) $(HOST_SRCS) -o $(BUILD)/host-tests
