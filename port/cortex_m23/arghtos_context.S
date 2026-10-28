@@ -35,6 +35,15 @@ PendSV_Handler:
 
     mrs r0, psp
     subs r0, #32
+#if ARGHTOS_COMPACT_PENDSV
+    mov r1, r0
+    stmia r1!, {r4-r7}
+    mov r4, r8
+    mov r5, r9
+    mov r6, r10
+    mov r7, r11
+    stmia r1!, {r4-r7}
+#else
     str r4, [r0, #0]
     str r5, [r0, #4]
     str r6, [r0, #8]
@@ -48,6 +57,7 @@ PendSV_Handler:
     mov r1, r11
     str r1, [r0, #28]
     movs r5, #0
+#endif
     b 2f
 
 1:
@@ -82,6 +92,19 @@ PendSV_Handler:
 
 4:
     mov r1, r4
+#if ARGHTOS_COMPACT_PENDSV
+    ldmia r0!, {r4-r7}
+    ldmia r0!, {r2-r3}
+    mov r8, r2
+    mov r9, r3
+    ldmia r0!, {r2-r3}
+    mov r10, r2
+    mov r11, r3
+    msr psp, r0
+    msr primask, r1
+    movs r2, #2
+    mvns r2, r2
+#else
     ldr r4, [r0, #0]
     ldr r5, [r0, #4]
     ldr r6, [r0, #8]
@@ -98,6 +121,7 @@ PendSV_Handler:
     msr psp, r0
     msr primask, r1
     ldr r2, =0xFFFFFFFD
+#endif
     mov lr, r2
     bx lr
 .size PendSV_Handler, .-PendSV_Handler
