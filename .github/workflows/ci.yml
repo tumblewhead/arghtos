@@ -46,6 +46,9 @@ jobs:
       - name: Host live R5g fixed schedule16
         run: make host-test-r5g
 
+      - name: Host live R5h direct schedule16
+        run: make host-test-r5h
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -79,9 +82,12 @@ jobs:
       - name: Cortex-M23 live R5g fixed schedule16
         run: make m23-footprint-r5g
 
+      - name: Cortex-M23 live R5h direct schedule16
+        run: make m23-footprint-r5h
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g; do
+          for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -103,6 +109,7 @@ jobs:
             build/footprint-r5e.json
             build/footprint-r5f.json
             build/footprint-r5g.json
+            build/footprint-r5h.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5a.map
@@ -112,6 +119,7 @@ jobs:
             build/m23-r5e.map
             build/m23-r5f.map
             build/m23-r5g.map
+            build/m23-r5h.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5a-symbols.txt
@@ -121,6 +129,7 @@ jobs:
             build/m23-r5e-symbols.txt
             build/m23-r5f-symbols.txt
             build/m23-r5g-symbols.txt
+            build/m23-r5h-symbols.txt
             build/m23-r4y.elf
             build/m23-r5a.elf
             build/m23-r5b.elf
@@ -129,4 +138,5 @@ jobs:
             build/m23-r5e.elf
             build/m23-r5f.elf
             build/m23-r5g.elf
+            build/m23-r5h.elf
             build/*.su
