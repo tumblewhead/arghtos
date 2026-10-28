@@ -55,6 +55,7 @@ static void test_public_fixed_sizes(void)
     assert(sizeof(arghtos_task_profile_t) == 12u);
 }
 
+#if !ARGHTOS_TRUSTED_CONFIG
 static void test_init_rejects_overlap(void)
 {
     arghtos_task_config_t tasks[2] = {
@@ -67,6 +68,8 @@ static void test_init_rejects_overlap(void)
     assert(arghtos_init(&cfg) == ARGHTOS_ERR_BAD_CONFIG);
     assert((arghtos_test_kernel()->flags & ARGHTOS_KF_INITIALIZED) == 0u);
 }
+
+#endif
 
 static void test_prestart_interrupt_wake_is_rejected(void)
 {
@@ -424,7 +427,9 @@ static void test_fatal_commits_generic_crash_record(void)
 int main(void)
 {
     test_public_fixed_sizes();
+#if !ARGHTOS_TRUSTED_CONFIG
     test_init_rejects_overlap();
+#endif
     test_prestart_interrupt_wake_is_rejected();
     test_start_establishes_normal_interrupt_state();
     test_start_releases_all_periodic_at_one_epoch();
