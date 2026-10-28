@@ -556,6 +556,15 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 
     for (id = 0u; id < init_count; ++id) {
 #if ARGHTOS_UNIFIED_SLOT
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+        /*
+         * Generated static configuration already supplies the exact saved
+         * target context in the application-owned task stack. Preserve the
+         * context token and reset only mutable runtime state.
+         */
+        ARGHTOS_CTRL_NEXT(&controls[id]) = 0u;
+        ARGHTOS_CTRL_STATUS_ID(id) = 0u;
+#else
         void *const stack_top = (void *)(uintptr_t)controls[id].context;
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
         const arghtos_task_fn_t entry = ARGHTOS_TASK_ENTRY(id);
@@ -571,6 +580,7 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
             stack_top,
             arghtos_task_start_trampoline,
             arghtos_task_return_guard);
+#endif
 #endif
 #elif ARGHTOS_COMPACT_DESCRIPTOR
         control_clear(id, &controls[id]);
