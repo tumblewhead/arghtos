@@ -165,8 +165,9 @@ sequenceDiagram
   participant X as Task
 
   A->>K: arghtos_init(config)
+  K->>K: validate descriptors + stack regions
   K->>P: arghtos_port_init()
-  K->>K: validate descriptors / initialize C8+C9
+  K->>K: initialize C8+C9
   K->>P: build initial PSPs
   A->>K: arghtos_start()
   K->>K: release all periodic tasks
