@@ -14,10 +14,17 @@ static _Alignas(8) uint8_t stack1[256];
 static void periodic_task(void) {}
 static void async_task(void) {}
 
+#if ARGHTOS_COMPACT_DESCRIPTOR
+const arghtos_static_task_t arghtos_static_tasks[2] = {
+    { periodic_task, &stack0[sizeof(stack0)], ARGHTOS_STATIC_PERIOD(10u) },
+    { async_task,    &stack1[sizeof(stack1)], ARGHTOS_STATIC_ASYNC(3u) }
+};
+#else
 const arghtos_task_config_t arghtos_static_tasks[2] = {
     { periodic_task, stack0, 10u, sizeof(stack0), 0u, 0u },
     { async_task,    stack1, 0u,  sizeof(stack1), 3u, 0u }
 };
+#endif
 
 arghtos_crash_record_t arghtos_static_crash_record;
 
