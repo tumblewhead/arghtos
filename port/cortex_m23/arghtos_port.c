@@ -171,7 +171,7 @@ arghtos_context_t arghtos_port_build_initial_context(
         sp[i] = 0u;
     }
 
-    sp[13] = (uint32_t)((uintptr_t)return_guard & ~(uintptr_t)1u);
+    sp[13] = (uint32_t)((uintptr_t)return_guard | (uintptr_t)1u);
     sp[14] = (uint32_t)((uintptr_t)thread_start & ~(uintptr_t)1u);
     sp[15] = ARGHTOS_M23_XPSR_T;
 
@@ -215,4 +215,21 @@ void arghtos_port_crash_fill(
 ARGHTOS_NORETURN void arghtos_port_fault_terminal(void)
 {
     arghtos_m23_board_fault_terminal();
+}
+
+
+ARGHTOS_NORETURN void arghtos_m23_hardfault_entry(
+    uint32_t exc_return,
+    const uint32_t *basic_frame,
+    uint32_t msp_at_entry,
+    uint32_t psp_at_entry)
+{
+    arghtos_m23_fault_context_t ctx;
+
+    ctx.msp = msp_at_entry;
+    ctx.psp = psp_at_entry;
+    ctx.exc_return = exc_return;
+    ctx.basic_frame = basic_frame;
+
+    arghtos_fatal(ARGHTOS_FAULT_CPU_EXCEPTION, &ctx);
 }
