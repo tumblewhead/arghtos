@@ -26,12 +26,16 @@ static void task_stub(void)
 #else
 #define ARGHTOS_PROFILE_SLOT_INIT
 #endif
+#if ARGHTOS_SPLIT_META
+#define ARGHTOS_META_SLOT_INIT
+#else
+#define ARGHTOS_META_SLOT_INIT .age_credit = 0u, .status = 0u,
+#endif
 #define SLOT(i, p) { \
     .context = (arghtos_context_t)(uintptr_t)&app_stacks[(i)][sizeof(app_stacks[(i)])], \
     .next_time = 0u, \
     ARGHTOS_PROFILE_SLOT_INIT \
-    .age_credit = 0u, \
-    .status = 0u, \
+    ARGHTOS_META_SLOT_INIT \
     .entry = task_stub, \
     .schedule = ARGHTOS_STATIC_PERIOD(p) \
 }
@@ -45,6 +49,10 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
     SLOT(16, 17u), SLOT(17, 18u), SLOT(18, 19u), SLOT(19, 20u),
     SLOT(20, 21u), SLOT(21, 22u), SLOT(22, 23u), SLOT(23, 24u)
 };
+#if ARGHTOS_SPLIT_META
+__attribute__((section(".arghtos_cfg")))
+arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
+#endif
 #elif ARGHTOS_COMPACT_DESCRIPTOR
 #define CDESC(i, p) \
     { task_stub, &app_stacks[(i)][sizeof(app_stacks[(i)])], ARGHTOS_STATIC_PERIOD(p) }
