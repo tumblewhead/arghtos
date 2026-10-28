@@ -157,15 +157,32 @@ Supported Makefile/CI surfaces are now:
 * final R4y footprint;
 * R3c/R4y map and symbol evidence.
 
+## Final merge-gate evidence
+
+```text
+CI run:    40669529301
+head:      c62e8ac51af76e9ed148e856b2a808c64c1f4cc9
+conclusion: success
+```
+
+All frozen CI steps passed.
+
+Final same-revision footprint evidence:
+
+```text
+R3c reference  3104 B
+R4y minimum    2294 B
+saved           810 B
+```
+
+The commit that records this evidence is documentation-only. Its CI must remain
+green before PR #3 is marked ready.
+
 ## Exact next action
 
-1. Run the final PR #3 CI on this frozen branch head.
-2. Confirm:
-   * all frozen CI steps pass;
-   * R3c is 3104 B physical;
-   * R4y remains 2294 B physical;
-   * PR #3 remains mergeable.
-3. If green, mark PR #3 ready for review/merge.
+1. Confirm CI for this documentation-only handoff commit is green.
+2. Confirm PR #3 remains mergeable.
+3. Mark PR #3 ready for review/merge.
 4. User should merge PR #3, preferably with **Squash and merge**.
 5. After merge, start any new footprint research from fresh canonical `main`,
    using frozen R4y as the control.
