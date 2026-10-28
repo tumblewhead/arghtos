@@ -86,7 +86,7 @@ c.max_run_ticks = max(c.max_run_ticks, elapsed)
 
 The accounting point happens exactly once per completed RUNNING residency.
 
-A same-task "dispatch" caused by reconsideration still closes one residency and starts another if D09 actually saves/restores through PendSV.
+A same-task "dispatch" caused by reconsideration still closes one residency and starts another if D09 actually closes and restarts the residency through the selected port's dispatch path.
 
 # Profile snapshot semantics
 
@@ -194,7 +194,7 @@ It must not:
 
 * call scheduler APIs;
 * format strings;
-* use task PSP;
+* depend on the current task's target-specific execution stack/context;
 * allocate;
 * return.
 
@@ -249,7 +249,7 @@ Reset/power loss during later writes produces a record that looks valid but is h
 * only the fully completed sequence may pass validity checks;
 * prefill crash record with a distinct old pattern to expose stale fields.
 
-## 4. Fatal recursion consumes MSP until overflow
+## 4. Fatal recursion consumes the port's kernel/handler stack until overflow
 
 **Failure scenario:** crash capture faults because crash storage is invalid; HardFault re-enters capture; repeat.
 
@@ -257,7 +257,7 @@ Reset/power loss during later writes produces a record that looks valid but is h
 
 * force a fault inside the capture path in a controlled target test;
 * verify second entry skips normal capture and reaches terminal hook;
-* measure MSP high water during recursion test.
+* measure the selected port's kernel/handler stack high water during recursion testing.
 
 ## 5. Frame pointer assumed valid for kernel invariant fault
 
