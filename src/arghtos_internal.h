@@ -134,6 +134,22 @@
 #define ARGHTOS_R5N_PROVEN_DISPATCH 0
 #endif
 
+#ifndef ARGHTOS_R5O_GENERATED_START_TIMER
+#define ARGHTOS_R5O_GENERATED_START_TIMER 0
+#endif
+
+#ifndef ARGHTOS_R5O_MIN_PERIOD
+#define ARGHTOS_R5O_MIN_PERIOD 0u
+#endif
+
+#if ARGHTOS_R5O_GENERATED_START_TIMER && !ARGHTOS_R5N_PROVEN_DISPATCH
+#error "R5o generated start timer requires accepted R5n generated profile"
+#endif
+
+#if ARGHTOS_R5O_MIN_PERIOD >= ARGHTOS_TIME_HALF_RANGE
+#error "R5o minimum period must satisfy the scheduler half-range rule"
+#endif
+
 #if ARGHTOS_R5N_PROVEN_DISPATCH && !ARGHTOS_R5M_PRISTINE_INIT
 #error "R5n proven dispatch requires the trusted R5m generated profile"
 #endif
