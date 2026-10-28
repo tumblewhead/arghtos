@@ -1157,9 +1157,11 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
 #endif
     arghtos_task_id_t next;
 
+#if !ARGHTOS_R5N_PROVEN_DISPATCH
     if ((kernel.flags & ARGHTOS_KF_STARTED) == 0u) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
+#endif
 
     if (outgoing_context != ARGHTOS_CONTEXT_NONE) {
         arghtos_task_control_t *c;
@@ -1167,10 +1169,12 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
         uint32_t elapsed;
 #endif
 
+#if !ARGHTOS_R5N_PROVEN_DISPATCH
         if ((kernel.current_task == ARGHTOS_TASK_ID_INVALID) ||
             !task_id_valid(kernel.current_task)) {
             arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
         }
+#endif
 
         c = &controls[kernel.current_task];
         c->context = outgoing_context;
@@ -1196,9 +1200,13 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
                 ARGHTOS_CTRL_AGE_ID(kernel.current_task) = 0u;
             }
         }
+#if ARGHTOS_R5N_PROVEN_DISPATCH
+    }
+#else
     } else if (kernel.current_task != ARGHTOS_TASK_ID_INVALID) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
+#endif
 
     next = arghtos_select_next();
 
@@ -1207,10 +1215,12 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
         return ARGHTOS_CONTEXT_NONE;
     }
 
+#if !ARGHTOS_R5N_PROVEN_DISPATCH
     if ((ARGHTOS_CTRL_STATE_ID(next) != ARGHTOS_TASK_READY) ||
         (controls[next].context == ARGHTOS_CONTEXT_NONE)) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
+#endif
 
     ARGHTOS_CTRL_SET_STATE_ID(next, ARGHTOS_TASK_RUNNING);
     if (task_is_async(next)) {
@@ -1319,6 +1329,7 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
 {
     arghtos_task_id_t id = kernel.current_task;
 
+#if !ARGHTOS_R5N_PROVEN_DISPATCH
     if (!task_id_valid(id)) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
@@ -1327,19 +1338,26 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
 #endif
+#endif
 
     if (ARGHTOS_TASK_PERIOD(id) != 0u) {
         for (;;) {
-            arghtos_result_t r;
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
             entry();
 #else
             ARGHTOS_TASK_ENTRY(id)();
 #endif
-            r = arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u);
-            if (r != ARGHTOS_OK) {
-                arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+#if ARGHTOS_R5N_PROVEN_DISPATCH
+            (void)arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u);
+#else
+            {
+                const arghtos_result_t r =
+                    arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u);
+                if (r != ARGHTOS_OK) {
+                    arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+                }
             }
+#endif
         }
     }
 
