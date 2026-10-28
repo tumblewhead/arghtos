@@ -67,17 +67,15 @@ Canonical first footprint build uses `-Oz`, section GC, no libc, and all section
   "task_descriptors": 512,
   "crash_record": 64,
   "linker_resident_metadata": 16,
-  "arghtos_only_msp": 0,
-  "arghtos_resident_total": 4106,
+  "arghtos_only_msp": 104,
+  "arghtos_resident_total": 4210,
   "soft_target": 1536,
-  "delta_to_target": -2570,
+  "delta_to_target": -2674,
   "target_met": false
 }
 ```
 
-The raw linker report above keeps `arghtos_only_msp=0` so code/data attribution can be read separately.
-
-Static stack-usage analysis of the stabilized `-Oz` build gives a current ArghtOS-only MSP lower bound of approximately 104 B for the normal SVC sleep path:
+The canonical footprint report now includes the current static ArghtOS-only MSP lower bound of 104 B. That bound comes from stack-usage analysis of the stabilized `-Oz` build for the normal SVC sleep path:
 
 ```text
 SVC assembly save          8 B
@@ -92,9 +90,12 @@ The first-dispatch port also now reclaims the startup MSP hardware frame before 
 Therefore:
 
 ```text
-measured before MSP    4106 B
+linked before MSP      4106 B
+static ArghtOS MSP      104 B
+-----------------------------
+reported lower bound   4210 B
 soft target            1536 B
-excess                 2570 B
+excess                 2674 B
 ```
 
 # Compiler-size sweep
