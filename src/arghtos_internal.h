@@ -218,6 +218,15 @@
 #error "R5v unit-period timer requires accepted R5t profile with minimum period 1"
 #endif
 
+#ifndef ARGHTOS_R5W_TRUSTED_CRASH_PORT
+#define ARGHTOS_R5W_TRUSTED_CRASH_PORT 0
+#endif
+
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT && \
+    (!ARGHTOS_R5S_PRESEEDED_CRASH || !ARGHTOS_R5N_PROVEN_DISPATCH)
+#error "R5w trusted crash port requires accepted R5s and R5n profiles"
+#endif
+
 #if ARGHTOS_R5N_PROVEN_DISPATCH && !ARGHTOS_R5M_PRISTINE_INIT
 #error "R5n proven dispatch requires the trusted R5m generated profile"
 #endif
