@@ -26,11 +26,12 @@ Default capacity:
 Final R4 control:
 
 ```text
-R4y complete resident footprint = 2294 B
-linked before MSP               = 2214 B
-ArghtOS-only MSP                 =   80 B
-soft target                      = 1536 B
-remaining gap                    =  758 B
+R4y frozen control             = 2294 B
+R5a accepted minimum            = 2290 B
+linked before MSP               = 2210 B
+ArghtOS-only MSP                =   80 B
+soft target                     = 1536 B
+remaining gap                   =  754 B
 ```
 
 The final same-revision profiling-enabled R3c reference on the frozen R4 source
@@ -76,68 +77,81 @@ R4y uses:
 * compact PendSV R4-R11 save/restore;
 * direct SVC branch to saved EXC_RETURN.
 
-## Exact next action: R5a compact PendSV tail/alignment
+## R5a accepted result
 
-Keep R4y as same-revision control.
+Authoritative CI:
 
-R5a should change only `port/cortex_m23/arghtos_context.S`, behind an
-R5a-only assembly define.
+```text
+40670407899  success
 
-### First-dispatch xPSR alignment decode
-
-Current:
-
-```asm
-ldr  r1, [r5, #28]
-lsrs r1, r1, #9
-movs r2, #1
-ands r1, r2
-lsls r1, r1, #2
+R4y 2294 B
+R5a 2290 B
+saved   4 B
 ```
 
-Experiment:
+`PendSV_Handler` shrank from 108 B to 104 B. All measured C symbols are
+unchanged and the 80 B MSP bound remains valid.
+
+See
+[implementation/R5a-compact-pendsv-tail.md](implementation/R5a-compact-pendsv-tail.md).
+
+## Exact next action: R5b compact EXC_RETURN bit tests
+
+Keep R5a as same-revision control.
+
+R5b should add one assembly-only define on top of R5a.
+
+Current PendSV entry test:
 
 ```asm
-ldr  r1, [r5, #28]
-lsrs r1, r1, #7
+mov  r3, lr
 movs r2, #4
-ands r1, r2
+tst  r3, r2
+beq  1f
 ```
 
-Both produce either 0 or 4 from xPSR bit 9.
-
-### PendSV exception return
-
-Current compact path:
+R5b candidate:
 
 ```asm
-mov lr, r2
-bx  lr
+mov  r3, lr
+lsrs r3, r3, #3
+bcc  1f
 ```
 
-R5a:
+LSR #3 places original EXC_RETURN bit 2 in carry. Carry clear means bit 2 was
+zero, selecting the MSP/first-dispatch path. R3 is scratch after the test.
+
+Current HardFault stack-selection test:
 
 ```asm
-bx r2
+mov  r0, lr
+mrs  r2, msp
+mrs  r3, psp
+movs r1, #4
+tst  r0, r1
+beq  1f
 ```
 
-R4y already proved the same direct-EXC_RETURN branch principle in SVC.
+R5b candidate:
 
-### Acceptance
+```asm
+mov  r0, lr
+mrs  r2, msp
+mrs  r3, psp
+lsrs r1, r0, #3
+bcc  1f
+```
 
-1. Preserve R4y control.
-2. Add R5a target only; do not mutate R4y.
+R0 retains the original EXC_RETURN value passed to the C hard-fault bridge.
+
+Acceptance:
+
+1. R5a remains control.
+2. R5b includes accepted R5a compaction plus only these bit-test changes.
 3. Run frozen host/sanitizer/portability gates.
-4. Link R4y and R5a in the same revision.
-5. Inspect disassembly and symbol sizes.
-6. Verify:
-   * first-dispatch alignment result remains exactly 0 or 4;
-   * saved task frame remains unchanged;
-   * PSP/MSP ownership is unchanged;
-   * PRIMASK/idle behavior is unchanged;
-   * MSP bound remains 80 B.
-7. Accept only if physical total <2294 B.
+4. Link R5a/R5b same revision.
+5. Inspect PendSV/HardFault disassembly.
+6. Verify stack-selection semantics and MSP bound.
+7. Accept only if physical total <2290 B.
 8. Record result and refresh this file.
 
-After R5a, the next likely assembly experiment is compact EXC_RETURN bit-2
-testing in PendSV/HardFault. Do not combine it with R5a until R5a is measured.
