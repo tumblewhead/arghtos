@@ -174,6 +174,14 @@
 #error "R5p periodic prefix exceeds configured task count"
 #endif
 
+#ifndef ARGHTOS_R5Q_PARTITIONED_TIME
+#define ARGHTOS_R5Q_PARTITIONED_TIME 0
+#endif
+
+#if ARGHTOS_R5Q_PARTITIONED_TIME && !ARGHTOS_R5P_GENERATED_ORDER
+#error "R5q partitioned time scan requires accepted R5p ordering"
+#endif
+
 #if ARGHTOS_R5N_PROVEN_DISPATCH && !ARGHTOS_R5M_PRISTINE_INIT
 #error "R5n proven dispatch requires the trusted R5m generated profile"
 #endif
