@@ -142,6 +142,11 @@ arghtos_crash_record_t arghtos_static_crash_record;
 
 static void reset_all(void)
 {
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+    /* Entry pointers live in the generated target stack image in this profile. */
+    (void)periodic_task;
+    (void)async_task;
+#endif
     arghtos_test_reset();
 #if ARGHTOS_UNIFIED_SLOT
 #if ARGHTOS_R5L_PREBUILT_CONTEXT
