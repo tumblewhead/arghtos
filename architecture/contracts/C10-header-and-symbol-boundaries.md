@@ -83,6 +83,7 @@ arghtos_result_t arghtos_port_init(void);
 bool arghtos_port_stack_valid(void *stack_base, uint32_t stack_size);
 
 typedef uintptr_t arghtos_context_t;
+typedef uintptr_t arghtos_irq_key_t;
 #define ARGHTOS_CONTEXT_NONE ((arghtos_context_t)0)
 
 arghtos_time_t arghtos_port_time_now(void);
@@ -116,13 +117,7 @@ void arghtos_port_crash_fill(
 _Noreturn void arghtos_port_fault_terminal(void);
 ```
 
-It also declares:
-
-```c
-void arghtos_timer_interrupt(void);
-```
-
-for invocation by the selected timer vector/adapter.
+The target port does not declare kernel callbacks in this header; those live in `arghtos_kernel_port.h`.
 
 # Private kernel-to-port callback header: arghtos_kernel_port.h
 
@@ -150,7 +145,7 @@ This header may contain:
 
 * C8 `arghtos_task_control_t`;
 * C9 `arghtos_kernel_state_t`;
-* C4 SVC IDs;
+* architecture-neutral kernel service IDs;
 * C6 selector/dispatch callbacks;
 * internal lifecycle transition helpers;
 * fatal entry;
@@ -164,17 +159,10 @@ _Noreturn void arghtos_task_start_trampoline(void);
 _Noreturn void arghtos_task_return_guard(void);
 ```
 
-Representative required internal symbols:
+Representative required internal symbol:
 
 ```c
 arghtos_task_id_t arghtos_select_next(void);
-
-
-arghtos_result_t arghtos_kernel_service(
-    uint8_t service_id,
-    uint32_t arg0);
-
-
 ```
 
 # Visibility rule
