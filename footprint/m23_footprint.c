@@ -8,7 +8,7 @@ extern ARGHTOS_NORETURN void arghtos_task_start_trampoline(void);
 extern ARGHTOS_NORETURN void arghtos_task_return_guard(void);
 
 __attribute__((section(".app_stacks"), aligned(8)))
-static uint8_t app_stacks[32][128];
+static uint8_t app_stacks[24][128];
 
 __attribute__((section(".app_text"), noinline))
 static void task_stub(void)
@@ -20,22 +20,20 @@ static void task_stub(void)
 
 #if ARGHTOS_STATIC_CONFIG
 __attribute__((section(".arghtos_cfg")))
-const arghtos_task_config_t arghtos_static_tasks[32] = {
+const arghtos_task_config_t arghtos_static_tasks[24] = {
     DESC(0, 1u), DESC(1, 2u), DESC(2, 3u), DESC(3, 4u),
     DESC(4, 5u), DESC(5, 6u), DESC(6, 7u), DESC(7, 8u),
     DESC(8, 9u), DESC(9, 10u), DESC(10, 11u), DESC(11, 12u),
     DESC(12, 13u), DESC(13, 14u), DESC(14, 15u), DESC(15, 16u),
     DESC(16, 17u), DESC(17, 18u), DESC(18, 19u), DESC(19, 20u),
-    DESC(20, 21u), DESC(21, 22u), DESC(22, 23u), DESC(23, 24u),
-    DESC(24, 25u), DESC(25, 26u), DESC(26, 27u), DESC(27, 28u),
-    DESC(28, 29u), DESC(29, 30u), DESC(30, 31u), DESC(31, 32u)
+    DESC(20, 21u), DESC(21, 22u), DESC(22, 23u), DESC(23, 24u)
 };
 
 __attribute__((section(".arghtos_crash"), aligned(4)))
 arghtos_crash_record_t arghtos_static_crash_record;
 #else
 __attribute__((section(".arghtos_cfg")))
-static const arghtos_task_config_t task_cfg[32] = {
+static const arghtos_task_config_t task_cfg[24] = {
     DESC(0, 1u), DESC(1, 2u), DESC(2, 3u), DESC(3, 4u),
     DESC(4, 5u), DESC(5, 6u), DESC(6, 7u), DESC(7, 8u),
     DESC(8, 9u), DESC(9, 10u), DESC(10, 11u), DESC(11, 12u),
@@ -53,7 +51,7 @@ __attribute__((section(".app_rodata")))
 static const arghtos_config_t config = {
     task_cfg,
     &crash_record,
-    32u,
+    24u,
     {0u, 0u, 0u}
 };
 #endif
