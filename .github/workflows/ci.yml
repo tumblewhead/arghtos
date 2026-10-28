@@ -326,4 +326,5 @@ jobs:
             build/m23-r4k-symbols.txt
             build/m23-r4l-symbols.txt
             build/m23-r4m-symbols.txt
+            build/m23-r4m.elf
             build/*.su
