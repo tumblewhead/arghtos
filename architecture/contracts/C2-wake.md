@@ -23,9 +23,12 @@ This function is valid only from a maskable HANDLER context that participates in
 
 It is invalid from TASK context, NMI, or fatal-fault handling.
 
-# Precondition
+# Preconditions
 
-`task_id` names a configured asynchronous task.
+* the scheduler has completed `arghtos_start()` and C9 STARTED is set;
+* `task_id` names a configured asynchronous task.
+
+An interrupt wake received after init but before scheduler start returns `ARGHTOS_ERR_BAD_STATE` and performs no task-state mutation.
 
 The device handler has already done whatever minimum hardware acknowledgment or data preservation is required to prevent loss at the peripheral boundary.
 
@@ -80,7 +83,7 @@ sequenceDiagram
 * `ARGHTOS_OK`: valid target; wake indication accepted or already represented.
 * `ARGHTOS_ERR_BAD_TASK_ID`: ID out of range.
 * `ARGHTOS_ERR_BAD_TASK_CLASS`: target is periodic.
-* `ARGHTOS_ERR_BAD_STATE`: target is FAULTED.
+* `ARGHTOS_ERR_BAD_STATE`: scheduler has not started, or target is FAULTED.
 * `ARGHTOS_ERR_BAD_CONTEXT`: caller is not a supported maskable handler.
 
 The function must not fail due to memory or queue exhaustion.
