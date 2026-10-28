@@ -52,6 +52,9 @@ jobs:
       - name: Host live R5q partitioned time scan
         run: make host-test-r5q
 
+      - name: Host live R5r proven age-reset elision
+        run: make host-test-r5r
+
       - name: Host live R5c compact wake result
         run: make host-test-r5c
 
@@ -133,9 +136,12 @@ jobs:
       - name: Cortex-M23 live R5q partitioned time scan
         run: make m23-footprint-r5q
 
+      - name: Cortex-M23 live R5r proven age-reset elision
+        run: make m23-footprint-r5r
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h r5i r5k r5l r5m r5n r5o r5p r5q; do
+          for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h r5i r5k r5l r5m r5n r5o r5p r5q r5r; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -167,6 +173,7 @@ jobs:
             build/footprint-r5o.json
             build/footprint-r5p.json
             build/footprint-r5q.json
+            build/footprint-r5r.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5a.map
@@ -185,6 +192,7 @@ jobs:
             build/m23-r5o.map
             build/m23-r5p.map
             build/m23-r5q.map
+            build/m23-r5r.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5a-symbols.txt
@@ -203,6 +211,7 @@ jobs:
             build/m23-r5o-symbols.txt
             build/m23-r5p-symbols.txt
             build/m23-r5q-symbols.txt
+            build/m23-r5r-symbols.txt
             build/m23-r4y.elf
             build/m23-r5a.elf
             build/m23-r5b.elf
@@ -220,4 +229,5 @@ jobs:
             build/m23-r5o.elf
             build/m23-r5p.elf
             build/m23-r5q.elf
+            build/m23-r5r.elf
             build/*.su
