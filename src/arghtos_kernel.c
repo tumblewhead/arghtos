@@ -24,6 +24,13 @@ extern uint16_t arghtos_static_schedule16[ARGHTOS_MAX_TASKS];
 extern uint32_t arghtos_static_schedule_overflow[ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT];
 #endif
 
+#if ARGHTOS_R5H_DIRECT_SCHEDULE16
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((arghtos_static_schedule16[(id)] & ARGHTOS_R5G_ASYNC_BASE) != 0u) ? \
+        0u : (uint32_t)arghtos_static_schedule16[(id)])
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(arghtos_static_schedule16[(id)] & 0x00FFu))
+#else
 static uint32_t r5g_schedule_get(arghtos_task_id_t id)
 {
     const uint16_t code = arghtos_static_schedule16[id];
@@ -45,6 +52,7 @@ static uint32_t r5g_schedule_get(arghtos_task_id_t id)
         0u : ARGHTOS_TASK_SCHEDULE(id))
 #define ARGHTOS_TASK_PRIORITY(id) \
     ((uint8_t)(ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_MASK))
+#endif
 #elif ARGHTOS_R5F_COMPRESSED_SCHEDULE
 uint32_t arghtos_r5f_schedule_get(arghtos_task_id_t id);
 #define ARGHTOS_TASK_SCHEDULE(id) arghtos_r5f_schedule_get((id))
