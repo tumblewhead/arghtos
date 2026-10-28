@@ -47,6 +47,16 @@ bool arghtos_port_is_task_context(void);
 bool arghtos_port_is_handler_context(void);
 
 void arghtos_port_request_dispatch(void);
+void arghtos_port_start(void);
+void arghtos_port_idle_wait(void);
+
+uintptr_t arghtos_port_build_initial_psp(
+    void *stack_base,
+    uint32_t stack_size,
+    void (*thread_start)(void),
+    void (*return_guard)(void));
+
+_Noreturn void arghtos_port_fault_terminal(void);
 ```
 
 The fake port records calls and exposes deterministic hook points.
