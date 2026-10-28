@@ -3,6 +3,8 @@
 #include "arghtos_internal.h"
 #include "arghtos_kernel_port.h"
 
+#include <stdatomic.h>
+
 static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
 static arghtos_kernel_state_t kernel;
 
@@ -326,6 +328,7 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 ARGHTOS_NORETURN void arghtos_start(void)
 {
     arghtos_time_t start;
+    arghtos_irq_key_t key;
     bool have_timer = false;
     arghtos_time_t earliest = 0u;
     uint32_t earliest_delta = 0u;
@@ -336,6 +339,7 @@ ARGHTOS_NORETURN void arghtos_start(void)
         arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
     }
 
+    key = arghtos_port_critical_enter();
     start = arghtos_port_time_now();
     kernel.start_time = start;
 
@@ -348,13 +352,15 @@ ARGHTOS_NORETURN void arghtos_start(void)
         }
     }
 
+    kernel.flags |= ARGHTOS_KF_STARTED;
+
     if (have_timer) {
         arghtos_port_timer_arm(earliest);
     } else {
         arghtos_port_timer_disarm();
     }
 
-    kernel.flags |= ARGHTOS_KF_STARTED;
+    arghtos_port_critical_exit(key);
     arghtos_port_start();
 }
 
@@ -421,6 +427,12 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     }
 
     key = arghtos_port_critical_enter();
+
+    if ((kernel.flags & ARGHTOS_KF_STARTED) == 0u) {
+        arghtos_port_critical_exit(key);
+        return ARGHTOS_ERR_BAD_STATE;
+    }
+
     dispatch = wake_locked(task_id, &result);
     arghtos_port_critical_exit(key);
 
@@ -618,6 +630,10 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
     const arghtos_time_t now = arghtos_port_time_now();
     arghtos_task_id_t next;
 
+    if ((kernel.flags & ARGHTOS_KF_STARTED) == 0u) {
+        arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
+    }
+
     if (outgoing_context != ARGHTOS_CONTEXT_NONE) {
         arghtos_task_control_t *c;
         uint32_t elapsed;
@@ -744,6 +760,7 @@ ARGHTOS_NORETURN void arghtos_fatal(
             r->flags |= ARGHTOS_CRASH_F_PORT_STATE_VALID;
         }
 
+        atomic_signal_fence(memory_order_seq_cst);
         r->commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC;
     }
 
