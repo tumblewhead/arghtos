@@ -45,6 +45,14 @@ arghtos_context_t arghtos_port_build_initial_context_top(
     void (*thread_start)(void),
     void (*return_guard)(void));
 
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+arghtos_context_t arghtos_port_build_initial_context_top_arg(
+    void *stack_top,
+    void (*thread_start)(arghtos_task_fn_t),
+    void (*return_guard)(void),
+    arghtos_task_fn_t initial_arg);
+#endif
+
 void arghtos_port_crash_fill(
     arghtos_crash_record_t *record,
     const void *port_fault_context);
