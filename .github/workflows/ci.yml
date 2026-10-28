@@ -25,6 +25,9 @@ jobs:
       - name: Host size-first selector tests
         run: make host-test-size-selector
 
+      - name: Host size-first crash-clear tests
+        run: make host-test-size-crash-clear
+
       - name: Host compact-profile tests
         run: make host-test-compact
 
@@ -97,6 +100,9 @@ jobs:
       - name: Cortex-M23 footprint looped crash copy R4c
         run: make m23-footprint-r4c
 
+      - name: Cortex-M23 footprint whole-record crash clear R4d
+        run: make m23-footprint-r4d
+
       - name: Symbol-size report
         run: |
           nm -S --size-sort --radix=d build/m23.elf > build/m23-symbols.txt || true
@@ -111,6 +117,7 @@ jobs:
           nm -S --size-sort --radix=d build/m23-r4a.elf > build/m23-r4a-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-r4b.elf > build/m23-r4b-symbols.txt || true
           nm -S --size-sort --radix=d build/m23-r4c.elf > build/m23-r4c-symbols.txt || true
+          nm -S --size-sort --radix=d build/m23-r4d.elf > build/m23-r4d-symbols.txt || true
           echo '--- baseline ---'
           cat build/footprint.json
           echo '--- compact R1a ---'
@@ -139,6 +146,8 @@ jobs:
           cat build/footprint-r4b.json
           echo '--- looped crash copy R4c ---'
           cat build/footprint-r4c.json
+          echo '--- whole-record crash clear R4d ---'
+          cat build/footprint-r4d.json
           echo '--- largest R3c symbols ---'
           tail -80 build/m23-r3c-symbols.txt || true
           echo '--- largest R4a symbols ---'
@@ -147,6 +156,8 @@ jobs:
           tail -80 build/m23-r4b-symbols.txt || true
           echo '--- largest R4c symbols ---'
           tail -80 build/m23-r4c-symbols.txt || true
+          echo '--- largest R4d symbols ---'
+          tail -80 build/m23-r4d-symbols.txt || true
 
       - name: Upload footprint evidence
         uses: actions/upload-artifact@v4
@@ -165,6 +176,7 @@ jobs:
             build/footprint-r4a.json
             build/footprint-r4b.json
             build/footprint-r4c.json
+            build/footprint-r4d.json
             build/m23.map
             build/m23-compact.map
             build/m23-static.map
@@ -177,6 +189,7 @@ jobs:
             build/m23-r4a.map
             build/m23-r4b.map
             build/m23-r4c.map
+            build/m23-r4d.map
             build/m23-symbols.txt
             build/m23-compact-symbols.txt
             build/m23-static-symbols.txt
@@ -189,4 +202,5 @@ jobs:
             build/m23-r4a-symbols.txt
             build/m23-r4b-symbols.txt
             build/m23-r4c-symbols.txt
+            build/m23-r4d-symbols.txt
             build/*.su
