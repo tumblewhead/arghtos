@@ -160,7 +160,7 @@ D10 reserves that 300 B as:
 
 These are red-line measurement envelopes, not predictions.
 
-I0 demonstrates that these red-line budgets are not feasible for the current feature set: the linked implementation is 4098 B before MSP.
+I0 demonstrates that these red-line budgets are not feasible for the current feature set: the linked implementation is 4106 B before MSP.
 
 # First implementation checkpoint
 
@@ -245,7 +245,7 @@ Heavy instrumentation inside critical/PendSV paths can invalidate measured overh
 
 The next stage may implement D01-D09 and the D10/D11 support tooling.
 
-The footprint-first checkpoint is complete. Portable implementation and host verification may continue, but any effort aimed at the 1.5 KiB goal must first address the measured 2562-byte pre-MSP deficit.
+The footprint-first checkpoint is complete. Portable implementation and host verification may continue, but any effort aimed at the 1.5 KiB goal must first address the measured 2570-byte pre-MSP deficit.
 
 # Portability gate
 
@@ -261,3 +261,12 @@ The portable kernel boundary is now a hard implementation gate:
 * the host fake port and Cortex-M23 reference port compile the same kernel source unchanged.
 
 A new target that requires editing portable kernel source does not pass the porting gate; the abstract port ABI must be reconsidered instead.
+
+
+# I0 static context/MSP evidence
+
+Static disassembly confirms the Cortex-M23 reference port saves/restores R4-R11 symmetrically around the hardware frame, routes task services through SVC, and routes HardFault into generic crash capture.
+
+Compiler stack-usage evidence gives a normal SVC sleep path of approximately 104 B of ArghtOS-only MSP, versus the earlier 48 B red-line assumption. The first-dispatch assembly now restores the pre-exception MSP before the first PSP return so the startup hardware frame is not stranded permanently.
+
+Hardware register-canary and high-water tests remain mandatory.
