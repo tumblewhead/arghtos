@@ -144,6 +144,8 @@ _Static_assert(sizeof(arghtos_crash_record_t) == 64u,
 
 `commit_magic` is cleared first and written valid last.
 
+Before the final commit-marker write, portable C executes a C11 release fence. The Cortex-M23 reference compiler lowers this to a DMB, ensuring prior crash-record stores are ordered before the validity marker.
+
 A record is valid only if magic, version, size, and commit marker all match.
 
 # Fatal kernel entry
