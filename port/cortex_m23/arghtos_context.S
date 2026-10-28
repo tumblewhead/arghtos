@@ -33,9 +33,14 @@ SVC_Handler:
 .thumb_func
 PendSV_Handler:
     mov r3, lr
+#if ARGHTOS_R5B_COMPACT_EXC_CHECKS
+    lsrs r3, r3, #3
+    bcc 1f
+#else
     movs r2, #4
     tst r3, r2
     beq 1f
+#endif
 
     mrs r0, psp
     subs r0, #32
@@ -148,9 +153,14 @@ HardFault_Handler:
     mov r0, lr
     mrs r2, msp
     mrs r3, psp
+#if ARGHTOS_R5B_COMPACT_EXC_CHECKS
+    lsrs r1, r0, #3
+    bcc 1f
+#else
     movs r1, #4
     tst r0, r1
     beq 1f
+#endif
     mov r1, r3
     b arghtos_m23_hardfault_entry
 1:
