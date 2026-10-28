@@ -283,6 +283,27 @@ C1 requires `thread_start` to be the kernel task-start trampoline, not the appli
 
 The `return_guard` is a fatal kernel guard that must never return.
 
+# Cortex-M23 crash-payload profile
+
+The portable C5 crash record reserves ten 32-bit words for port-defined state.
+
+The Cortex-M23 reference port uses one port-format identifier for this payload:
+
+```text
+word 0  MSP
+word 1  PSP
+word 2  EXC_RETURN
+word 3  stacked R0
+word 4  stacked R1
+word 5  stacked R2
+word 6  stacked R3
+word 7  stacked LR
+word 8  stacked PC
+word 9  stacked xPSR
+```
+
+`arghtos_port_crash_fill()` owns extraction of those values from the opaque `port_fault_context` or current processor state. The portable kernel only zeroes the payload, calls the port, and commits the record.
+
 # First start
 
 `arghtos_port_start()`:
