@@ -69,6 +69,15 @@
 #error "R5d compact service outcome requires specialized production services"
 #endif
 
+#ifndef ARGHTOS_R5E_AGE_NEXT_OVERLAY
+#define ARGHTOS_R5E_AGE_NEXT_OVERLAY 0
+#endif
+
+#if ARGHTOS_R5E_AGE_NEXT_OVERLAY && \
+    (!ARGHTOS_ENTRY_NEXT_OVERLAY || !ARGHTOS_SPLIT_META || ARGHTOS_RUNTIME_PROFILING)
+#error "R5e age/deadline overlay requires no-profile split entry/next profile"
+#endif
+
 #if ARGHTOS_COMPACT_DESCRIPTOR && !ARGHTOS_STATIC_CONFIG
 #error "ARGHTOS_COMPACT_DESCRIPTOR requires ARGHTOS_STATIC_CONFIG=1"
 #endif
@@ -147,6 +156,9 @@ typedef struct {
     union {
         arghtos_task_fn_t entry;
         arghtos_time_t    next_time;
+#if ARGHTOS_R5E_AGE_NEXT_OVERLAY
+        uint8_t           age_credit;
+#endif
     } entry_or_next;
 #else
     arghtos_time_t    next_time;
@@ -178,14 +190,24 @@ typedef struct {
 #endif
 
 #if ARGHTOS_SPLIT_META
+#if ARGHTOS_R5E_AGE_NEXT_OVERLAY
+typedef struct {
+    uint8_t status;
+} arghtos_task_meta_t;
+#else
 typedef struct {
     uint8_t age_credit;
     uint8_t status;
 } arghtos_task_meta_t;
+#endif
 extern arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
 #define ARGHTOS_CTRL_META(c) \
     (arghtos_static_meta[(size_t)((c) - arghtos_static_slots)])
+#if ARGHTOS_R5E_AGE_NEXT_OVERLAY
+#define ARGHTOS_CTRL_AGE(c)    ((c)->entry_or_next.age_credit)
+#else
 #define ARGHTOS_CTRL_AGE(c)    (ARGHTOS_CTRL_META(c).age_credit)
+#endif
 #define ARGHTOS_CTRL_STATUS(c) (ARGHTOS_CTRL_META(c).status)
 #else
 #define ARGHTOS_CTRL_AGE(c)    ((c)->age_credit)
@@ -294,6 +316,9 @@ _Static_assert(sizeof(arghtos_crash_record_t) == 64u, "crash record ABI changed"
 #if ARGHTOS_UNIFIED_SLOT
 #if ARGHTOS_RUNTIME_PROFILING
 _Static_assert(sizeof(arghtos_task_control_t) == 24u, "32-bit unified task slot ABI changed");
+#elif ARGHTOS_R5E_AGE_NEXT_OVERLAY
+_Static_assert(sizeof(arghtos_task_control_t) == 12u, "32-bit R5e core slot ABI changed");
+_Static_assert(sizeof(arghtos_task_meta_t) == 1u, "R5e metadata ABI changed");
 #elif ARGHTOS_ENTRY_NEXT_OVERLAY
 _Static_assert(sizeof(arghtos_task_control_t) == 12u, "32-bit entry-overlay core slot ABI changed");
 _Static_assert(sizeof(arghtos_task_meta_t) == 2u, "entry-overlay metadata ABI changed");
