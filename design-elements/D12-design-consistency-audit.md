@@ -245,3 +245,18 @@ Heavy instrumentation inside critical/PendSV paths can invalidate measured overh
 The next stage may implement D01-D09 and the D10/D11 support tooling.
 
 Implementation should proceed **footprint-first**, with the linkable skeleton checkpoint before deep feature coding.
+
+# Portability gate
+
+The portable kernel boundary is now a hard implementation gate:
+
+* `src/arghtos_kernel.c` is architecture-neutral C11;
+* `arghtos_port.h` is the architecture-neutral kernel-to-port ABI;
+* `arghtos_kernel_port.h` is the architecture-neutral port-to-kernel callback ABI;
+* all target-specific code/headers live under `port/<target>/`;
+* task continuations are opaque `arghtos_context_t` tokens;
+* public crash records contain a generic port payload rather than architecture registers;
+* task service calls use `arghtos_port_service_call()` rather than a kernel-known trap mechanism;
+* the host fake port and Cortex-M23 reference port compile the same kernel source unchanged.
+
+A new target that requires editing portable kernel source does not pass the porting gate; the abstract port ABI must be reconsidered instead.
