@@ -77,6 +77,10 @@
 #define ARGHTOS_SPLIT_META 0
 #endif
 
+#ifndef ARGHTOS_ENTRY_NEXT_OVERLAY
+#define ARGHTOS_ENTRY_NEXT_OVERLAY 0
+#endif
+
 #ifndef ARGHTOS_ID_NATIVE_META
 #define ARGHTOS_ID_NATIVE_META 0
 #endif
@@ -114,6 +118,10 @@
 #if ARGHTOS_SPLIT_META && \
     (!ARGHTOS_UNIFIED_SLOT || ARGHTOS_RUNTIME_PROFILING)
 #error "split metadata requires the no-profile unified-slot minimum profile"
+#endif
+
+#if ARGHTOS_ENTRY_NEXT_OVERLAY && !ARGHTOS_SPLIT_META
+#error "entry/next-time overlay requires split task metadata"
 #endif
 
 #if ARGHTOS_ID_NATIVE_META && !ARGHTOS_SPLIT_META
@@ -155,7 +163,14 @@ typedef struct {
 #if ARGHTOS_COMPACT_RUNTIME
 typedef struct {
     arghtos_context_t context;
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+    union {
+        arghtos_task_fn_t entry;
+        arghtos_time_t    next_time;
+    } entry_or_next;
+#else
     arghtos_time_t    next_time;
+#endif
 #if ARGHTOS_RUNTIME_PROFILING
     uint32_t          total_cpu_ticks;
     uint16_t          max_run_ticks;
@@ -165,10 +180,22 @@ typedef struct {
     uint8_t           status;
 #endif
 #if ARGHTOS_UNIFIED_SLOT
+#if !ARGHTOS_ENTRY_NEXT_OVERLAY
     arghtos_task_fn_t entry;
+#endif
     uint32_t          schedule;
 #endif
 } arghtos_task_control_t;
+
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+#define ARGHTOS_CTRL_NEXT(c)  ((c)->entry_or_next.next_time)
+#define ARGHTOS_CTRL_ENTRY(c) ((c)->entry_or_next.entry)
+#else
+#define ARGHTOS_CTRL_NEXT(c)  ((c)->next_time)
+#if ARGHTOS_UNIFIED_SLOT
+#define ARGHTOS_CTRL_ENTRY(c) ((c)->entry)
+#endif
+#endif
 
 #if ARGHTOS_SPLIT_META
 typedef struct {
@@ -236,6 +263,7 @@ typedef struct {
     uint8_t           flags;
 } arghtos_task_control_t;
 
+#define ARGHTOS_CTRL_NEXT(c) ((c)->next_time)
 #define ARGHTOS_CTRL_AGE(c) ((c)->age_credit)
 #define ARGHTOS_CTRL_STATE(c) ((c)->state)
 #define ARGHTOS_CTRL_SET_STATE(c, v) ((c)->state = (uint8_t)(v))
@@ -286,6 +314,9 @@ _Static_assert(sizeof(arghtos_crash_record_t) == 64u, "crash record ABI changed"
 #if ARGHTOS_UNIFIED_SLOT
 #if ARGHTOS_RUNTIME_PROFILING
 _Static_assert(sizeof(arghtos_task_control_t) == 24u, "32-bit unified task slot ABI changed");
+#elif ARGHTOS_ENTRY_NEXT_OVERLAY
+_Static_assert(sizeof(arghtos_task_control_t) == 12u, "32-bit entry-overlay core slot ABI changed");
+_Static_assert(sizeof(arghtos_task_meta_t) == 2u, "entry-overlay metadata ABI changed");
 #elif ARGHTOS_SPLIT_META
 _Static_assert(sizeof(arghtos_task_control_t) == 16u, "32-bit split-meta core slot ABI changed");
 _Static_assert(sizeof(arghtos_task_meta_t) == 2u, "split-meta task metadata ABI changed");
@@ -311,7 +342,11 @@ _Static_assert(sizeof(arghtos_kernel_state_t) == 20u, "32-bit kernel state ABI c
 #endif
 
 arghtos_task_id_t arghtos_select_next(void);
+#if ARGHTOS_ENTRY_NEXT_OVERLAY
+ARGHTOS_NORETURN void arghtos_task_start_trampoline(arghtos_task_fn_t entry);
+#else
 ARGHTOS_NORETURN void arghtos_task_start_trampoline(void);
+#endif
 ARGHTOS_NORETURN void arghtos_task_return_guard(void);
 
 #endif
