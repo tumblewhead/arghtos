@@ -1455,6 +1455,7 @@ void arghtos_timer_interrupt(void)
     }
 }
 
+#if !ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE
 static bool task_fault_attributed(arghtos_fault_reason_t reason)
 {
     return (reason == ARGHTOS_FAULT_ASYNC_RETURNED) ||
@@ -1462,6 +1463,7 @@ static bool task_fault_attributed(arghtos_fault_reason_t reason)
            (reason == ARGHTOS_FAULT_CONTEXT_CORRUPT) ||
            (reason == ARGHTOS_FAULT_CPU_EXCEPTION);
 }
+#endif
 
 ARGHTOS_NORETURN void arghtos_fatal(
     arghtos_fault_reason_t reason,
@@ -1478,6 +1480,7 @@ ARGHTOS_NORETURN void arghtos_fatal(
 
     kernel.flags |= ARGHTOS_KF_FAULT_ACTIVE;
 
+#if !ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE
     if (task_fault_attributed(reason) &&
 #if ARGHTOS_R5W_TRUSTED_CRASH_PORT
         (kernel.current_task != ARGHTOS_TASK_ID_INVALID)
@@ -1488,6 +1491,7 @@ ARGHTOS_NORETURN void arghtos_fatal(
         ARGHTOS_CTRL_SET_STATE_ID(kernel.current_task, ARGHTOS_TASK_FAULTED);
     }
 
+#endif
     r = ARGHTOS_CRASH_RECORD;
 #if ARGHTOS_R5S_PRESEEDED_CRASH
     /*
