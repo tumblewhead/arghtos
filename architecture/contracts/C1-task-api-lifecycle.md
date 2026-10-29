@@ -258,3 +258,25 @@ No supported application path supplies an arbitrary service ID. Therefore the
 set of service IDs reaching the kernel service dispatcher is exactly the
 defined lifecycle-service set. Removing the unknown-service runtime branch from
 that generated profile does not change any legal C1 transition or return value.
+
+# R6j proven non-faulted wake-state domain
+
+The trusted generated minimum-size profile may specialize wake handling when
+`ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE=1`.
+
+In that profile, fatal handling is terminal and does not store
+`ARGHTOS_TASK_FAULTED` into scheduler state. Combined with P1's legal
+lifecycle transitions and pristine generated initialization, every wake target
+observable during supported normal execution is in exactly one of:
+
+```text
+DORMANT, READY, RUNNING, WAITING, SLEEPING
+```
+
+Therefore the minimum-profile wake helper need not retain runtime handling for
+FAULTED or corrupt/unknown state encodings. The generic/debug profile retains
+the documented FAULTED -> BAD_STATE behavior and invariant-fault diagnostic.
+
+This refinement does not make FAULTED a legal normal state in the minimum
+profile; it proves that the terminal-fault profile never resumes scheduler
+execution after a condition that would require that state.
