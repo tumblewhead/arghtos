@@ -1089,11 +1089,13 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
         outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
         break;
 
+#if !ARGHTOS_R6F_TRUSTED_SERVICE_IDS
     default:
 #if !ARGHTOS_R6E_SERIAL_SVC_MUTATION
         arghtos_port_critical_exit(key);
 #endif
         arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+#endif
     }
 
 #if !ARGHTOS_R6E_SERIAL_SVC_MUTATION
