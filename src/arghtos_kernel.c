@@ -1020,11 +1020,15 @@ arghtos_result_t arghtos_profile_get(
 #if ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
 arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 {
+#if !ARGHTOS_R6E_SERIAL_SVC_MUTATION
     arghtos_irq_key_t key;
+#endif
     const arghtos_task_id_t self = kernel.current_task;
     uint8_t outcome = ARGHTOS_OK;
 
+#if !ARGHTOS_R6E_SERIAL_SVC_MUTATION
     key = arghtos_port_critical_enter();
+#endif
 
     switch (service_id) {
     case ARGHTOS_SERVICE_YIELD:
@@ -1086,11 +1090,15 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
         break;
 
     default:
+#if !ARGHTOS_R6E_SERIAL_SVC_MUTATION
         arghtos_port_critical_exit(key);
+#endif
         arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
     }
 
+#if !ARGHTOS_R6E_SERIAL_SVC_MUTATION
     arghtos_port_critical_exit(key);
+#endif
 
     if ((outcome & ARGHTOS_WAKE_DISPATCH_BIT) != 0u) {
         arghtos_port_request_dispatch();
