@@ -141,8 +141,10 @@ static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
 #endif
 #if ARGHTOS_R6P_INFALLIBLE_PORT_INIT
 static arghtos_kernel_state_t kernel = {
-    .current_task = ARGHTOS_TASK_ID_INVALID,
-    .flags = ARGHTOS_KF_INITIALIZED
+    .current_task = ARGHTOS_TASK_ID_INVALID
+#if !ARGHTOS_R6R_FLAGLESS_KERNEL_STATE
+    ,.flags = ARGHTOS_KF_INITIALIZED
+#endif
 };
 #elif ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID
 static arghtos_kernel_state_t kernel = {
@@ -925,7 +927,9 @@ ARGHTOS_NORETURN void arghtos_start(void)
     }
 #endif
 
+#if !ARGHTOS_R6R_FLAGLESS_KERNEL_STATE
     kernel.flags |= ARGHTOS_KF_STARTED;
+#endif
 
 #if ARGHTOS_R5O_GENERATED_START_TIMER
 #if ARGHTOS_R5O_MIN_PERIOD > 0u
@@ -1822,6 +1826,7 @@ void arghtos_test_reset(void)
     kernel.run_start = 0u;
 #endif
     kernel.current_task = ARGHTOS_TASK_ID_INVALID;
+#if !ARGHTOS_R6R_FLAGLESS_KERNEL_STATE
     kernel.flags = 0u;
 #if ARGHTOS_STATIC_CONFIG
     kernel.reserved[0] = 0u;
@@ -1831,6 +1836,7 @@ void arghtos_test_reset(void)
     kernel.crash_record = NULL;
     kernel.task_count = 0u;
     kernel.reserved = 0u;
+#endif
 #endif
 }
 #endif
