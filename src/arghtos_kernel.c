@@ -421,9 +421,19 @@ static void timer_consider(
 #endif
 #endif
 
-static bool process_time_locked(arghtos_time_t now)
+#if ARGHTOS_R6V_ALWAYS_DISPATCH_TICK
+#define ARGHTOS_TIME_RETURN void
+#define ARGHTOS_TIME_MARK_CHANGED() ((void)0)
+#else
+#define ARGHTOS_TIME_RETURN bool
+#define ARGHTOS_TIME_MARK_CHANGED() do { changed = true; } while (0)
+#endif
+
+static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
 {
+#if !ARGHTOS_R6V_ALWAYS_DISPATCH_TICK
     bool changed = false;
+#endif
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
     uint8_t id;
 #elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
@@ -455,7 +465,7 @@ static bool process_time_locked(arghtos_time_t now)
 #if ARGHTOS_R5Y_PROVEN_PERIODIC_STATE
             if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT) {
                 ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
-                changed = true;
+                ARGHTOS_TIME_MARK_CHANGED();
                 missed = releases - 1u;
             } else {
                 missed = releases;
@@ -463,7 +473,7 @@ static bool process_time_locked(arghtos_time_t now)
 #else
             if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT) {
                 ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
-                changed = true;
+                ARGHTOS_TIME_MARK_CHANGED();
                 missed = releases - 1u;
             } else if ((ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) ||
                        (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_RUNNING)) {
@@ -502,7 +512,7 @@ static bool process_time_locked(arghtos_time_t now)
 #if !ARGHTOS_R5R_ELIDE_AGE_RESETS
                 ARGHTOS_CTRL_AGE_ID(id) = 0u;
 #endif
-                changed = true;
+                ARGHTOS_TIME_MARK_CHANGED();
             } else {
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
                 (void)c;
@@ -529,7 +539,7 @@ static bool process_time_locked(arghtos_time_t now)
 #if !ARGHTOS_R5R_ELIDE_AGE_RESETS
                 ARGHTOS_CTRL_AGE_ID(id) = 0u;
 #endif
-                changed = true;
+                ARGHTOS_TIME_MARK_CHANGED();
             } else {
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
                 (void)c;
@@ -561,7 +571,7 @@ static bool process_time_locked(arghtos_time_t now)
 
                 if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT) {
                     ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
-                    changed = true;
+                    ARGHTOS_TIME_MARK_CHANGED();
                     missed = releases - 1u;
                 } else if ((ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) ||
                            (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_RUNNING)) {
@@ -583,7 +593,7 @@ static bool process_time_locked(arghtos_time_t now)
 #if !ARGHTOS_R5R_ELIDE_AGE_RESETS
                 ARGHTOS_CTRL_AGE_ID(id) = 0u;
 #endif
-                changed = true;
+                ARGHTOS_TIME_MARK_CHANGED();
             } else {
                 timer_consider(
                     now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
@@ -607,8 +617,15 @@ static bool process_time_locked(arghtos_time_t now)
 
 #endif
 
+#if ARGHTOS_R6V_ALWAYS_DISPATCH_TICK
+    return;
+#else
     return changed;
+#endif
 }
+
+#undef ARGHTOS_TIME_RETURN
+#undef ARGHTOS_TIME_MARK_CHANGED
 
 #if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
 #define ARGHTOS_WAKE_DISPATCH_BIT 0x08u
@@ -1189,7 +1206,7 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 #endif
             ARGHTOS_CTRL_NEXT(&controls[self]) = deadline;
             ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
-            (void)process_time_locked(now);
+            process_time_locked(now);
             #if ARGHTOS_R6N_OK_ONLY_SERVICES
         dispatch = true;
 #else
@@ -1310,7 +1327,7 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             ARGHTOS_CTRL_AGE_ID(self) = 0u;
             ARGHTOS_CTRL_NEXT(&controls[self]) = deadline;
             ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
-            (void)process_time_locked(now);
+            process_time_locked(now);
             dispatch = true;
         }
         break;
@@ -1598,7 +1615,9 @@ void arghtos_timer_interrupt(void)
 #if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     arghtos_irq_key_t key;
 #endif
+#if !ARGHTOS_R6V_ALWAYS_DISPATCH_TICK
     bool changed;
+#endif
 
 #if !ARGHTOS_R6B_TRUSTED_TIMER_ENTRY
     if ((kernel.flags & ARGHTOS_KF_STARTED) == 0u) {
@@ -1610,14 +1629,22 @@ void arghtos_timer_interrupt(void)
 #if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     key = arghtos_port_critical_enter();
 #endif
+#if ARGHTOS_R6V_ALWAYS_DISPATCH_TICK
+    process_time_locked(arghtos_port_time_now());
+#else
     changed = process_time_locked(arghtos_port_time_now());
+#endif
 #if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     arghtos_port_critical_exit(key);
 #endif
 
+#if ARGHTOS_R6V_ALWAYS_DISPATCH_TICK
+    arghtos_port_request_dispatch();
+#else
     if (changed) {
         arghtos_port_request_dispatch();
     }
+#endif
 }
 
 #if !ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE
