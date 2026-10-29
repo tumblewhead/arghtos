@@ -105,33 +105,41 @@ R6a:    rejected neutral         = 1534 B
 R6b:    accepted                  = 1522 B
 R6c:    accepted                  = 1514 B
 R6d:    accepted                  = 1494 B
-R6e:    accepted control          = 1482 B
-phase:  R6f trusted private service-ID domain experiment
+R6e:    accepted                  = 1482 B
+R6f:    accepted current control  = 1478 B
+saved from R5ag                  =   56 B
+saved from R4y                   =  816 B
 ```
 
-R6f tests a proof-backed generated-profile specialization in
-`arghtos_kernel_service()`. The trusted Cortex-M23 profile already routes
-task lifecycle operations through fixed veneers and the generated task-return
-trampoline. Under the new closed service-ID contract, only YIELD, WAIT,
-SLEEP_UNTIL, WAKE, and TASK_RETURN can reach the service dispatcher.
+R6f authoritative CI:
 
-R6f therefore removes the runtime BAD_SERVICE default branch only in that
-trusted generated profile. The generic/debug profile retains the fatal branch.
-No compiler unreachable intrinsic is used.
+```text
+run:        40817586249
+conclusion: success
+measured head:
+            df4930da915569c2e367731882ae61cf8283f541
+```
 
-Owning refinements:
+R6f physical accounting:
 
-* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
-* [architecture/contracts/C1-task-api-lifecycle.md](architecture/contracts/C1-task-api-lifecycle.md)
-* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
+```text
+linked before MSP  1414 B
+ArghtOS-only MSP      64 B
+-------------------------
+complete resident   1478 B
+```
+
+R6f is preserved in
+[implementation/R6f-trusted-service-domain.md](implementation/R6f-trusted-service-domain.md).
 
 ## Exact next action
 
-1. Let PR #5 CI build R6e and R6f in the same revision.
-2. Compare complete resident bytes and `arghtos_kernel_service` symbol size.
-3. Accept R6f only for a strict linked physical reduction with all retained
-   host, sanitizer, portability, Cortex-M23, R5ag, and R6e gates green.
-4. If accepted, preserve the exact closed service-ID preconditions in an R6f
-   implementation checkpoint.
-5. If neutral/regressive, reject and preserve the result before selecting R6g.
+1. Treat R6f = 1478 B as the accepted R6 control.
+2. Investigate R6g in the fatal path using the already-proved R5n dispatcher
+   invariant that `kernel.current_task` is either INVALID or a configured
+   task ID.
+3. Do not resurrect the rejected R5w trusted-crash-port split; isolate only the
+   current-task-domain simplification first.
+4. Build R6f and R6g side by side and require a strict physical reduction.
+5. Preserve R5ag as the immutable merged reference.
 6. Do not merge PR #5 without explicit user permission.
