@@ -111,35 +111,44 @@ R6g:    rejected neutral          = 1478 B
 R6h:    rejected neutral          = 1478 B
 R6i:    accepted                  = 1470 B
 R6j:    accepted                  = 1450 B
-R6k:    accepted control          = 1434 B
-phase:  R6l pre-masked scheduler-start experiment
+R6k:    accepted                  = 1434 B
+R6l:    accepted control          = 1422 B
+phase:  R6m crash commit-word recursion-guard experiment
 ```
 
-R6k is preserved in
-[implementation/R6k-preseeded-periodic-ready.md](implementation/R6k-preseeded-periodic-ready.md).
+R6l is preserved in
+[implementation/R6l-premasked-start.md](implementation/R6l-premasked-start.md).
 
-R6l moves ownership of the scheduler-start critical section to the trusted
-generated integration. On Cortex-M23, the generated caller enters
-`arghtos_start()` in Thread/MSP with PRIMASK=1, the scheduler timer disarmed,
-and no active dispatch. `arghtos_start()` remains masked through deadline
-materialization, STARTED commit, and timer arm; `arghtos_port_start()` then
-takes ownership and restores normal interrupt eligibility.
+R6m tests a new crash-path representation rather than revisiting R5w. The
+trusted R5s generated image guarantees `commit_magic=0` before init. R6m
+uses the same crash-record word as the recursive-fatal guard:
 
-Generic profiles retain the ordinary critical enter/exit pair.
+```text
+commit == 0          -> first fatal
+commit = 1           -> capture in progress, record invalid
+commit = COMMIT_MAGIC -> capture complete, record valid
+any nonzero on fatal entry -> recursive/second fatal, terminal immediately
+```
+
+This removes the separate C9 FAULT_ACTIVE test/store in the generated minimum
+profile while retaining commit-last validity and recursive-fatal protection.
+
+A host fault-injection seam deliberately re-enters `arghtos_fatal()` from
+`arghtos_port_crash_fill()`; R6m must terminate before a second crash-fill
+call and leave the record invalid/in-progress.
 
 Owning refinements:
 
-* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
-* [architecture/contracts/C0-static-task-configuration.md](architecture/contracts/C0-static-task-configuration.md)
-* [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
+* [architecture/contracts/C5-fault-diagnostics.md](architecture/contracts/C5-fault-diagnostics.md)
+* [proof/P7-bounded-memory-and-work.md](proof/P7-bounded-memory-and-work.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build R6k and R6l in the same revision.
-2. Compare complete resident bytes and `arghtos_start` symbol size.
-3. Accept R6l only for a strict linked physical reduction with the pre-masked
-   host-start regression and all retained gates green.
-4. If accepted, preserve the exact masked-entry/start ownership preconditions in
-   an R6l implementation checkpoint.
-5. If neutral/regressive, reject and preserve the result before selecting R6m.
-6. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI build R6l and R6m in the same revision.
+2. Require the recursive crash-fill injection test to pass.
+3. Compare complete resident bytes and `arghtos_fatal` symbol size.
+4. Accept R6m only for a strict physical reduction with all retained gates green.
+5. If accepted, preserve the exact R5s startup/commit-word preconditions in an
+   R6m implementation checkpoint.
+6. If neutral/regressive, reject and preserve the result before selecting R6n.
+7. Do not merge PR #5 without explicit user permission.
