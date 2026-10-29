@@ -185,3 +185,20 @@ sleep release semantics, earliest-deadline selection, and dispatch-request
 behavior are unchanged.
 
 Total task inspections remain bounded by `N`.
+
+# R6b generated timer-entry precondition
+
+The trusted generated minimum-size profile may elide the defensive
+`ARGHTOS_KF_STARTED` test in `arghtos_timer_interrupt()` only when all of
+these integration conditions are part of the selected port/profile contract:
+
+1. `arghtos_init()` leaves the scheduler timer disarmed;
+2. `arghtos_start()` sets `ARGHTOS_KF_STARTED` before it arms the first
+   scheduler deadline;
+3. a disarmed scheduler timer cannot call `arghtos_timer_interrupt()`;
+4. no unrelated interrupt source calls `arghtos_timer_interrupt()`; and
+5. once armed, the timer callback is delivered only according to the ordinary
+   C3 one-shot timer contract.
+
+Under those conditions every reachable timer entry occurs after STARTED is
+committed. The generic profile retains the defensive pre-start guard.
