@@ -170,3 +170,14 @@ on every execution admitted by the generated profile.
 All reachable state transitions remain exactly those already covered by P1.
 The generic/debug profile continues to retain the BAD_SERVICE fatal path for
 invalid service-ID injection.
+
+# R6g fatal current-task domain refinement
+
+R5n already establishes that, on supported generated-profile execution,
+`kernel.current_task` is either INVALID or names a configured task selected by
+the dispatcher.
+
+R6g reuses that invariant in fatal capture. Replacing the repeated range test
+with an INVALID test does not create a new task-state transition and cannot
+attribute a supported fatal event to an unconfigured task. Generic/debug builds
+continue to validate the full ID range at runtime.
