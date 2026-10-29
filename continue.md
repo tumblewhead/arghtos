@@ -108,32 +108,32 @@ R6d:    accepted                  = 1494 B
 R6e:    accepted                  = 1482 B
 R6f:    accepted control          = 1478 B
 R6g:    rejected neutral          = 1478 B
-phase:  R6h singleton async-time suffix experiment
+R6h:    rejected neutral          = 1478 B
+phase:  R6i known-unmasked PendSV experiment
 ```
 
-R6g is preserved in
-[implementation/R6g-proven-current-domain.md](implementation/R6g-proven-current-domain.md)
-and removed from the live build/CI surface.
+R6g and R6h are preserved as rejected-neutral implementation checkpoints and
+removed from the live build/CI challenger surface.
 
-R6h uses the accepted R5ab/R5p generated invariant that the measured profile
-has exactly one async task, located immediately after the periodic prefix.
-The async suffix loop in `process_time_locked()` is replaced with a direct
-operation on that one slot.
+R6i tests a Cortex-M23-only refinement: every supported PendSV entry in the
+trusted generated profile has PRIMASK=0. PendSV therefore masks with
+`cpsid i` during dispatch/idle and restores the known normal state with
+`cpsie i`, instead of saving and restoring an incoming PRIMASK value.
 
-The generic and multi-async paths retain the loop.
+The generic Cortex-M23 path retains exact prior-mask save/restore.
 
 Owning refinements:
 
-* [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
-* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
+* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
+* [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build R6f and R6h in the same revision.
-2. Compare complete resident bytes and `process_time_locked` symbol size.
-3. Accept R6h only for a strict linked physical reduction with all retained
+1. Let PR #5 CI build R6f and R6i in the same revision.
+2. Compare complete resident bytes and `PendSV_Handler` symbol size.
+3. Accept R6i only for a strict linked physical reduction with all retained
    gates green.
-4. If accepted, preserve the exact single-async generated precondition in an
-   R6h implementation checkpoint.
-5. If neutral/regressive, reject and preserve the result before selecting R6i.
+4. If accepted, preserve the exact PRIMASK=0 entry preconditions in an R6i
+   implementation checkpoint.
+5. If neutral/regressive, reject and preserve the result before selecting R6j.
 6. Do not merge PR #5 without explicit user permission.
