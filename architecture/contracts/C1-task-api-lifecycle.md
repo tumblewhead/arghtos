@@ -246,3 +246,15 @@ transaction, and PendSV remains less urgent.
 
 All public task-service semantics are unchanged. The generic profile retains
 the explicit C4 critical section.
+
+# R6f closed private service domain
+
+For the trusted generated minimum-size profile, each legal C1 lifecycle
+operation maps to one fixed private service ID through the generated target
+veneer, and periodic task return maps to the fixed TASK_RETURN service through
+the kernel trampoline.
+
+No supported application path supplies an arbitrary service ID. Therefore the
+set of service IDs reaching the kernel service dispatcher is exactly the
+defined lifecycle-service set. Removing the unknown-service runtime branch from
+that generated profile does not change any legal C1 transition or return value.
