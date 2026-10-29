@@ -110,36 +110,36 @@ R6f:    accepted                  = 1478 B
 R6g:    rejected neutral          = 1478 B
 R6h:    rejected neutral          = 1478 B
 R6i:    accepted                  = 1470 B
-R6j:    accepted control          = 1450 B
-phase:  R6k preseeded periodic READY startup experiment
+R6j:    accepted                  = 1450 B
+R6k:    accepted control          = 1434 B
+phase:  R6l pre-masked scheduler-start experiment
 ```
 
-R6j is preserved in
-[implementation/R6j-proven-wake-domain.md](implementation/R6j-proven-wake-domain.md).
+R6k is preserved in
+[implementation/R6k-preseeded-periodic-ready.md](implementation/R6k-preseeded-periodic-ready.md).
 
-R6k refines R5m pristine generated startup. The generated metadata image
-preseeds each periodic task READY while leaving the async suffix DORMANT.
-R5n/R6b and production lifecycle preconditions prove that no supported
-scheduler observer can run before STARTED, so this physical pre-start encoding
-is not an early observable release.
+R6l moves ownership of the scheduler-start critical section to the trusted
+generated integration. On Cortex-M23, the generated caller enters
+`arghtos_start()` in Thread/MSP with PRIMASK=1, the scheduler timer disarmed,
+and no active dispatch. `arghtos_start()` remains masked through deadline
+materialization, STARTED commit, and timer arm; `arghtos_port_start()` then
+takes ownership and restores normal interrupt eligibility.
 
-At `arghtos_start()`, R6k still reads the runtime start epoch, computes every
-periodic `next_time = start + period`, commits STARTED, arms the first timer,
-and enters the port start path. It removes only the redundant periodic READY
-write.
+Generic profiles retain the ordinary critical enter/exit pair.
 
 Owning refinements:
 
+* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
 * [architecture/contracts/C0-static-task-configuration.md](architecture/contracts/C0-static-task-configuration.md)
-* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
+* [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build R6j and R6k in the same revision.
+1. Let PR #5 CI build R6k and R6l in the same revision.
 2. Compare complete resident bytes and `arghtos_start` symbol size.
-3. Accept R6k only for a strict linked physical reduction with the pre-start
-   host-state regression and all retained gates green.
-4. If accepted, preserve the exact generated metadata/startup preconditions in
-   an R6k implementation checkpoint.
-5. If neutral/regressive, reject and preserve the result before selecting R6l.
+3. Accept R6l only for a strict linked physical reduction with the pre-masked
+   host-start regression and all retained gates green.
+4. If accepted, preserve the exact masked-entry/start ownership preconditions in
+   an R6l implementation checkpoint.
+5. If neutral/regressive, reject and preserve the result before selecting R6m.
 6. Do not merge PR #5 without explicit user permission.
