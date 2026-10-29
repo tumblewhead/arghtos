@@ -174,6 +174,16 @@
 #error "R5p periodic prefix exceeds configured task count"
 #endif
 
+#ifndef ARGHTOS_R5Z_RAW_CLASS_SCHEDULE
+#define ARGHTOS_R5Z_RAW_CLASS_SCHEDULE 0
+#endif
+
+#if ARGHTOS_R5Z_RAW_CLASS_SCHEDULE && \
+    (!ARGHTOS_R5P_GENERATED_ORDER || !ARGHTOS_R5I_SCHEDULE8 || \
+     ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT != 0u)
+#error "R5z raw class schedule requires generated-order zero-overflow schedule8"
+#endif
+
 #ifndef ARGHTOS_R5Q_PARTITIONED_TIME
 #define ARGHTOS_R5Q_PARTITIONED_TIME 0
 #endif
