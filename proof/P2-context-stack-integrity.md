@@ -130,3 +130,33 @@ apply.
 
 A target build should retain a static/golden-frame check or relocation audit,
 and hardware register-canary/first-dispatch testing remains required.
+
+# R6i PendSV mask-state refinement
+
+R6i does not change the saved PSP frame, callee-saved register set, exception
+return token, or MSP/PSP ownership.
+
+Under C4's trusted generated precondition that every supported PendSV entry has
+`PRIMASK=0`, replacing the save/restore sequence:
+
+```text
+read prior PRIMASK
+mask
+...
+restore prior PRIMASK
+```
+
+with:
+
+```text
+mask
+...
+enable
+```
+
+restores the same architectural mask state on every admitted execution.
+
+The dispatch and idle loop remain fully masked while scheduler state is read or
+mutated. Interrupts become eligible at the same restore point immediately
+before exception return. Therefore P2 context integrity and C4 race-free idle
+ownership are unchanged.
