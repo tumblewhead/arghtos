@@ -1544,7 +1544,11 @@ ARGHTOS_NORETURN void arghtos_fatal(
         r->flags |= ARGHTOS_CRASH_F_TASK_VALID;
     }
 #else
+#if ARGHTOS_R6G_PROVEN_CURRENT_DOMAIN
+    if (kernel.current_task != ARGHTOS_TASK_ID_INVALID) {
+#else
     if (task_id_valid(kernel.current_task)) {
+#endif
         r->task_id = kernel.current_task;
         r->flags = ARGHTOS_CRASH_F_TASK_VALID;
     }
