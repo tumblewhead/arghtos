@@ -105,3 +105,19 @@ Depends on [P1](P1-task-state-invariants.md) and the C1/C2/C4 concrete handshake
 The abstract race argument is discharged by the one-bit handshake design.
 
 Implementation discharge still requires host interleaving tests and target validation of the C4 serialization primitive.
+
+# R6d non-preempting handler serialization refinement
+
+P3 requires one total order between the wait transaction and the interrupt
+wake transaction. In the R6d generated Cortex-M23 profile that order is still
+well defined:
+
+* while SVC performs the wait transaction, its ordinary C4 critical section
+  masks scheduler-mutating device handlers;
+* while a wake handler performs its transaction, no peer scheduler-mutating
+  handler can preempt it by generated exception-priority construction;
+* PendSV is less urgent and cannot preempt either transaction.
+
+Therefore the wake transaction remains indivisible with respect to every other
+scheduler-state mutation even when the wake handler omits its own redundant
+PRIMASK enter/exit pair. The two P3 linearization cases are unchanged.
