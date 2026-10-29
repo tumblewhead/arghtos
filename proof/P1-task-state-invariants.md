@@ -148,3 +148,14 @@ without a runtime READY/RUNNING membership check.
 This refinement is valid only for the trusted generated profile that already
 adopts the R5n proof-discharged scheduler invariants. Generic/debug profiles
 retain the explicit impossible-state fault check.
+
+# R6e serialized SVC transaction refinement
+
+For the trusted R6e Cortex-M23 profile, C4 guarantees that SVC, scheduler timer,
+and scheduler-mutating device handlers form one non-preempting exception class.
+
+Consequently the lifecycle mutations performed by
+`arghtos_kernel_service()` remain serialized with every competing
+scheduler-state mutation even when the local PRIMASK enter/exit pair is
+elided. No additional transition becomes reachable, and the existing P1 task
+state invariants are unchanged.
