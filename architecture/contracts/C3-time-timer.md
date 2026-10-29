@@ -253,3 +253,45 @@ winning candidate.
 This refinement changes only temporary representation inside the bounded timer
 scan. Due testing, half-range legality, periodic catch-up, async sleep release,
 and the one-shot timer ABI are unchanged.
+
+# R6t unit-period timer dominance
+
+The trusted generated minimum profile may omit all earliest-deadline candidate
+tracking when its generated RMS prefix contains a periodic task with period
+exactly one scheduler tick and generated ordering places that task at ID 0.
+
+For task 0, after the periodic release/catch-up update at sampled time `now`:
+
+```text
+next_time[0] = now + 1
+```
+
+If task 0 was due, this follows algebraically from period = 1:
+
+```text
+releases = 1 + (now - old_next)
+new_next = old_next + releases
+         = now + 1
+```
+
+If task 0 was not due, the previous invariant already gives the same first
+future unit-tick boundary.
+
+Any legal future async sleep deadline has positive integer unsigned delta from
+`now`, so its delta is at least one tick. Therefore no async sleep deadline,
+and no longer-period periodic deadline, can precede task 0's `now+1`
+deadline. Ties are harmless because the timer is armed to the same absolute
+tick.
+
+The timer scan may therefore ignore candidate deadlines and arm directly with
+`next_time[0]` after processing all due state transitions.
+
+This is valid only for the generated profile with:
+
+* generated RMS ordering;
+* at least one periodic task;
+* minimum generated period exactly 1;
+* task 0 being that period-1 task;
+* ordinary wrap-safe half-range timing rules.
+
+Generic profiles retain normal earliest-deadline selection.
