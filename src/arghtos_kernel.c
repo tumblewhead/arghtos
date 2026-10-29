@@ -139,7 +139,13 @@ extern arghtos_crash_record_t arghtos_static_crash_record;
 #else
 static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
 #endif
+#if ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID
+static arghtos_kernel_state_t kernel = {
+    .current_task = ARGHTOS_TASK_ID_INVALID
+};
+#else
 static arghtos_kernel_state_t kernel;
+#endif
 
 #if ARGHTOS_COMPACT_RUNTIME
 #define ARGHTOS_CTRL_AGE_ID(id)    ARGHTOS_CTRL_AGE(&controls[(id)])
@@ -734,7 +740,9 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
         return r;
     }
 
+#if !ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID
     kernel.current_task = ARGHTOS_TASK_ID_INVALID;
+#endif
     kernel.flags = ARGHTOS_KF_INITIALIZED;
     return ARGHTOS_OK;
 #else
