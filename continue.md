@@ -126,6 +126,14 @@ measured head:
             e3e4e8b3bc304d3249cb31cf0abf486ef5264897
 ```
 
+R6e checkpoint validation:
+
+```text
+run:        40817165110
+conclusion: success
+head:       a2cf74161dd8b88edce1bcfd7806b51b3abe223e
+```
+
 R6e physical accounting:
 
 ```text
@@ -146,12 +154,11 @@ R5ag remains immutable and continues to build as the merged R5 reference.
 ## Exact next action
 
 1. Treat R6e = 1482 B as the accepted R6 control.
-2. Let CI validate this result-documentation-only head.
-3. Inspect the R6e linked symbol/map evidence before selecting R6f.
-4. Prefer the next hypothesis from the remaining large live symbols
+2. Inspect the R6e linked symbol/map evidence before selecting R6f.
+3. Prefer the next hypothesis from the remaining large live symbols
    (`process_time_locked`, `arghtos_fatal`, `arghtos_kernel_dispatch`,
    `PendSV_Handler`) without weakening the generated integration contract
    beyond what can be proved and tested.
-5. Keep any R6f change as a side-by-side challenger against R6e and preserve
+4. Keep any R6f change as a side-by-side challenger against R6e and preserve
    R5ag as the immutable merged reference.
-6. Do not merge PR #5 without explicit user permission.
+5. Do not merge PR #5 without explicit user permission.
