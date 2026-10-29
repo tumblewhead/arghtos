@@ -236,3 +236,22 @@ retry semantics for the initialization flag are unchanged.
 
 The resident size of C9 state is unchanged. Generic/debug profiles retain the
 runtime current-task initialization store.
+
+# R6p preseeded initialized kernel state
+
+When C4 proves the selected generated port initializer is infallible, the
+minimum image may extend R6o and materialize:
+
+```text
+current_task = ARGHTOS_TASK_ID_INVALID
+flags        = ARGHTOS_KF_INITIALIZED
+```
+
+before the public `arghtos_init()` call.
+
+The public init entry still executes the required selected-port initialization
+exactly once and returns its result. Since that result is proved to be
+`ARGHTOS_OK`, pre-materializing INITIALIZED is equivalent for every execution
+admitted by this generated profile.
+
+Generic profiles and fallible ports retain the runtime INITIALIZED commit.
