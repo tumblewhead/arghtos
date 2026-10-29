@@ -159,3 +159,14 @@ Consequently the lifecycle mutations performed by
 scheduler-state mutation even when the local PRIMASK enter/exit pair is
 elided. No additional transition becomes reachable, and the existing P1 task
 state invariants are unchanged.
+
+# R6f closed service-domain refinement
+
+Under C4/C1's trusted generated service-domain preconditions, every reachable
+call to `arghtos_kernel_service()` carries one of the five defined private
+service IDs. The removed BAD_SERVICE default branch is therefore unreachable
+on every execution admitted by the generated profile.
+
+All reachable state transitions remain exactly those already covered by P1.
+The generic/debug profile continues to retain the BAD_SERVICE fatal path for
+invalid service-ID injection.
