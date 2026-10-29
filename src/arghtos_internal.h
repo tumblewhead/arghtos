@@ -184,6 +184,16 @@
 #error "R5z raw class schedule requires generated-order zero-overflow schedule8"
 #endif
 
+#ifndef ARGHTOS_R5AB_SINGLE_ASYNC
+#define ARGHTOS_R5AB_SINGLE_ASYNC 0
+#endif
+
+#if ARGHTOS_R5AB_SINGLE_ASYNC && \
+    (!ARGHTOS_R5Z_RAW_CLASS_SCHEDULE || !ARGHTOS_R5R_ELIDE_AGE_RESETS || \
+     (ARGHTOS_R5P_PERIODIC_COUNT + 1u) != ARGHTOS_STATIC_TASK_COUNT)
+#error "R5ab single-async selector requires exactly one generated async task"
+#endif
+
 #ifndef ARGHTOS_R5Q_PARTITIONED_TIME
 #define ARGHTOS_R5Q_PARTITIONED_TIME 0
 #endif
