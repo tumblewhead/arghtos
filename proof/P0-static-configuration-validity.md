@@ -204,3 +204,13 @@ The public init call still executes the port initialization exactly once.
 Because the selected port cannot fail, the state observed after the call and
 the returned result are identical to the ordinary successful initialization
 path. No storage cardinality changes and no new runtime resource is introduced.
+
+# R6r minimum C9 storage refinement
+
+Under the R6r trusted generated profile, the minimum static C9 object contains
+only the one-byte `current_task` value. The former flags byte and reserved
+padding are absent.
+
+This reduces rather than expands the finite resident state established by P0.
+Generic ABI/storage claims remain unchanged for profiles that retain the
+ordinary C9 representation.
