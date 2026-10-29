@@ -370,3 +370,15 @@ the eventual transition back to normal interrupt eligibility.
 
 Generic profiles continue to enter and exit serialization inside
 `arghtos_start()`.
+
+# R6o generated kernel-state seed
+
+The trusted generated image may seed the minimum C9 kernel state with
+`current_task=INVALID` before `arghtos_init()`.
+
+This seed is static configuration evidence, analogous to other accepted
+generated initial-state materialization. The runtime initializer still owns the
+port initialization result and INITIALIZED flag commit.
+
+After successful `arghtos_init()`, the observable kernel state is identical to
+the ordinary minimum profile.
