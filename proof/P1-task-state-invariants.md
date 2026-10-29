@@ -252,3 +252,22 @@ already proved unreachable before STARTED in the trusted profile.
 
 Therefore the dispatcher begins from the same INVALID current-task state and
 all P1 transitions are unchanged.
+
+# R6r flagless kernel-state refinement
+
+R6r removes no state that participates in the admitted task-state transition
+relation.
+
+For the trusted generated profile:
+
+* initialization success is a generated/selected-port invariant;
+* dispatch and timer entry-before-start are already excluded by R5n/R6b;
+* public lifecycle misuse checks are outside the minimal-production contract;
+* recursive fatal detection is carried by the C5 commit word under R6m.
+
+Therefore C9 INITIALIZED/STARTED/FAULT_ACTIVE bits have no remaining observer on
+supported execution. Removing their storage and the final STARTED write cannot
+enable or suppress any P1 transition.
+
+The only surviving minimum C9 runtime value is `current_task`, whose
+dispatcher ownership is unchanged.
