@@ -846,7 +846,9 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 ARGHTOS_NORETURN void arghtos_start(void)
 {
     arghtos_time_t start;
+#if !ARGHTOS_R6L_PREMASKED_START
     arghtos_irq_key_t key;
+#endif
 #if !ARGHTOS_R5O_GENERATED_START_TIMER
     bool have_timer = false;
     arghtos_time_t earliest = 0u;
@@ -861,7 +863,9 @@ ARGHTOS_NORETURN void arghtos_start(void)
     }
 #endif
 
+#if !ARGHTOS_R6L_PREMASKED_START
     key = arghtos_port_critical_enter();
+#endif
     start = arghtos_port_time_now();
 #if !ARGHTOS_SIZE_FIRST_NO_START_TIME
     kernel.start_time = start;
@@ -903,7 +907,9 @@ ARGHTOS_NORETURN void arghtos_start(void)
     }
 #endif
 
+#if !ARGHTOS_R6L_PREMASKED_START
     arghtos_port_critical_exit(key);
+#endif
     arghtos_port_start();
 }
 
