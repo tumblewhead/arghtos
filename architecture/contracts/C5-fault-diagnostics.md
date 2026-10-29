@@ -354,3 +354,19 @@ The reasoning is:
 Therefore the `FAULTED` state write is redundant for valid execution of the
 terminal minimum profile. Generic/debug and other profiles retain task-state
 mutation for diagnostic visibility.
+
+# R6g proven current-task domain in fatal capture
+
+The trusted generated minimum-size profile may consume the R5n dispatcher
+invariant that C9 `current_task` is always either:
+
+* `ARGHTOS_TASK_ID_INVALID`; or
+* the ID of a configured task previously selected by the dispatcher.
+
+For that profile, fatal capture may test task attribution with
+`current_task != ARGHTOS_TASK_ID_INVALID` instead of repeating an
+`id < task_count` validation.
+
+This refinement changes no crash-record field or commit rule. It only removes a
+runtime range check whose stronger domain property is already proved by R5n.
+The generic/debug profile retains ordinary task-ID validation.
