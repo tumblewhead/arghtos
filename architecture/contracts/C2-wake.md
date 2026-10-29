@@ -183,3 +183,16 @@ unreachable in the generated minimum profile.
 
 All reachable wake state/latch effects and dispatch-request behavior are
 unchanged.
+
+# R6n OK-only generated wake result
+
+Under the R6j non-faulted wake domain and generated valid-async target
+preconditions, every reachable task-context or interrupt-context wake returns
+`ARGHTOS_OK`.
+
+The internal wake helper therefore needs to communicate only whether wake
+changed eligibility and requires dispatch. The generated profile may represent
+that internal result as a boolean dispatch decision.
+
+The generic/debug profile continues to return BAD_TASK_ID, BAD_TASK_CLASS,
+BAD_STATE, and BAD_CONTEXT where applicable.
