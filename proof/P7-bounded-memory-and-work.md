@@ -217,3 +217,23 @@ recapture.
 Thus recursive-fatal work remains fixed and bounded, no allocation or loop is
 added, and the required 64-byte crash record remains unchanged. The eliminated
 C9 flag is not replaced by any additional resident storage.
+
+# R6x bounded missed-counter loop
+
+R6x deliberately trades bounded cycles for code size.
+
+For one due periodic task, the missed-counter loop executes at most 15
+iterations because the compact counter saturates at 15 and each iteration
+increments it by one. Once saturated, arbitrarily large delayed-release counts
+perform zero further iterations.
+
+Thus the time engine remains bounded by task count and a fixed representation
+constant:
+
+```text
+work <= periodic_scan_work + 15 * periodic_task_count + fixed_async_work
+```
+
+The bound is independent of the number of releases actually missed. R6x
+therefore preserves P7's prohibition on catch-up work that grows without bound
+with delayed-release history.
