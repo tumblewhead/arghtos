@@ -348,3 +348,25 @@ READY into metadata that already contains READY.
 
 Generic/debug and ordinary R5m profiles retain DORMANT periodic metadata before
 start and perform DORMANT -> READY at runtime.
+
+# R6l pre-serialized start transaction
+
+R6l does not remove serialization from the C0 start transaction. It moves
+ownership of that serialization across the API boundary.
+
+For the trusted generated profile, the caller enters `arghtos_start()` with
+the C4 scheduler serialization state already active. The start transaction
+still executes atomically:
+
+1. read the common start epoch;
+2. materialize runtime periodic deadlines;
+3. commit STARTED;
+4. arm the first scheduler timer;
+5. transfer permanently to `arghtos_port_start()`.
+
+Because interrupts remain masked through step 4, no timer, wake, SVC, or
+PendSV path can observe a partially started scheduler. The port start path owns
+the eventual transition back to normal interrupt eligibility.
+
+Generic profiles continue to enter and exit serialization inside
+`arghtos_start()`.
