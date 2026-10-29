@@ -122,47 +122,33 @@ physical-board harness
   R6q physical control         = 1504 B
   R6r accepted                 = 1492 B
   R6s accepted                 = 1480 B
-  R6t accepted current control = 1424 B
+  R6t accepted control         = 1424 B
   saved from physical R6q      =   80 B
   margin below 1536 target     =  112 B
+  phase: R6u singleton-async release under unit-period timer
 ```
 
-Accepted physical checkpoints:
+R6t is preserved in
+[implementation/R6t-unit-period-timer.md](implementation/R6t-unit-period-timer.md).
 
-* [implementation/R6r-flagless-kernel-state.md](implementation/R6r-flagless-kernel-state.md)
-* [implementation/R6s-delta-only-timer.md](implementation/R6s-delta-only-timer.md)
-* [implementation/R6t-unit-period-timer.md](implementation/R6t-unit-period-timer.md)
+R6u revisits the previously neutral singleton-async time-suffix specialization
+in a materially different code-generation context. R6t removed all
+earliest-deadline tracking from the async suffix, leaving only the one async
+task's SLEEPING/due release check.
 
-R6t authoritative CI:
+R6u enables the already-proved direct singleton operation on top of R6t.
 
-```text
-run:        40923091938
-conclusion: success
+Owning refinements:
 
-physical R6s           1480 B
-physical R6t           1424 B
-delta                    -56 B
-
-process_time_locked:
-  R6s                   240 B
-  R6t                   184 B
-```
-
-R6t proves that generated task 0, with period exactly one scheduler tick,
-always supplies the first future timer deadline. Earliest-deadline candidate
-tracking is therefore absent in the accepted minimum profile.
-
-Historical legacy-harness evidence remains independently reproducible. New
-absolute footprint claims use the physical-board harness described in
-[implementation/FOOTPRINT-HARNESS-METHODOLOGY.md](implementation/FOOTPRINT-HARNESS-METHODOLOGY.md).
+* [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
+* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
 
 ## Exact next action
 
-1. Treat physical R6t = 1424 B as the accepted control.
-2. Re-test the previously neutral singleton-async time-release specialization
-   on top of R6t. R6t removed all async timer-candidate tracking, materially
-   changing the code-generation context from the old R6h experiment.
-3. Build the new challenger side-by-side with physical R6t.
-4. Require a strict physical reduction and all semantic/historical gates green.
-5. If neutral/regressive, preserve the result and keep R6t as control.
+1. Let PR #5 CI build physical R6t and R6u in the same revision.
+2. Require host semantics, sanitizers, portability, historical reproduction,
+   and all physical gates green.
+3. Compare complete resident bytes and `process_time_locked`.
+4. Accept R6u only for a strict physical-board reduction.
+5. If neutral/regressive, preserve the result and keep R6t = 1424 B as control.
 6. Do not merge PR #5 without explicit user permission.
