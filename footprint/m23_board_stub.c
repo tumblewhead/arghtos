@@ -1,7 +1,16 @@
 #include <arghtos/arghtos.h>
 
-static arghtos_time_t board_now;
-static arghtos_time_t board_deadline;
+/*
+ * Model hardware/application-owned timer state as externally mutable.
+ *
+ * Volatile prevents LTO from proving the clock is permanently zero or timer
+ * writes unobservable.  The .app_data placement excludes this synthetic board
+ * state from ArghtOS-resident accounting, matching real MMIO ownership.
+ */
+__attribute__((section(".app_data")))
+static volatile arghtos_time_t board_now;
+__attribute__((section(".app_data")))
+static volatile arghtos_time_t board_deadline;
 
 arghtos_time_t arghtos_m23_board_time_now(void)
 {
