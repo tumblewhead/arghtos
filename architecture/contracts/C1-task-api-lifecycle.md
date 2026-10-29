@@ -232,3 +232,17 @@ For the R3 production profile, valid-use semantics are unchanged, but selected m
 Violating these preconditions in the R3c production profile is outside the supported runtime contract. The generic/debug profile remains the verification surface for those misuse cases.
 
 Wake/wait race semantics, sleep timer-only behavior, and all valid lifecycle transitions are unchanged.
+
+# R6e task-service serialization refinement
+
+In the trusted R6e Cortex-M23 profile, the C1 task-service transaction executes
+inside SVC, and SVC belongs to C4's generated non-preempting
+scheduler-exception class.
+
+Therefore lifecycle state mutation remains one indivisible scheduler
+transaction even when `arghtos_kernel_service()` omits its local PRIMASK
+enter/exit pair. Timer and interrupt-wake handlers cannot preempt the SVC
+transaction, and PendSV remains less urgent.
+
+All public task-service semantics are unchanged. The generic profile retains
+the explicit C4 critical section.
