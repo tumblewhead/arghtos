@@ -106,34 +106,55 @@ R6b:    accepted                  = 1522 B
 R6c:    accepted                  = 1514 B
 R6d:    accepted                  = 1494 B
 R6e:    accepted                  = 1482 B
-R6f:    accepted control          = 1478 B
+R6f:    accepted                  = 1478 B
 R6g:    rejected neutral          = 1478 B
 R6h:    rejected neutral          = 1478 B
-phase:  R6i known-unmasked PendSV experiment
+R6i:    accepted current control  = 1470 B
+saved from R5ag                  =   64 B
+saved from R4y                   =  824 B
 ```
 
-R6g and R6h are preserved as rejected-neutral implementation checkpoints and
-removed from the live build/CI challenger surface.
+Rejected-neutral checkpoints:
 
-R6i tests a Cortex-M23-only refinement: every supported PendSV entry in the
-trusted generated profile has PRIMASK=0. PendSV therefore masks with
-`cpsid i` during dispatch/idle and restores the known normal state with
-`cpsie i`, instead of saving and restoring an incoming PRIMASK value.
+* [implementation/R6g-proven-current-domain.md](implementation/R6g-proven-current-domain.md)
+* [implementation/R6h-single-async-time.md](implementation/R6h-single-async-time.md)
 
-The generic Cortex-M23 path retains exact prior-mask save/restore.
+Accepted R6i checkpoint:
 
-Owning refinements:
+* [implementation/R6i-known-unmasked-pendsv.md](implementation/R6i-known-unmasked-pendsv.md)
 
-* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
-* [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
+R6i authoritative measurement CI:
+
+```text
+run:        40818322636
+conclusion: success
+measured head:
+            62dabb5dab89bfc8861fd91a7ab0868a4e5f8a8f
+```
+
+R6i physical accounting:
+
+```text
+linked before MSP  1406 B
+ArghtOS-only MSP      64 B
+-------------------------
+complete resident   1470 B
+```
+
+R6i depends on the trusted Cortex-M23 profile guaranteeing PRIMASK=0 at every
+supported PendSV entry. PendSV still masks across kernel dispatch and idle, and
+interrupts are restored at the same pre-return point. The generic target path
+retains exact prior-PRIMASK save/restore.
+
+R5ag remains immutable and continues to build as the merged R5 reference.
 
 ## Exact next action
 
-1. Let PR #5 CI build R6f and R6i in the same revision.
-2. Compare complete resident bytes and `PendSV_Handler` symbol size.
-3. Accept R6i only for a strict linked physical reduction with all retained
-   gates green.
-4. If accepted, preserve the exact PRIMASK=0 entry preconditions in an R6i
-   implementation checkpoint.
-5. If neutral/regressive, reject and preserve the result before selecting R6j.
+1. Treat R6i = 1470 B as the accepted R6 control.
+2. Let CI validate this result-documentation-only head.
+3. Inspect remaining large symbols before selecting R6j. Current primary
+   candidates are `process_time_locked`, `arghtos_fatal`,
+   `arghtos_kernel_service`, and `arghtos_kernel_dispatch`.
+4. Avoid revisiting R6g/R6h without a materially different hypothesis.
+5. Keep R6j as a side-by-side challenger against R6i and preserve R5ag.
 6. Do not merge PR #5 without explicit user permission.
