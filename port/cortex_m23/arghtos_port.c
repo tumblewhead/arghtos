@@ -8,6 +8,10 @@
 #define ARGHTOS_R5AF_ASM_HARDFAULT_ENTRY 0
 #endif
 
+#ifndef ARGHTOS_R5AG_LINK_ALIAS_TERMINAL
+#define ARGHTOS_R5AG_LINK_ALIAS_TERMINAL 0
+#endif
+
 #ifndef ARGHTOS_R5X_FORCE_CRASH_INLINE
 #define ARGHTOS_R5X_FORCE_CRASH_INLINE 0
 #endif
@@ -286,10 +290,12 @@ ARGHTOS_R5X_ALWAYS_INLINE void arghtos_port_crash_fill(
 }
 #endif
 
+#if !ARGHTOS_R5AG_LINK_ALIAS_TERMINAL
 ARGHTOS_NORETURN void arghtos_port_fault_terminal(void)
 {
     arghtos_m23_board_fault_terminal();
 }
+#endif
 
 
 #if !ARGHTOS_R5AF_ASM_HARDFAULT_ENTRY
