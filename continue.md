@@ -125,53 +125,34 @@ physical-board harness
   R6t accepted                 = 1424 B
   R6u accepted                 = 1420 B
   R6v accepted control         = 1396 B
-  saved from physical R6q      =  108 B
-  margin below 1536 target     =  140 B
-  phase: R6w early periodic READY normalization
+  R6w rejected regressive      = 1400 B
+  phase: R6x bounded missed-release saturator
 ```
 
-R6v is preserved in
-[implementation/R6v-always-dispatch-tick.md](implementation/R6v-always-dispatch-tick.md).
+R6w is preserved in
+[implementation/R6w-early-periodic-ready.md](implementation/R6w-early-periodic-ready.md)
+and removed from the live build/CI surface.
 
-Authoritative R6v CI:
+R6x replaces compact missed-release room arithmetic with a packed high-nibble
+increment loop. Each iteration adds one missed release while preserving the low
+state/wake nibble. The loop stops when the requested increment is exhausted or
+the four-bit count saturates at 15.
 
-```text
-run:        40924511450
-conclusion: success
-
-physical R6u           1420 B
-physical R6v           1396 B
-delta                    -24 B
-
-process_time_locked:
-  R6u                   180 B
-  R6v                   160 B
-
-arghtos_timer_interrupt:
-  R6u                    32 B
-  R6v                    28 B
-```
-
-R6w consumes R6v's guaranteed PendSV request. For a due periodic task, missed
-release accounting is computed from the old DORMANT/READY/RUNNING state and
-then the state is normalized to READY unconditionally. A RUNNING task therefore
-takes its ordinary preemption transition in the timer transaction rather than
-a few instructions later inside PendSV.
-
-The host challenger verifies the interrupted RUNNING task becomes READY in the
-timer transaction and is then reselected RUNNING by the dispatcher.
+The loop is capped at 15 iterations per due periodic task, independent of the
+magnitude of delayed release history.
 
 Owning refinements:
 
-* [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
-* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
+* [architecture/contracts/C5-fault-diagnostics.md](architecture/contracts/C5-fault-diagnostics.md)
+* [proof/P7-bounded-memory-and-work.md](proof/P7-bounded-memory-and-work.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6v and R6w in the same revision.
-2. Require host transition/reselection evidence, sanitizers, portability,
-   historical reproduction, and physical controls green.
+1. Let PR #5 CI build physical R6v and R6x in the same revision.
+2. Require exact small missed-count and saturation host checks, sanitizers,
+   portability, historical reproduction, and physical controls green.
 3. Compare complete resident bytes and `process_time_locked`.
-4. Accept R6w only for a strict physical reduction.
-5. If neutral/regressive, preserve the result and keep R6v = 1396 B as control.
+4. Accept R6x only for a strict physical reduction.
+5. If accepted, record the bounded-cycle trade explicitly in the implementation
+   checkpoint.
 6. Do not merge PR #5 without explicit user permission.
