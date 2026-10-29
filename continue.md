@@ -115,13 +115,21 @@ Accepted R6 checkpoints:
 * [implementation/R6c-zero-sleep-service.md](implementation/R6c-zero-sleep-service.md)
 * [implementation/R6d-serialized-handler-mutation.md](implementation/R6d-serialized-handler-mutation.md)
 
-R6d authoritative CI:
+R6d authoritative measurement CI:
 
 ```text
 run:        40816356031
 conclusion: success
-head before result-document commit:
+measured head:
             5336fd318c1b099a0ee6a1e0a52ed659981b062b
+```
+
+Documentation/checkpoint validation:
+
+```text
+run:        40816434442
+conclusion: success
+head:       591f2e9f335c6d18ebf0fd8e5f52f0c830010f30
 ```
 
 R6d physical accounting:
@@ -142,12 +150,11 @@ R5ag remains immutable and continues to build as the merged R5 reference.
 ## Exact next action
 
 1. Treat R6d = 1494 B as the accepted R6 control.
-2. Let CI validate this result-documentation-only head.
-3. Inspect the R6d linked symbol/map evidence before selecting R6e.
-4. Prefer the next hypothesis from remaining large live kernel symbols
+2. Inspect the R6d linked symbol/map evidence before selecting R6e.
+3. Prefer the next hypothesis from remaining large live kernel symbols
    (`process_time_locked`, `arghtos_kernel_service`, `arghtos_fatal`,
    `arghtos_kernel_dispatch`, `PendSV_Handler`) rather than fixture-only
    schedule assumptions.
-5. Keep any R6e change as a side-by-side challenger against R6d and preserve
+4. Keep any R6e change as a side-by-side challenger against R6d and preserve
    R5ag as the immutable merged reference.
-6. Do not merge PR #5 without explicit user permission.
+5. Do not merge PR #5 without explicit user permission.
