@@ -406,8 +406,15 @@ static void test_compact_runtime_saturation(void)
 
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
     arghtos_host_set_time(1000u);
+#if ARGHTOS_R6V_ALWAYS_DISPATCH_TICK
+    arghtos_host_clear_dispatch_requests();
+#endif
     arghtos_timer_interrupt();
     assert(ARGHTOS_CTRL_MISSED(&ctrl[0]) == ARGHTOS_CTRL_MISSED_MAX);
+#if ARGHTOS_R6V_ALWAYS_DISPATCH_TICK
+    assert(arghtos_host_dispatch_request_count() == 1u);
+    assert(ARGHTOS_CTRL_STATE(&ctrl[0]) == ARGHTOS_TASK_RUNNING);
+#endif
 }
 #endif
 
