@@ -116,7 +116,24 @@ uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
 #endif
 #if ARGHTOS_SPLIT_META
 __attribute__((section(".arghtos_cfg")))
+#if ARGHTOS_R6K_PRESEEDED_PERIODIC_READY
+arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS] = {
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }
+};
+#else
 arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
+#endif
 #endif
 #elif ARGHTOS_COMPACT_DESCRIPTOR
 #define CDESC(i, p) \
