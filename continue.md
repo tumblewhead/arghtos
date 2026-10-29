@@ -123,55 +123,55 @@ physical-board harness
   R6r accepted                 = 1492 B
   R6s accepted                 = 1480 B
   R6t accepted                 = 1424 B
-  R6u accepted control         = 1420 B
-  saved from physical R6q      =   84 B
-  margin below 1536 target     =  116 B
-  phase: R6v unconditional unit-tick dispatch experiment
+  R6u accepted                 = 1420 B
+  R6v accepted control         = 1396 B
+  saved from physical R6q      =  108 B
+  margin below 1536 target     =  140 B
+  phase: R6w early periodic READY normalization
 ```
 
-R6u is preserved in
-[implementation/R6u-single-async-unit-timer.md](implementation/R6u-single-async-unit-timer.md).
+R6v is preserved in
+[implementation/R6v-always-dispatch-tick.md](implementation/R6v-always-dispatch-tick.md).
 
-Authoritative R6u CI:
+Authoritative R6v CI:
 
 ```text
-run:        40923612503
+run:        40924511450
 conclusion: success
 
-physical R6t           1424 B
 physical R6u           1420 B
-delta                     -4 B
+physical R6v           1396 B
+delta                    -24 B
 
 process_time_locked:
-  R6t                   184 B
   R6u                   180 B
+  R6v                   160 B
+
+arghtos_timer_interrupt:
+  R6u                    32 B
+  R6v                    28 B
 ```
 
-R6v trades bounded runtime cycles for bytes. Under the unit-period profile,
-timer entry requests PendSV every tick, even when the time engine creates no
-new READY work. Because profiling is off and async age-reset side effects are
-elided, a redundant dispatch over an unchanged eligibility set preempts and
-reselects the same current task. Any already-pending scheduling indication
-already required PendSV.
+R6w consumes R6v's guaranteed PendSV request. For a due periodic task, missed
+release accounting is computed from the old DORMANT/READY/RUNNING state and
+then the state is normalized to READY unconditionally. A RUNNING task therefore
+takes its ordinary preemption transition in the timer transaction rather than
+a few instructions later inside PendSV.
 
-This allows the time engine to drop its `changed` result and all persistent
-change bookkeeping. P6 explicitly charges the possible extra PendSV/dispatcher
-pass to kernel overhead.
+The host challenger verifies the interrupted RUNNING task becomes READY in the
+timer transaction and is then reselected RUNNING by the dispatcher.
 
 Owning refinements:
 
 * [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
 * [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
-* [proof/P6-rms-schedulability.md](proof/P6-rms-schedulability.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6u and R6v in the same revision.
-2. Require the new redundant-dispatch host regression, all semantic gates,
+1. Let PR #5 CI build physical R6v and R6w in the same revision.
+2. Require host transition/reselection evidence, sanitizers, portability,
    historical reproduction, and physical controls green.
-3. Compare complete resident bytes, `process_time_locked`, and
-   `arghtos_timer_interrupt`.
-4. Accept R6v only for a strict physical reduction.
-5. If accepted, preserve the bounded runtime-cost caveat in the implementation
-   checkpoint and P6.
+3. Compare complete resident bytes and `process_time_locked`.
+4. Accept R6w only for a strict physical reduction.
+5. If neutral/regressive, preserve the result and keep R6v = 1396 B as control.
 6. Do not merge PR #5 without explicit user permission.
