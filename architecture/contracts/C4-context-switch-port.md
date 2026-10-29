@@ -539,3 +539,30 @@ This specialization does not use an unreachable compiler intrinsic and does
 not introduce undefined C behavior. If the generated-profile precondition is
 violated, behavior is outside that profile contract rather than relying on
 undefined execution.
+
+# R6i known-unmasked PendSV entry
+
+The trusted generated Cortex-M23 minimum profile may treat the normal mask state
+at every supported PendSV entry as known:
+
+```text
+PRIMASK = 0
+```
+
+This refinement is valid only when:
+
+1. trusted application tasks never modify PRIMASK;
+2. scheduler startup restores/enables normal mask state before the first
+   PendSV dispatch;
+3. R6d/R6e scheduler-mutating SVC, timer, and device handlers do not leave
+   PRIMASK set when they pend or tail-chain to PendSV;
+4. any other handler permitted to request scheduler dispatch also preserves
+   the normal unmasked state on exception return; and
+5. the PendSV idle loop itself keeps PRIMASK masked only internally and restores
+   the known normal unmasked state immediately before returning to Thread mode.
+
+Under those conditions PendSV need not read and save the incoming PRIMASK
+value. It may execute `cpsid i` before scheduler dispatch/idle and restore the
+known normal state with `cpsie i` before exception return.
+
+The generic Cortex-M23 profile retains exact prior-PRIMASK save/restore.
