@@ -197,3 +197,23 @@ remaining excess        1309 B
 R4a removes profiling-only counters, `run_start`, snapshot code, and execution
 accounting. It does not remove crash state, missed-release evidence, or async
 age credit.
+
+# R6m commit-word recursion-bound refinement
+
+R6m replaces the separate C9 recursive-fatal flag with the already-resident C5
+commit word in the trusted R5s generated profile.
+
+At first fatal entry, generated startup guarantees `commit_magic == 0`.
+The path writes a nonzero invalid in-progress marker before any dynamic capture.
+A recursive fatal therefore performs one fixed comparison and transfers
+directly to the non-returning terminal hook. It cannot begin another crash-fill
+operation.
+
+After the release fence, the first capture writes the valid nonzero commit
+magic and immediately enters the terminal hook. If another fatal entry occurs
+during that terminal interval, the same nonzero test also terminates without
+recapture.
+
+Thus recursive-fatal work remains fixed and bounded, no allocation or loop is
+added, and the required 64-byte crash record remains unchanged. The eliminated
+C9 flag is not replaced by any additional resident storage.
