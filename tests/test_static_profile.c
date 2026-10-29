@@ -35,7 +35,11 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
     {
 #if ARGHTOS_R5L_PREBUILT_CONTEXT
         .context = (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0) - 64u],
+#if ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS
+        .entry_or_next.next_time = ARGHTOS_TEST_PERIOD,
+#else
         .entry_or_next.next_time = 0u,
+#endif
 #else
         .context = (arghtos_context_t)(uintptr_t)&stack0[sizeof(stack0)],
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
@@ -179,6 +183,10 @@ static void reset_all(void)
 #if ARGHTOS_R6K_PRESEEDED_PERIODIC_READY
     arghtos_static_meta[0].status = ARGHTOS_TASK_READY;
 #endif
+#if ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS
+    ARGHTOS_CTRL_NEXT(&arghtos_static_slots[0]) = ARGHTOS_TEST_PERIOD;
+    ARGHTOS_CTRL_NEXT(&arghtos_static_slots[1]) = 0u;
+#endif
 #if ARGHTOS_UNIFIED_SLOT
 #if ARGHTOS_R5L_PREBUILT_CONTEXT
     arghtos_static_slots[0].context =
@@ -254,6 +262,10 @@ static void test_static_init_ignores_runtime_config(void)
     c = arghtos_test_controls();
     assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
     assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_DORMANT);
+#endif
+#if ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS
+    assert(ARGHTOS_CTRL_NEXT(&c[0]) == ARGHTOS_TEST_PERIOD);
+    assert(ARGHTOS_CTRL_NEXT(&c[1]) == 0u);
 #endif
 #if ARGHTOS_ENTRY_NEXT_OVERLAY && !ARGHTOS_R5L_PREBUILT_CONTEXT
 #if ARGHTOS_TEST_THREE_TASKS
