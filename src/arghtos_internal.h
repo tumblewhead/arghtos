@@ -194,6 +194,15 @@
 #error "R5ab single-async selector requires exactly one generated async task"
 #endif
 
+#ifndef ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE
+#define ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE 0
+#endif
+
+#if ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE && \
+    (!ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_MINIMAL_VALIDATION)
+#error "R5ac terminal fault-state elision requires trusted generated minimum profile"
+#endif
+
 #ifndef ARGHTOS_R5Q_PARTITIONED_TIME
 #define ARGHTOS_R5Q_PARTITIONED_TIME 0
 #endif
