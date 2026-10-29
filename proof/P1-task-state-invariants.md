@@ -271,3 +271,25 @@ enable or suppress any P1 transition.
 
 The only surviving minimum C9 runtime value is `current_task`, whose
 dispatcher ownership is unchanged.
+
+# R6v redundant unit-tick dispatch refinement
+
+Consider a unit-timer interrupt for which the time engine performs no
+DORMANT/SLEEPING -> READY transition.
+
+If no independent scheduling indication is pending, the currently RUNNING task
+was the highest-priority eligible winner at the preceding dispatch boundary.
+PendSV saves it, applies the ordinary legal RUNNING -> READY preemption
+transition, and re-runs the unchanged selector over an unchanged eligibility
+set. That task remains the winner and returns READY -> RUNNING with the same
+saved continuation.
+
+If another scheduling indication is pending, a dispatch was already required
+and R6v only collapses another request into the same PendSV mechanism.
+
+Because the selected minimum profile has runtime profiling disabled and elides
+async age-reset side effects, this redundant preemption adds no persistent
+scheduler state change beyond ordinary context save/restore.
+
+Therefore unconditional timer-side dispatch preserves P1 state invariants and
+observable scheduler selection.
