@@ -209,3 +209,24 @@ which is identical modulo 2^32 to the ordinary assignment
 After that conversion, the existing P4 release/catch-up proof operates on the
 same absolute deadlines and the same schedule periods. Therefore release phase,
 wrap behavior, missed-release arithmetic, and timer selection are unchanged.
+
+# R6s delta-only timer equivalence
+
+Let the ordinary R5t scan choose candidate `t*` because its unsigned
+`delta* = t* - now` is minimal among all considered future deadlines.
+
+R6s performs the identical candidate scan and comparison but stores only
+`delta*`. It then arms:
+
+```text
+now + delta*
+= now + (t* - now)
+= t*                  modulo 2^32
+```
+
+Therefore R6s arms the exact same 32-bit absolute deadline as the ordinary
+always-armed path for every admitted scheduler state.
+
+No release predicate, catch-up count, wake/sleep transition, or wrap-safe
+ordering changes. The proof is algebraic and independent of the physical-board
+harness; the physical harness merely makes the code-size effect measurable.
