@@ -603,7 +603,11 @@ static bool process_time_locked(arghtos_time_t now)
 _Static_assert(ARGHTOS_ERR_BAD_CONFIG <= ARGHTOS_WAKE_RESULT_MASK,
                "R5c wake encoding must cover all public result codes");
 
+#if ARGHTOS_R6N_OK_ONLY_SERVICES
+static bool wake_locked_compact(arghtos_task_id_t id)
+#else
 static uint8_t wake_locked_compact(arghtos_task_id_t id)
+#endif
 {
 #if ARGHTOS_R6J_PROVEN_WAKE_DOMAIN
     const uint8_t state = ARGHTOS_CTRL_STATE_ID(id);
@@ -614,13 +618,21 @@ static uint8_t wake_locked_compact(arghtos_task_id_t id)
         ARGHTOS_CTRL_AGE_ID(id) = 0u;
 #endif
         ARGHTOS_CTRL_CLEAR_WAKE_ID(id);
+#if ARGHTOS_R6N_OK_ONLY_SERVICES
+        return true;
+#else
         return ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+#endif
     }
 
     if ((state == ARGHTOS_TASK_RUNNING) || (state == ARGHTOS_TASK_SLEEPING)) {
         ARGHTOS_CTRL_SET_WAKE_ID(id);
     }
+#if ARGHTOS_R6N_OK_ONLY_SERVICES
+    return false;
+#else
     return ARGHTOS_OK;
+#endif
 #else
     switch (ARGHTOS_CTRL_STATE_ID(id)) {
     case ARGHTOS_TASK_DORMANT:
@@ -990,7 +1002,9 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 #if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     arghtos_irq_key_t key;
 #endif
-#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+#if ARGHTOS_R6N_OK_ONLY_SERVICES
+    bool dispatch;
+#elif ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     uint8_t wake_result;
 #else
     arghtos_result_t result;
@@ -1014,7 +1028,9 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     }
 #endif
 
-#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+#if ARGHTOS_R6N_OK_ONLY_SERVICES
+    dispatch = wake_locked_compact(task_id);
+#elif ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     wake_result = wake_locked_compact(task_id);
 #else
     dispatch = wake_locked(task_id, &result);
@@ -1023,7 +1039,12 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     arghtos_port_critical_exit(key);
 #endif
 
-#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+#if ARGHTOS_R6N_OK_ONLY_SERVICES
+    if (dispatch) {
+        arghtos_port_request_dispatch();
+    }
+    return ARGHTOS_OK;
+#elif ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     if ((wake_result & ARGHTOS_WAKE_DISPATCH_BIT) != 0u) {
         arghtos_port_request_dispatch();
     }
@@ -1079,7 +1100,11 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
     arghtos_irq_key_t key;
 #endif
     const arghtos_task_id_t self = kernel.current_task;
+#if ARGHTOS_R6N_OK_ONLY_SERVICES
+    bool dispatch = false;
+#else
     uint8_t outcome = ARGHTOS_OK;
+#endif
 
 #if !ARGHTOS_R6E_SERIAL_SVC_MUTATION
     key = arghtos_port_critical_enter();
@@ -1093,7 +1118,11 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             ARGHTOS_CTRL_AGE_ID(self) = 0u;
         }
 #endif
+        #if ARGHTOS_R6N_OK_ONLY_SERVICES
+        dispatch = true;
+#else
         outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+#endif
         break;
 
     case ARGHTOS_SERVICE_WAIT:
@@ -1104,7 +1133,11 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 #if !ARGHTOS_R5R_ELIDE_AGE_RESETS
             ARGHTOS_CTRL_AGE_ID(self) = 0u;
 #endif
-            outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+            #if ARGHTOS_R6N_OK_ONLY_SERVICES
+        dispatch = true;
+#else
+        outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+#endif
         }
         break;
 
@@ -1131,17 +1164,29 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             ARGHTOS_CTRL_NEXT(&controls[self]) = deadline;
             ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
             (void)process_time_locked(now);
-            outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+            #if ARGHTOS_R6N_OK_ONLY_SERVICES
+        dispatch = true;
+#else
+        outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+#endif
         }
         break;
 
     case ARGHTOS_SERVICE_WAKE:
+#if ARGHTOS_R6N_OK_ONLY_SERVICES
+        dispatch = wake_locked_compact((arghtos_task_id_t)arg0);
+#else
         outcome = wake_locked_compact((arghtos_task_id_t)arg0);
+#endif
         break;
 
     case ARGHTOS_SERVICE_TASK_RETURN:
         ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_DORMANT);
+        #if ARGHTOS_R6N_OK_ONLY_SERVICES
+        dispatch = true;
+#else
         outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+#endif
         break;
 
 #if !ARGHTOS_R6F_TRUSTED_SERVICE_IDS
@@ -1157,11 +1202,17 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
     arghtos_port_critical_exit(key);
 #endif
 
+#if ARGHTOS_R6N_OK_ONLY_SERVICES
+    if (dispatch) {
+        arghtos_port_request_dispatch();
+    }
+    return ARGHTOS_OK;
+#else
     if ((outcome & ARGHTOS_WAKE_DISPATCH_BIT) != 0u) {
         arghtos_port_request_dispatch();
     }
-
     return (arghtos_result_t)(outcome & ARGHTOS_WAKE_RESULT_MASK);
+#endif
 }
 #else
 arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
