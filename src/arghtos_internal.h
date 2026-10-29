@@ -238,6 +238,17 @@
 #define ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS 0
 #endif
 
+#ifndef ARGHTOS_R6R_FLAGLESS_KERNEL_STATE
+#define ARGHTOS_R6R_FLAGLESS_KERNEL_STATE 0
+#endif
+
+#if ARGHTOS_R6R_FLAGLESS_KERNEL_STATE && \
+    (!ARGHTOS_R6P_INFALLIBLE_PORT_INIT || !ARGHTOS_R5N_PROVEN_DISPATCH || \
+     !ARGHTOS_R6B_TRUSTED_TIMER_ENTRY || !ARGHTOS_R6M_COMMIT_RECURSION_GUARD || \
+     !ARGHTOS_MINIMAL_VALIDATION || !ARGHTOS_STATIC_CONFIG)
+#error "R6r flagless kernel state requires fully discharged trusted minimum profile"
+#endif
+
 #if ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS && \
     (!ARGHTOS_R6K_PRESEEDED_PERIODIC_READY || !ARGHTOS_R5L_PREBUILT_CONTEXT || \
      !ARGHTOS_R5P_GENERATED_ORDER || !ARGHTOS_R5E_AGE_NEXT_OVERLAY)
@@ -647,6 +658,7 @@ typedef struct {
     arghtos_time_t               run_start;
 #endif
     arghtos_task_id_t            current_task;
+#if !ARGHTOS_R6R_FLAGLESS_KERNEL_STATE
 #if !ARGHTOS_STATIC_CONFIG
     uint8_t                      task_count;
 #endif
@@ -655,6 +667,7 @@ typedef struct {
     uint8_t                      reserved[2];
 #else
     uint8_t                      reserved;
+#endif
 #endif
 } arghtos_kernel_state_t;
 
@@ -699,7 +712,11 @@ _Static_assert(sizeof(arghtos_task_control_t) == 20u, "32-bit task control ABI c
 #if ARGHTOS_RUNTIME_PROFILING
 _Static_assert(sizeof(arghtos_kernel_state_t) == 12u, "32-bit static-profile kernel state ABI changed");
 #elif ARGHTOS_SIZE_FIRST_NO_START_TIME
+#if ARGHTOS_R6R_FLAGLESS_KERNEL_STATE
+_Static_assert(sizeof(arghtos_kernel_state_t) == 1u, "32-bit flagless minimum kernel state ABI changed");
+#else
 _Static_assert(sizeof(arghtos_kernel_state_t) == 4u, "32-bit minimum-size kernel state ABI changed");
+#endif
 #else
 _Static_assert(sizeof(arghtos_kernel_state_t) == 8u, "32-bit no-profile static kernel state ABI changed");
 #endif
