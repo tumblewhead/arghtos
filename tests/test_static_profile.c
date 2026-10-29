@@ -423,8 +423,19 @@ static void test_recursive_fatal_uses_commit_guard(void)
 }
 #endif
 
+#if ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID
+static void test_preseeded_kernel_current_invalid(void)
+{
+    assert(arghtos_test_kernel()->current_task == ARGHTOS_TASK_ID_INVALID);
+    assert(arghtos_test_kernel()->flags == 0u);
+}
+#endif
+
 int main(void)
 {
+#if ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID
+    test_preseeded_kernel_current_invalid();
+#endif
     test_static_init_ignores_runtime_config();
     test_static_dispatch_and_async_wake();
     test_static_crash_record_symbol_is_used();
