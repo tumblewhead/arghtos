@@ -566,3 +566,30 @@ value. It may execute `cpsid i` before scheduler dispatch/idle and restore the
 known normal state with `cpsie i` before exception return.
 
 The generic Cortex-M23 profile retains exact prior-PRIMASK save/restore.
+
+# R6l pre-serialized scheduler start entry
+
+The trusted generated Cortex-M23 minimum profile may enter
+`arghtos_start()` with scheduler mutation already serialized by integration.
+
+For the Cortex-M23 realization, R6l requires:
+
+```text
+Thread mode on MSP
+PRIMASK = 1
+scheduler timer disarmed
+no PendSV dispatch active
+```
+
+and the caller must not restore PRIMASK after transferring control to
+`arghtos_start()`.
+
+Under this profile, `arghtos_start()` need not call
+`arghtos_port_critical_enter/exit()`. It performs the same start transaction
+while the inherited mask remains active. The terminal call to
+`arghtos_port_start()` then takes ownership and restores normal interrupt
+eligibility as already required by C4.
+
+This specialization is valid only when the generated startup path establishes
+the masked entry condition before calling ArghtOS. Generic integration retains
+the ordinary nested critical-section pair.
