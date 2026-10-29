@@ -482,3 +482,35 @@ enter/exit in each handler-facing API.
 This specialization is an integration property, not a portable-kernel
 assumption. A generated build must not enable it unless the exception-priority
 configuration is fixed and verified.
+
+# R6e unified scheduler-exception serialization
+
+The trusted generated Cortex-M23 profile may extend the R6d non-preempting
+scheduler-handler class to SVC.
+
+When enabled, all normal scheduler-state mutation performed from Handler mode
+uses one generated non-preempting exception-priority class:
+
+* SVC task-service handling;
+* scheduler timer handling;
+* device handlers permitted to call `arghtos_wake_from_interrupt()`.
+
+The profile is valid only when:
+
+1. SVC and every scheduler-mutating maskable device/timer handler execute at
+   one priority level or otherwise at priorities that cannot preempt one
+   another;
+2. PendSV is strictly less urgent than every member of that class;
+3. NMI and fatal-fault handlers never call normal scheduler APIs;
+4. no scheduler-state mutation is performed from any other preempting handler
+   class; and
+5. the generated exception-priority configuration is fixed before
+   `arghtos_start()` and is not modified by application tasks.
+
+Under these conditions, Handler-mode exception execution itself serializes
+`arghtos_kernel_service()`, `arghtos_timer_interrupt()`, and interrupt wake.
+The minimum profile may therefore omit the PRIMASK enter/exit pair inside
+`arghtos_kernel_service()`.
+
+The generic profile retains the explicit critical section. This is a
+Cortex-M23 integration specialization, not a portable scheduler assumption.
