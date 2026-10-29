@@ -463,6 +463,11 @@ static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
             ARGHTOS_CTRL_NEXT(c) += releases * period;
 
 #if ARGHTOS_R5Y_PROVEN_PERIODIC_STATE
+#if ARGHTOS_R6W_PERIODIC_READY_NORMALIZE
+            missed = releases -
+                (uint32_t)(ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT);
+            ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#else
             if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT) {
                 ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
                 ARGHTOS_TIME_MARK_CHANGED();
@@ -470,6 +475,7 @@ static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
             } else {
                 missed = releases;
             }
+#endif
 #else
             if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT) {
                 ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
