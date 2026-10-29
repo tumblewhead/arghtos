@@ -593,3 +593,21 @@ eligibility as already required by C4.
 This specialization is valid only when the generated startup path establishes
 the masked entry condition before calling ArghtOS. Generic integration retains
 the ordinary nested critical-section pair.
+
+# R6p infallible generated Cortex-M23 port initialization
+
+The trusted generated minimum-size Cortex-M23 profile may strengthen the
+selected-port initialization contract to:
+
+```text
+arghtos_port_init() always returns ARGHTOS_OK
+```
+
+for the fixed reference integration.
+
+The selected implementation performs only bounded register configuration,
+clears stale PendSV state, disarms the scheduler timer, and returns OK. There is
+no runtime allocation, device discovery, or fallible resource acquisition.
+
+This is a selected-port specialization only. The generic port ABI continues to
+permit `ARGHTOS_ERR_BAD_CONFIG` for other integrations.
