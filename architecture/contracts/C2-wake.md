@@ -171,3 +171,15 @@ being committed.
 
 The public wake semantics and the one-bit pending-wake handshake are unchanged.
 The generic profile retains the explicit handler-side critical section.
+
+# R6j generated wake-state refinement
+
+R6j consumes C1/P1 plus the terminal-only R5ac fault profile.
+
+For supported generated-profile execution, interrupt wake can observe only
+DORMANT, READY, RUNNING, WAITING, or SLEEPING. The FAULTED error case and
+unknown-state diagnostic remain required in the generic/debug profile but are
+unreachable in the generated minimum profile.
+
+All reachable wake state/latch effects and dispatch-request behavior are
+unchanged.
