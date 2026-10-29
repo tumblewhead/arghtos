@@ -370,3 +370,43 @@ For that profile, fatal capture may test task attribution with
 This refinement changes no crash-record field or commit rule. It only removes a
 runtime range check whose stronger domain property is already proved by R5n.
 The generic/debug profile retains ordinary task-ID validation.
+
+# R6m commit-word recursion guard
+
+The trusted generated minimum-size profile may use the crash record's
+`commit_magic` word as both the capture-validity marker and the recursive-fatal
+guard.
+
+This specialization requires R5s generated startup, which materializes
+`commit_magic = 0` before `arghtos_init()`, and a static valid crash-record
+address.
+
+For this profile, the fatal entry protocol is:
+
+```text
+if commit_magic != 0:
+    terminal immediately
+
+commit_magic = CAPTURE_IN_PROGRESS   # nonzero and != ARGHTOS_CRASH_COMMIT_MAGIC
+write dynamic crash fields
+fill port payload
+release fence
+commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC
+terminal
+```
+
+A record is valid only when the commit word equals
+`ARGHTOS_CRASH_COMMIT_MAGIC`. Therefore the in-progress value invalidates the
+record before dynamic capture exactly as required by the commit-last protocol.
+
+Because a successful fatal path never returns, any second fatal entry in the
+same runtime is recursive. It observes either the in-progress marker or the
+final valid commit marker, both nonzero, and transfers directly to the terminal
+hook without recapturing.
+
+The generated minimum profile may therefore omit the separate C9
+`ARGHTOS_KF_FAULT_ACTIVE` test/store. Generic/debug profiles retain the C9
+guard and the ordinary zero-before-capture protocol.
+
+Post-reset crash export/persistence remains outside C5; R6m inherits R5s's
+requirement that generated startup rematerializes the initial zero commit word.
