@@ -102,28 +102,34 @@ branch: implementation/r6-size-research-001
 PR:     #5 (draft)
 R5ag:   frozen reference = 1534 B
 R6a:    rejected neutral = 1534 B
-R6b:    accepted control = 1522 B
-phase:  R6c zero-duration sleep service-path experiment
+R6b:    accepted          = 1522 B
+R6c:    accepted control  = 1514 B
+phase:  R6d serialized scheduler-handler experiment
 ```
 
-R6b is preserved in
-[implementation/R6b-trusted-timer-entry.md](implementation/R6b-trusted-timer-entry.md).
+R6d tests a generated Cortex-M23 integration specialization. Handler-local
+PRIMASK enter/exit is omitted in `arghtos_timer_interrupt()` and
+`arghtos_wake_from_interrupt()` only when the board guarantees that all
+scheduler-mutating maskable handlers execute in one non-preempting priority
+class, PendSV is lower priority, and task/SVC mutation keeps the ordinary C4
+critical section.
 
-R6c tests whether the explicit `sleep_for(0)` fast path is redundant in the
-minimum profile. With R6c enabled, zero duration computes an absolute deadline
-equal to `now` and enters the existing SVC sleep-until path. That path already
-recognizes the deadline as due, returns `ARGHTOS_OK`, leaves the running task
-RUNNING, and requests no dispatch.
+The generic profile retains the handler-side critical sections.
 
-The static-profile host suite now asserts those zero-duration properties.
+Owning refinements:
 
-R5ag remains untouched; R6b is the current accepted R6 control.
+* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
+* [architecture/contracts/C2-wake.md](architecture/contracts/C2-wake.md)
+* [proof/P3-wake-wait-race-freedom.md](proof/P3-wake-wait-race-freedom.md)
+* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build R6b and R6c in the same revision.
-2. Compare complete resident bytes and `arghtos_sleep_for` symbol size.
-3. Accept R6c only for a strict linked physical reduction with the new zero
-   sleep regression and every retained gate green.
-4. If neutral/regressive, reject and preserve the result.
-5. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI build R6c and R6d in the same revision.
+2. Compare complete resident bytes and the linked sizes of
+   `arghtos_timer_interrupt` and `arghtos_wake_from_interrupt`.
+3. Accept R6d only for a strict physical reduction with all retained gates green.
+4. If accepted, preserve the exact interrupt-priority integration precondition
+   as part of the generated-profile contract.
+5. If neutral/regressive, reject and preserve the result.
+6. Do not merge PR #5 without explicit user permission.
