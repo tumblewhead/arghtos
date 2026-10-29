@@ -109,33 +109,37 @@ R6e:    accepted                  = 1482 B
 R6f:    accepted                  = 1478 B
 R6g:    rejected neutral          = 1478 B
 R6h:    rejected neutral          = 1478 B
-R6i:    accepted control          = 1470 B
-phase:  R6j proven non-faulted wake-state domain experiment
+R6i:    accepted                  = 1470 B
+R6j:    accepted control          = 1450 B
+phase:  R6k preseeded periodic READY startup experiment
 ```
 
-R6j consumes the accepted terminal-only fault specialization plus the P1
-lifecycle proof. In the trusted minimum profile, normal scheduler execution
-never resumes after a fatal condition and no task state is written FAULTED.
-Starting from pristine generated state, wake can therefore observe only
-DORMANT, READY, RUNNING, WAITING, or SLEEPING.
+R6j is preserved in
+[implementation/R6j-proven-wake-domain.md](implementation/R6j-proven-wake-domain.md).
 
-R6j removes only the FAULTED BAD_STATE branch and unknown-state invariant fatal
-from `wake_locked_compact()` in that trusted profile. Generic/debug builds
-retain both diagnostics.
+R6k refines R5m pristine generated startup. The generated metadata image
+preseeds each periodic task READY while leaving the async suffix DORMANT.
+R5n/R6b and production lifecycle preconditions prove that no supported
+scheduler observer can run before STARTED, so this physical pre-start encoding
+is not an early observable release.
+
+At `arghtos_start()`, R6k still reads the runtime start epoch, computes every
+periodic `next_time = start + period`, commits STARTED, arms the first timer,
+and enters the port start path. It removes only the redundant periodic READY
+write.
 
 Owning refinements:
 
-* [architecture/contracts/C1-task-api-lifecycle.md](architecture/contracts/C1-task-api-lifecycle.md)
-* [architecture/contracts/C2-wake.md](architecture/contracts/C2-wake.md)
+* [architecture/contracts/C0-static-task-configuration.md](architecture/contracts/C0-static-task-configuration.md)
 * [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build R6i and R6j in the same revision.
-2. Compare complete resident bytes and `wake_locked_compact` symbol size.
-3. Accept R6j only for a strict linked physical reduction with all retained
-   host, sanitizer, portability, Cortex-M23, R5ag, and R6i gates green.
-4. If accepted, preserve the exact terminal-only/non-faulted wake-domain
-   preconditions in an R6j implementation checkpoint.
-5. If neutral/regressive, reject and preserve the result before selecting R6k.
+1. Let PR #5 CI build R6j and R6k in the same revision.
+2. Compare complete resident bytes and `arghtos_start` symbol size.
+3. Accept R6k only for a strict linked physical reduction with the pre-start
+   host-state regression and all retained gates green.
+4. If accepted, preserve the exact generated metadata/startup preconditions in
+   an R6k implementation checkpoint.
+5. If neutral/regressive, reject and preserve the result before selecting R6l.
 6. Do not merge PR #5 without explicit user permission.
