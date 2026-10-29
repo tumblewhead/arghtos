@@ -222,3 +222,21 @@ epoch, and no task can dispatch before STARTED.
 
 Therefore the first dispatch sees the same set of READY periodic tasks and all
 subsequent P1 transitions are unchanged.
+
+# R6n dispatch-only service-outcome refinement
+
+For the trusted generated profile, the legal C1/C2 service domain contains no
+reachable error-return transition:
+
+* YIELD is issued from the current generated task;
+* WAIT and SLEEP_UNTIL are issued only by the generated async worker;
+* WAKE names the generated async worker and R6j excludes FAULTED/unknown state;
+* TASK_RETURN is issued only by the generated periodic trampoline;
+* R6f excludes unknown private service IDs;
+* invalid relative/absolute timing inputs are outside the minimum production
+  contract.
+
+Thus the public result for every admitted service execution is exactly
+`ARGHTOS_OK`. Replacing the encoded result-plus-dispatch byte with a
+dispatch-only internal value preserves every reachable P1 state transition and
+every public result.
