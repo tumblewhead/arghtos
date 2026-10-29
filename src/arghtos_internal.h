@@ -219,6 +219,14 @@
 #error "R5t always-armed timer requires generated periodic tasks"
 #endif
 
+#ifndef ARGHTOS_R5AA_DELTA_ONLY_TIMER
+#define ARGHTOS_R5AA_DELTA_ONLY_TIMER 0
+#endif
+
+#if ARGHTOS_R5AA_DELTA_ONLY_TIMER && !ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+#error "R5aa delta-only timer requires accepted R5t always-armed timer"
+#endif
+
 #ifndef ARGHTOS_R5V_UNIT_PERIOD_TIMER
 #define ARGHTOS_R5V_UNIT_PERIOD_TIMER 0
 #endif
