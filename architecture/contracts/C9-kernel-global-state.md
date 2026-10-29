@@ -255,3 +255,27 @@ exactly once and returns its result. Since that result is proved to be
 admitted by this generated profile.
 
 Generic profiles and fallible ports retain the runtime INITIALIZED commit.
+
+# R6r flagless generated minimum kernel state
+
+The trusted generated minimum-size profile may remove the C9 `flags` field
+entirely when every runtime use has been discharged by prior accepted
+specializations:
+
+* R6p materializes successful initialization by construction;
+* minimal-validation production rules remove runtime INITIALIZED/STARTED API
+  misuse checks;
+* R5n proves dispatch is entered only after start;
+* R6b proves timer entry is reachable only after start;
+* R6m moves recursive-fatal state into the crash commit word.
+
+Under this composition, no admitted execution reads INITIALIZED, STARTED, or
+FAULT_ACTIVE from C9. The remaining STARTED write in `arghtos_start()` is
+therefore observationally dead.
+
+The minimum C9 state may contain only `current_task`. No replacement flag
+storage is introduced. Generic/debug and less-specialized profiles retain the
+ordinary flags field and reserved padding.
+
+This specialization is valid only as the conjunction of the listed proofs and
+generated-profile preconditions; it is not a new generic scheduler rule.
