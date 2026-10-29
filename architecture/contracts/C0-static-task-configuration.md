@@ -320,3 +320,31 @@ R5l/R5m generated task context/state refinements.
 
 The crash record remains scheduler-owned writable storage and its full 64 bytes
 remain part of the ArghtOS resident-footprint accounting.
+
+# R6k preseeded periodic release-zero state
+
+The trusted generated minimum-size profile may refine R5m pristine startup by
+preseeding the packed state of every generated periodic task to READY while
+leaving every generated async task DORMANT.
+
+This is permitted only when the profile also proves that no supported scheduler
+observer can execute before C9 STARTED is committed:
+
+* R5n prevents dispatch before STARTED;
+* R6b prevents scheduler-timer entry before STARTED;
+* production interrupt-wake/service preconditions exclude lifecycle mutation
+  before scheduler start;
+* no public diagnostic state query is present in the no-profiling minimum
+  profile.
+
+The periodic READY encoding before STARTED is therefore an internal generated
+representation of the synchronous release-zero transaction, not an early task
+release visible to supported execution.
+
+At `arghtos_start()`, the kernel still reads the common start epoch, computes
+each periodic `next_time = start + period`, commits STARTED, arms the generated
+first timer, and enters the port start path. The only removed work is rewriting
+READY into metadata that already contains READY.
+
+Generic/debug and ordinary R5m profiles retain DORMANT periodic metadata before
+start and perform DORMANT -> READY at runtime.
