@@ -139,7 +139,12 @@ extern arghtos_crash_record_t arghtos_static_crash_record;
 #else
 static arghtos_task_control_t controls[ARGHTOS_MAX_TASKS];
 #endif
-#if ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID
+#if ARGHTOS_R6P_INFALLIBLE_PORT_INIT
+static arghtos_kernel_state_t kernel = {
+    .current_task = ARGHTOS_TASK_ID_INVALID,
+    .flags = ARGHTOS_KF_INITIALIZED
+};
+#elif ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID
 static arghtos_kernel_state_t kernel = {
     .current_task = ARGHTOS_TASK_ID_INVALID
 };
@@ -732,6 +737,10 @@ static bool current_running(arghtos_task_id_t *id)
 arghtos_result_t arghtos_init(const arghtos_config_t *config)
 {
 #if ARGHTOS_R5M_PRISTINE_INIT
+#if ARGHTOS_R6P_INFALLIBLE_PORT_INIT
+    (void)config;
+    return arghtos_port_init();
+#else
     arghtos_result_t r;
 
     (void)config;
@@ -745,6 +754,7 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 #endif
     kernel.flags = ARGHTOS_KF_INITIALIZED;
     return ARGHTOS_OK;
+#endif
 #else
     arghtos_result_t r;
     uint8_t id;
