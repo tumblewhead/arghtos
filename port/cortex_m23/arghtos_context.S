@@ -9,6 +9,46 @@ arghtos_port_service_call:
     bx lr
 .size arghtos_port_service_call, .-arghtos_port_service_call
 
+#if ARGHTOS_R5AD_COMPACT_API_VENEERS
+/*
+ * Public task-context service veneers for the trusted minimum-size target.
+ * YIELD and WAIT leave R1 unchanged because their service cases ignore arg0.
+ */
+.global arghtos_yield
+.type arghtos_yield, %function
+.thumb_func
+arghtos_yield:
+    movs r0, #0
+    b.n arghtos_port_service_call
+.size arghtos_yield, .-arghtos_yield
+
+.global arghtos_wait
+.type arghtos_wait, %function
+.thumb_func
+arghtos_wait:
+    movs r0, #1
+    b.n arghtos_port_service_call
+.size arghtos_wait, .-arghtos_wait
+
+.global arghtos_sleep_until
+.type arghtos_sleep_until, %function
+.thumb_func
+arghtos_sleep_until:
+    mov r1, r0
+    movs r0, #2
+    b.n arghtos_port_service_call
+.size arghtos_sleep_until, .-arghtos_sleep_until
+
+.global arghtos_wake
+.type arghtos_wake, %function
+.thumb_func
+arghtos_wake:
+    mov r1, r0
+    movs r0, #3
+    b.n arghtos_port_service_call
+.size arghtos_wake, .-arghtos_wake
+#endif
+
 .global SVC_Handler
 .type SVC_Handler, %function
 .thumb_func
@@ -78,18 +118,26 @@ PendSV_Handler:
      */
     mrs r5, msp
     ldr r1, [r5, #28]
-#if ARGHTOS_R5A_COMPACT_PENDSV_TAIL
+#if ARGHTOS_R5AD_COMPACT_API_VENEERS
+    adds r5, #32
+    lsrs r1, r1, #10
+    bcc 5f
+    adds r5, #4
+5:
+#elif ARGHTOS_R5A_COMPACT_PENDSV_TAIL
     lsrs r1, r1, #7
     movs r2, #4
     ands r1, r2
+    adds r5, #32
+    adds r5, r5, r1
 #else
     lsrs r1, r1, #9
     movs r2, #1
     ands r1, r2
     lsls r1, r1, #2
-#endif
     adds r5, #32
     adds r5, r5, r1
+#endif
     msr msp, r5
     movs r0, #0
 
@@ -162,10 +210,18 @@ HardFault_Handler:
     beq 1f
 #endif
     mov r1, r3
+#if ARGHTOS_R5AD_COMPACT_API_VENEERS
+    b 2f
+1:
+    mov r1, r2
+2:
+    b arghtos_m23_hardfault_entry
+#else
     b arghtos_m23_hardfault_entry
 1:
     mov r1, r2
     b arghtos_m23_hardfault_entry
+#endif
 .size HardFault_Handler, .-HardFault_Handler
 
 #if ARGHTOS_R5K_ASM_CRASH_FILL
