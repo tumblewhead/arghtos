@@ -25,11 +25,16 @@ extern uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_
 #endif
 
 #if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT == 0u
+#if ARGHTOS_R5Z_RAW_CLASS_SCHEDULE
+#define ARGHTOS_TASK_PERIOD(id)   ((uint32_t)arghtos_static_schedule8[(id)])
+#define ARGHTOS_TASK_PRIORITY(id) ((uint8_t)arghtos_static_schedule8[(id)])
+#else
 #define ARGHTOS_TASK_PERIOD(id) \
     (((arghtos_static_schedule8[(id)] & ARGHTOS_R5I_ASYNC_BASE) != 0u) ? \
         0u : (uint32_t)arghtos_static_schedule8[(id)])
 #define ARGHTOS_TASK_PRIORITY(id) \
     ((uint8_t)(arghtos_static_schedule8[(id)] & 0x7Fu))
+#endif
 #else
 static uint32_t r5i_schedule_get(arghtos_task_id_t id)
 {
