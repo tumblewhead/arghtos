@@ -293,3 +293,28 @@ scheduler state change beyond ordinary context save/restore.
 
 Therefore unconditional timer-side dispatch preserves P1 state invariants and
 observable scheduler selection.
+
+# R6w early periodic preemption refinement
+
+For each due periodic task, let `s` be its state before R6w normalization.
+
+R5y limits `s` to DORMANT, READY, or RUNNING. Missed-release accounting is
+computed from `s` before mutation:
+
+```text
+missed = releases - (s == DORMANT ? 1 : 0)
+```
+
+R6w then writes READY.
+
+* DORMANT -> READY is the ordinary release transition.
+* READY -> READY is idempotent.
+* RUNNING -> READY is the ordinary preemption transition moved earlier into the
+  timer handler.
+
+R6v guarantees a PendSV request on that timer exit. The interrupted RUNNING
+task's continuation is still saved by PendSV, and the unchanged selector then
+performs READY -> RUNNING for the winning task.
+
+Thus R6w does not add a new state edge. It only moves an already-legal
+preemption edge earlier within one handler-to-PendSV scheduling transaction.
