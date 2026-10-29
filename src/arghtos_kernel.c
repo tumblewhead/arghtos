@@ -857,6 +857,7 @@ ARGHTOS_NORETURN void arghtos_start(void)
     arghtos_port_start();
 }
 
+#if !ARGHTOS_R5AD_COMPACT_API_VENEERS
 arghtos_result_t arghtos_yield(void)
 {
 #if !ARGHTOS_PRODUCTION_PROFILE
@@ -888,6 +889,8 @@ arghtos_result_t arghtos_sleep_until(arghtos_time_t absolute_time)
         ARGHTOS_SERVICE_SLEEP_UNTIL, absolute_time);
 }
 
+#endif
+
 arghtos_result_t arghtos_sleep_for(arghtos_duration_t duration)
 {
     arghtos_time_t now;
@@ -911,6 +914,7 @@ arghtos_result_t arghtos_sleep_for(arghtos_duration_t duration)
         ARGHTOS_SERVICE_SLEEP_UNTIL, now + duration);
 }
 
+#if !ARGHTOS_R5AD_COMPACT_API_VENEERS
 arghtos_result_t arghtos_wake(arghtos_task_id_t task_id)
 {
 #if !ARGHTOS_PRODUCTION_PROFILE
@@ -920,6 +924,8 @@ arghtos_result_t arghtos_wake(arghtos_task_id_t task_id)
 #endif
     return arghtos_port_service_call(ARGHTOS_SERVICE_WAKE, task_id);
 }
+
+#endif
 
 arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 {
