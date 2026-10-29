@@ -198,6 +198,17 @@
 #define ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE 0
 #endif
 
+#ifndef ARGHTOS_R6G_PROVEN_CURRENT_DOMAIN
+#define ARGHTOS_R6G_PROVEN_CURRENT_DOMAIN 0
+#endif
+
+#if ARGHTOS_R6G_PROVEN_CURRENT_DOMAIN && \
+    (!ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_MINIMAL_VALIDATION || \
+     !ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE || !ARGHTOS_R5S_PRESEEDED_CRASH || \
+     !ARGHTOS_SPECIALIZED_SERVICES || ARGHTOS_RUNTIME_PROFILING)
+#error "R6g proven current-task domain requires the trusted generated minimum profile"
+#endif
+
 #if ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE && \
     (!ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_MINIMAL_VALIDATION)
 #error "R5ac terminal fault-state elision requires trusted generated minimum profile"
