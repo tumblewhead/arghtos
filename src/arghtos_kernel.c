@@ -478,6 +478,34 @@ static bool process_time_locked(arghtos_time_t now)
 #endif
     }
 
+#if ARGHTOS_R6H_SINGLE_ASYNC_TIME
+    id = (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT;
+    {
+        arghtos_task_control_t *c = &controls[id];
+
+        if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_SLEEPING) {
+            if (time_due(now, ARGHTOS_CTRL_NEXT(c))) {
+                ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
+                ARGHTOS_CTRL_AGE_ID(id) = 0u;
+#endif
+                changed = true;
+            } else {
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+                (void)c;
+#elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
+                timer_consider(now, ARGHTOS_CTRL_NEXT(c), &best_delta);
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+                timer_consider(
+                    now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
+#else
+                timer_consider(
+                    now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
+#endif
+            }
+        }
+    }
+#else
     for (id = (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT;
          id < ARGHTOS_TASK_COUNT; ++id) {
         arghtos_task_control_t *c = &controls[id];
@@ -504,6 +532,7 @@ static bool process_time_locked(arghtos_time_t now)
             }
         }
     }
+#endif
 #else
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         const uint32_t period = ARGHTOS_TASK_PERIOD(id);
