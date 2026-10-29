@@ -280,3 +280,24 @@ the documented FAULTED -> BAD_STATE behavior and invariant-fault diagnostic.
 This refinement does not make FAULTED a legal normal state in the minimum
 profile; it proves that the terminal-fault profile never resumes scheduler
 execution after a condition that would require that state.
+
+# R6n OK-only trusted service outcome
+
+The trusted generated minimum-size profile may specialize the private service
+dispatcher when all prior generated preconditions are active:
+
+* R6f closes the service-ID domain to the five defined lifecycle services;
+* generated API ownership ensures WAIT/SLEEP target the async worker,
+  TASK_RETURN is emitted only by the periodic trampoline, and WAKE targets the
+  generated async task;
+* minimal validation makes invalid time arguments outside the supported
+  production contract;
+* R6j proves wake cannot observe FAULTED or an unknown task state.
+
+Under those conditions, every reachable call to
+`arghtos_kernel_service()` returns `ARGHTOS_OK`. The only remaining internal
+service outcome is whether the operation requests dispatch.
+
+The generated minimum profile may therefore carry a dispatch-only internal
+outcome and return `ARGHTOS_OK` directly. Generic/debug profiles retain the
+full public result domain and all misuse/error reporting.
