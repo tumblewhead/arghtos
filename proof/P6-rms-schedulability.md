@@ -122,3 +122,16 @@ equivalent to the `hp(i)` ordering used by this proof.
 This representation refinement does not change any `T_i`, `C_i`, deadline,
 release, jitter, or interference term. It only removes runtime reconstruction
 of an ordering already proved by the generator.
+
+# R6v unit-tick dispatch overhead
+
+R6v may execute one redundant PendSV/dispatcher pass on a unit timer tick that
+does not create new READY work, for example while a period-1 job is already
+active.
+
+This is a bounded runtime-cost trade, not a free timing transformation.
+Build-time response-time analysis selecting R6v SHALL include at most one
+additional bounded PendSV/dispatch cost per scheduler timer tick in `K_i(R)`.
+
+No application execution priority changes; the additional work is scheduler
+overhead already represented by the P6 kernel-overhead term.
