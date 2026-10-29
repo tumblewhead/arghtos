@@ -906,9 +906,11 @@ arghtos_result_t arghtos_sleep_for(arghtos_duration_t duration)
         return ARGHTOS_ERR_BAD_TIME;
     }
 #endif
+#if !ARGHTOS_R6C_SLEEP_ZERO_SERVICE
     if (duration == 0u) {
         return ARGHTOS_OK;
     }
+#endif
 
     now = arghtos_port_time_now();
     return arghtos_port_service_call(
