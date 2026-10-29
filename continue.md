@@ -105,60 +105,33 @@ R6a:    rejected neutral         = 1534 B
 R6b:    accepted                  = 1522 B
 R6c:    accepted                  = 1514 B
 R6d:    accepted                  = 1494 B
-R6e:    accepted current control  = 1482 B
-saved from R5ag                  =   52 B
-saved from R4y                   =  812 B
+R6e:    accepted control          = 1482 B
+phase:  R6f trusted private service-ID domain experiment
 ```
 
-Accepted R6 checkpoints:
+R6f tests a proof-backed generated-profile specialization in
+`arghtos_kernel_service()`. The trusted Cortex-M23 profile already routes
+task lifecycle operations through fixed veneers and the generated task-return
+trampoline. Under the new closed service-ID contract, only YIELD, WAIT,
+SLEEP_UNTIL, WAKE, and TASK_RETURN can reach the service dispatcher.
 
-* [implementation/R6b-trusted-timer-entry.md](implementation/R6b-trusted-timer-entry.md)
-* [implementation/R6c-zero-sleep-service.md](implementation/R6c-zero-sleep-service.md)
-* [implementation/R6d-serialized-handler-mutation.md](implementation/R6d-serialized-handler-mutation.md)
-* [implementation/R6e-unified-scheduler-exception-serialization.md](implementation/R6e-unified-scheduler-exception-serialization.md)
+R6f therefore removes the runtime BAD_SERVICE default branch only in that
+trusted generated profile. The generic/debug profile retains the fatal branch.
+No compiler unreachable intrinsic is used.
 
-R6e authoritative measurement CI:
+Owning refinements:
 
-```text
-run:        40817081956
-conclusion: success
-measured head:
-            e3e4e8b3bc304d3249cb31cf0abf486ef5264897
-```
-
-R6e checkpoint validation:
-
-```text
-run:        40817165110
-conclusion: success
-head:       a2cf74161dd8b88edce1bcfd7806b51b3abe223e
-```
-
-R6e physical accounting:
-
-```text
-linked before MSP  1418 B
-ArghtOS-only MSP      64 B
--------------------------
-complete resident   1482 B
-```
-
-R6e extends R6d's generated non-preempting scheduler-handler class to SVC.
-The generated Cortex-M23 exception-priority configuration must prevent SVC,
-scheduler timer, and scheduler-mutating device handlers from preempting one
-another; PendSV remains strictly less urgent. The generic profile retains
-service-side PRIMASK critical sections.
-
-R5ag remains immutable and continues to build as the merged R5 reference.
+* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
+* [architecture/contracts/C1-task-api-lifecycle.md](architecture/contracts/C1-task-api-lifecycle.md)
+* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
 
 ## Exact next action
 
-1. Treat R6e = 1482 B as the accepted R6 control.
-2. Inspect the R6e linked symbol/map evidence before selecting R6f.
-3. Prefer the next hypothesis from the remaining large live symbols
-   (`process_time_locked`, `arghtos_fatal`, `arghtos_kernel_dispatch`,
-   `PendSV_Handler`) without weakening the generated integration contract
-   beyond what can be proved and tested.
-4. Keep any R6f change as a side-by-side challenger against R6e and preserve
-   R5ag as the immutable merged reference.
-5. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI build R6e and R6f in the same revision.
+2. Compare complete resident bytes and `arghtos_kernel_service` symbol size.
+3. Accept R6f only for a strict linked physical reduction with all retained
+   host, sanitizer, portability, Cortex-M23, R5ag, and R6e gates green.
+4. If accepted, preserve the exact closed service-ID preconditions in an R6f
+   implementation checkpoint.
+5. If neutral/regressive, reject and preserve the result before selecting R6g.
+6. Do not merge PR #5 without explicit user permission.
