@@ -49,6 +49,9 @@ jobs:
       - name: Host R6f trusted-service-domain control
         run: make host-test-r6f
 
+      - name: Host R6h singleton-async-time challenger
+        run: make host-test-r6h
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -79,6 +82,9 @@ jobs:
       - name: Cortex-M23 R6f trusted-service-domain control
         run: make m23-footprint-r6f
 
+      - name: Cortex-M23 R6h singleton-async-time challenger
+        run: make m23-footprint-r6h
+
       - name: Enforce R5ag 1536-byte resident target
         run: |
           python3 - <<'PY'
@@ -93,7 +99,7 @@ jobs:
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5ag r6b r6c r6d r6e r6f; do
+          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6h; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -114,6 +120,7 @@ jobs:
             build/footprint-r6d.json
             build/footprint-r6e.json
             build/footprint-r6f.json
+            build/footprint-r6h.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5ag.map
@@ -122,6 +129,7 @@ jobs:
             build/m23-r6d.map
             build/m23-r6e.map
             build/m23-r6f.map
+            build/m23-r6h.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5ag-symbols.txt
@@ -130,6 +138,7 @@ jobs:
             build/m23-r6d-symbols.txt
             build/m23-r6e-symbols.txt
             build/m23-r6f-symbols.txt
+            build/m23-r6h-symbols.txt
             build/m23-r4y.elf
             build/m23-r5ag.elf
             build/m23-r6b.elf
@@ -137,4 +146,5 @@ jobs:
             build/m23-r6d.elf
             build/m23-r6e.elf
             build/m23-r6f.elf
+            build/m23-r6h.elf
             build/*.su
