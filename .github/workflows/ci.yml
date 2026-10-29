@@ -34,8 +34,11 @@ jobs:
       - name: Host frozen R5ag semantic profile
         run: make host-test-r5ag
 
-      - name: Host R6b trusted timer-entry challenger
+      - name: Host R6b trusted timer-entry control
         run: make host-test-r6b
+
+      - name: Host R6c zero-sleep challenger
+        run: make host-test-r6c
 
       - name: Host sanitizers
         run: make host-sanitize
@@ -52,8 +55,11 @@ jobs:
       - name: Cortex-M23 frozen target-crossing R5ag
         run: make m23-footprint-r5ag
 
-      - name: Cortex-M23 R6b trusted timer-entry challenger
+      - name: Cortex-M23 R6b trusted timer-entry control
         run: make m23-footprint-r6b
+
+      - name: Cortex-M23 R6c zero-sleep challenger
+        run: make m23-footprint-r6c
 
       - name: Enforce R5ag 1536-byte resident target
         run: |
@@ -69,7 +75,7 @@ jobs:
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5ag r6b; do
+          for p in r3c r4y r5ag r6b r6c; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -86,15 +92,19 @@ jobs:
             build/footprint-r4y.json
             build/footprint-r5ag.json
             build/footprint-r6b.json
+            build/footprint-r6c.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5ag.map
             build/m23-r6b.map
+            build/m23-r6c.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5ag-symbols.txt
             build/m23-r6b-symbols.txt
+            build/m23-r6c-symbols.txt
             build/m23-r4y.elf
             build/m23-r5ag.elf
             build/m23-r6b.elf
+            build/m23-r6c.elf
             build/*.su
