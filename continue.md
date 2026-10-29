@@ -106,40 +106,33 @@ R6b:    accepted                  = 1522 B
 R6c:    accepted                  = 1514 B
 R6d:    accepted                  = 1494 B
 R6e:    accepted                  = 1482 B
-R6f:    accepted current control  = 1478 B
-saved from R5ag                  =   56 B
-saved from R4y                   =  816 B
+R6f:    accepted control          = 1478 B
+phase:  R6g fatal current-task-domain experiment
 ```
 
-R6f authoritative CI:
+R6g consumes the existing R5n dispatcher invariant that
+`kernel.current_task` is either INVALID or a configured task ID on supported
+generated-profile execution.
 
-```text
-run:        40817586249
-conclusion: success
-measured head:
-            df4930da915569c2e367731882ae61cf8283f541
-```
+The generated fatal path therefore tests
+`current_task != ARGHTOS_TASK_ID_INVALID` instead of repeating
+`current_task < task_count` before attributing the crash record to a task.
 
-R6f physical accounting:
+R6g does not enable or reuse the rejected R5w trusted-crash-port split. The
+generic/debug profile retains full task-ID validation.
 
-```text
-linked before MSP  1414 B
-ArghtOS-only MSP      64 B
--------------------------
-complete resident   1478 B
-```
+Owning refinements:
 
-R6f is preserved in
-[implementation/R6f-trusted-service-domain.md](implementation/R6f-trusted-service-domain.md).
+* [architecture/contracts/C5-fault-diagnostics.md](architecture/contracts/C5-fault-diagnostics.md)
+* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
 
 ## Exact next action
 
-1. Treat R6f = 1478 B as the accepted R6 control.
-2. Investigate R6g in the fatal path using the already-proved R5n dispatcher
-   invariant that `kernel.current_task` is either INVALID or a configured
-   task ID.
-3. Do not resurrect the rejected R5w trusted-crash-port split; isolate only the
-   current-task-domain simplification first.
-4. Build R6f and R6g side by side and require a strict physical reduction.
-5. Preserve R5ag as the immutable merged reference.
+1. Let PR #5 CI build R6f and R6g in the same revision.
+2. Compare complete resident bytes and `arghtos_fatal` symbol size.
+3. Accept R6g only for a strict linked physical reduction with all retained
+   gates green.
+4. If accepted, preserve the exact R5n current-task-domain dependency in an R6g
+   implementation checkpoint.
+5. If neutral/regressive, reject and preserve the result before selecting R6h.
 6. Do not merge PR #5 without explicit user permission.
