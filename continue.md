@@ -100,34 +100,30 @@ footprint report.
 ```text
 branch: implementation/r6-size-research-001
 PR:     #5 (draft)
-control: R5ag = 1534 B
-R6a:    rejected neutral, 1534 B, 0 B delta
-phase:  R6b trusted timer-entry experiment
+R5ag:   frozen reference = 1534 B
+R6a:    rejected neutral = 1534 B
+R6b:    accepted control = 1522 B
+phase:  R6c zero-duration sleep service-path experiment
 ```
 
-R6a is preserved in
-[implementation/R6a-compact-wake-tree.md](implementation/R6a-compact-wake-tree.md).
+R6b is preserved in
+[implementation/R6b-trusted-timer-entry.md](implementation/R6b-trusted-timer-entry.md).
 
-R6b tests a proof-backed generated-profile specialization: elide the defensive
-pre-start guard in `arghtos_timer_interrupt()` only when the selected
-generated port/profile guarantees that the scheduler timer is disarmed before
-start, STARTED is committed before first arm, and a disarmed timer cannot call
-the timer entry.
+R6c tests whether the explicit `sleep_for(0)` fast path is redundant in the
+minimum profile. With R6c enabled, zero duration computes an absolute deadline
+equal to `now` and enters the existing SVC sleep-until path. That path already
+recognizes the deadline as due, returns `ARGHTOS_OK`, leaves the running task
+RUNNING, and requests no dispatch.
 
-The generic profile retains the guard. R5ag remains untouched.
+The static-profile host suite now asserts those zero-duration properties.
 
-Owning refinements:
-
-* [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
-* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
+R5ag remains untouched; R6b is the current accepted R6 control.
 
 ## Exact next action
 
-1. Let PR #5 CI build frozen R5ag and R6b in the same revision.
-2. Compare complete resident bytes and `arghtos_timer_interrupt` symbol size.
-3. Accept R6b only for a strict linked physical reduction with all gates green.
-4. If accepted, record the exact generated-profile preconditions and freeze the
-   new control beside R5ag evidence.
-5. If neutral/regressive, reject it and preserve the result before choosing the
-   next challenger.
-6. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI build R6b and R6c in the same revision.
+2. Compare complete resident bytes and `arghtos_sleep_for` symbol size.
+3. Accept R6c only for a strict linked physical reduction with the new zero
+   sleep regression and every retained gate green.
+4. If neutral/regressive, reject and preserve the result.
+5. Do not merge PR #5 without explicit user permission.
