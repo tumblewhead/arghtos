@@ -4,6 +4,10 @@
 #define ARGHTOS_R5K_ASM_CRASH_FILL 0
 #endif
 
+#ifndef ARGHTOS_R5AF_ASM_HARDFAULT_ENTRY
+#define ARGHTOS_R5AF_ASM_HARDFAULT_ENTRY 0
+#endif
+
 #ifndef ARGHTOS_R5X_FORCE_CRASH_INLINE
 #define ARGHTOS_R5X_FORCE_CRASH_INLINE 0
 #endif
@@ -288,6 +292,7 @@ ARGHTOS_NORETURN void arghtos_port_fault_terminal(void)
 }
 
 
+#if !ARGHTOS_R5AF_ASM_HARDFAULT_ENTRY
 ARGHTOS_NORETURN void arghtos_m23_hardfault_entry(
     uint32_t exc_return,
     const uint32_t *basic_frame,
@@ -303,3 +308,4 @@ ARGHTOS_NORETURN void arghtos_m23_hardfault_entry(
 
     arghtos_fatal(ARGHTOS_FAULT_CPU_EXCEPTION, &ctx);
 }
+#endif
