@@ -1,6 +1,10 @@
 .syntax unified
 .thumb
 
+#if ARGHTOS_R5AE_LOCAL_SERVICE_SECTION
+.section .text.arghtos_service_veneer, "ax", %progbits
+#endif
+
 .global arghtos_port_service_call
 .type arghtos_port_service_call, %function
 .thumb_func
@@ -47,6 +51,10 @@ arghtos_wake:
     movs r0, #3
     b.n arghtos_port_service_call
 .size arghtos_wake, .-arghtos_wake
+#endif
+
+#if ARGHTOS_R5AE_LOCAL_SERVICE_SECTION
+.text
 #endif
 
 .global SVC_Handler
