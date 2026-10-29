@@ -410,3 +410,27 @@ guard and the ordinary zero-before-capture protocol.
 
 Post-reset crash export/persistence remains outside C5; R6m inherits R5s's
 requirement that generated startup rematerializes the initial zero commit word.
+
+# R6x bounded iterative missed-release saturation
+
+The trusted compact minimum profile may update the packed four-bit periodic
+missed-release counter with a bounded iterative saturator instead of
+room/subtraction arithmetic.
+
+The packed status high nibble is the missed count and the low nibble contains
+state/wake bits. Starting from the current status, each loop iteration adds
+`0x10`, preserving the low nibble, until either:
+
+* the requested missed-release increment is exhausted; or
+* the high nibble reaches `0xF`.
+
+The result is exactly:
+
+```text
+min(15, old_missed + count)
+```
+
+and therefore preserves the C5 saturating diagnostic contract.
+
+The loop executes at most `15 - old_missed <= 15` iterations, regardless of
+the delayed-release count.
