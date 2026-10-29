@@ -12,6 +12,15 @@ extern ARGHTOS_NORETURN void arghtos_task_start_trampoline(void);
 #endif
 extern ARGHTOS_NORETURN void arghtos_task_return_guard(void);
 
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+extern uint8_t app_stacks[24][128];
+
+__attribute__((section(".app_text"), noinline))
+void task_stub(void)
+{
+    __asm volatile("");
+}
+#else
 __attribute__((section(".app_stacks"), aligned(8)))
 static uint8_t app_stacks[24][128];
 
@@ -20,6 +29,7 @@ static void task_stub(void)
 {
     __asm volatile("");
 }
+#endif
 
 #define DESC(i, p) { task_stub, app_stacks[(i)], (p), sizeof(app_stacks[(i)]), 0u, 0u }
 
@@ -35,20 +45,35 @@ static void task_stub(void)
 #else
 #define ARGHTOS_META_SLOT_INIT .age_credit = 0u, .status = 0u,
 #endif
-#if ARGHTOS_ENTRY_NEXT_OVERLAY
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+#define ARGHTOS_TIME_ENTRY_INIT .entry_or_next.next_time = 0u,
+#define ARGHTOS_ENTRY_FIELD_INIT
+#elif ARGHTOS_ENTRY_NEXT_OVERLAY
 #define ARGHTOS_TIME_ENTRY_INIT .entry_or_next.entry = task_stub,
 #define ARGHTOS_ENTRY_FIELD_INIT
 #else
 #define ARGHTOS_TIME_ENTRY_INIT .next_time = 0u,
 #define ARGHTOS_ENTRY_FIELD_INIT .entry = task_stub,
 #endif
+#if ARGHTOS_R5F_COMPRESSED_SCHEDULE || ARGHTOS_R5G_SCHEDULE16 || ARGHTOS_R5I_SCHEDULE8
+#define ARGHTOS_SCHEDULE_SLOT_INIT(p)
+#else
+#define ARGHTOS_SCHEDULE_SLOT_INIT(p) .schedule = ARGHTOS_STATIC_PERIOD(p),
+#endif
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+#define ARGHTOS_INITIAL_CONTEXT(i) \
+    ((arghtos_context_t)(uintptr_t)&app_stacks[(i)][64])
+#else
+#define ARGHTOS_INITIAL_CONTEXT(i) \
+    ((arghtos_context_t)(uintptr_t)&app_stacks[(i)][sizeof(app_stacks[(i)])])
+#endif
 #define SLOT(i, p) { \
-    .context = (arghtos_context_t)(uintptr_t)&app_stacks[(i)][sizeof(app_stacks[(i)])], \
+    .context = ARGHTOS_INITIAL_CONTEXT(i), \
     ARGHTOS_TIME_ENTRY_INIT \
     ARGHTOS_PROFILE_SLOT_INIT \
     ARGHTOS_META_SLOT_INIT \
     ARGHTOS_ENTRY_FIELD_INIT \
-    .schedule = ARGHTOS_STATIC_PERIOD(p) \
+    ARGHTOS_SCHEDULE_SLOT_INIT(p) \
 }
 
 __attribute__((section(".arghtos_cfg")))
@@ -60,6 +85,35 @@ arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS] = {
     SLOT(16, 17u), SLOT(17, 18u), SLOT(18, 19u), SLOT(19, 20u),
     SLOT(20, 21u), SLOT(21, 22u), SLOT(22, 23u), SLOT(23, 24u)
 };
+#if ARGHTOS_R5F_COMPRESSED_SCHEDULE
+__attribute__((section(".arghtos_cfg")))
+uint8_t arghtos_static_schedule_stream[ARGHTOS_MAX_TASKS] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
+    9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u
+};
+#endif
+#if ARGHTOS_R5G_SCHEDULE16
+__attribute__((section(".arghtos_cfg")))
+uint16_t arghtos_static_schedule16[ARGHTOS_MAX_TASKS] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
+    9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u
+};
+#endif
+#if ARGHTOS_R5I_SCHEDULE8
+__attribute__((section(".arghtos_cfg")))
+uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
+    9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u, 20u, 21u, 22u, 23u,
+#if ARGHTOS_R5Z_RAW_CLASS_SCHEDULE
+    3u
+#else
+    ARGHTOS_R5I_ASYNC_BASE | 3u
+#endif
+};
+#endif
 #if ARGHTOS_SPLIT_META
 __attribute__((section(".arghtos_cfg")))
 arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
@@ -90,7 +144,19 @@ const arghtos_task_config_t arghtos_static_tasks[24] = {
 #endif
 
 __attribute__((section(".arghtos_crash"), aligned(4)))
+#if ARGHTOS_R5S_PRESEEDED_CRASH
+arghtos_crash_record_t arghtos_static_crash_record = {
+    .magic = ARGHTOS_CRASH_MAGIC,
+    .version = ARGHTOS_CRASH_VERSION,
+    .size = (uint16_t)sizeof(arghtos_crash_record_t),
+    .task_id = ARGHTOS_TASK_ID_INVALID
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+    ,.flags = ARGHTOS_CRASH_F_PORT_STATE_VALID
+#endif
+};
+#else
 arghtos_crash_record_t arghtos_static_crash_record;
+#endif
 #else
 __attribute__((section(".arghtos_cfg")))
 static const arghtos_task_config_t task_cfg[24] = {

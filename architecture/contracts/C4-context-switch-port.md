@@ -393,3 +393,68 @@ return, normal AAPCS argument delivery presents the entry pointer in R0.
 
 The generic/debug and non-overlay profiles retain the ordinary no-argument
 initial-context API.
+
+# R5l prebuilt initial-context equivalence
+
+The trusted generated minimum-size profile may enter C4 with an initial saved
+context already present in each application-owned task stack.
+
+For Cortex-M23, that generated context must be exactly equivalent to the
+ordinary synthesized 16-word frame:
+
+```text
+software R4-R11                 8 zero words
+hardware R0                     private task-entry pointer
+hardware R1-R3,R12              zero
+hardware LR                     task return guard
+hardware PC                     task-start trampoline, Thumb bit cleared
+hardware xPSR                   Thumb state bit set
+```
+
+The saved context token still points at software-saved R4. The 64-byte initial
+frame and 68-byte worst-case scheduler context reserve are unchanged.
+
+This is a build-time realization of the existing C4 frame contract, not a new
+context ABI. PendSV save/restore, PSP ownership, exception return, and runtime
+alignment handling are unchanged.
+
+# R5n trusted dispatch-entry refinement
+
+For the trusted generated minimum-size profile, the C4 handoff protocol is a
+precondition strong enough to discharge several portable dispatcher assertions:
+
+* `arghtos_port_start()` invokes first dispatch only after STARTED is committed;
+* PendSV supplies a nonzero outgoing context only for a task that was previously
+  selected by the dispatcher;
+* the PendSV no-task/idle path supplies a zero context only while
+  `current_task` is INVALID;
+* a generated saved context token is nonzero and valid for every configured
+  task.
+
+The generic/debug profile continues to check these combinations at runtime.
+R5n may compile those redundant checks out of the minimum-size image without
+changing the context ABI or legal scheduler behavior.
+
+
+# R5ad compact target service veneers
+
+The trusted minimum-size target profile may provide the public task-context
+service veneers in target assembly instead of the portable C translation unit.
+
+This specialization is permitted only when the veneer is ABI-equivalent to the
+portable wrapper:
+
+* `arghtos_yield()` invokes `ARGHTOS_SERVICE_YIELD`;
+* `arghtos_wait()` invokes `ARGHTOS_SERVICE_WAIT`;
+* `arghtos_sleep_until(t)` invokes `ARGHTOS_SERVICE_SLEEP_UNTIL` with
+  `arg0=t`;
+* `arghtos_wake(id)` invokes `ARGHTOS_SERVICE_WAKE` with `arg0=id`;
+* each veneer returns the service result in R0 using the ordinary public C ABI.
+
+For YIELD and WAIT, the kernel service cases do not inspect `arg0`. Therefore
+the target veneer need not initialize R1 before SVC. This is an internal
+calling-convention optimization only; the public functions remain no-argument
+operations.
+
+The generic/debug and non-specialized builds retain the portable C veneers.
+The portable scheduler core remains target-independent C11.

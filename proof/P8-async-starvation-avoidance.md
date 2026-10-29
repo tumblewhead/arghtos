@@ -77,3 +77,19 @@ Depends on C6 opportunity aging and P5 periodic-domain isolation.
 The architectural liveness argument is discharged for the specified opportunity-based algorithm.
 
 Implementation discharge requires model/property tests of the concrete selector.
+
+# R5r zero-reset elision
+
+R5r removes explicit zero stores only where zero is already implied by the
+state/selection invariant.
+
+Initially every async task has zero credit. The only operation that increases
+credit applies to READY async tasks. Before any such task becomes RUNNING, the
+selector resets its credit to zero. No non-READY state increments credit.
+
+By induction, every RUNNING, WAITING, SLEEPING, DORMANT, or FAULTED async task
+has zero credit. Thus eliding repeated zero stores on transitions from those
+states cannot alter the credit seen when the task later re-enters READY.
+
+The selected READY -> RUNNING reset is retained, so the starvation argument
+that selected peers return to zero is unchanged.

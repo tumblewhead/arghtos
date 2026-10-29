@@ -77,3 +77,74 @@ Depends on [P0](P0-static-configuration-validity.md).
 [P3](P3-wake-wait-race-freedom.md) proves the concurrency condition required for the `WAITING -> READY` edge.
 
 [P4](P4-time-release-correctness.md) proves the release predicate required for the `SLEEPING -> READY` edge.
+
+# R5n trusted generated-profile diagnostic refinement
+
+The generic/debug profile retains runtime assertions that detect impossible
+dispatcher state combinations and converts them to deterministic scheduler
+faults.
+
+The trusted generated minimum-size profile may omit a runtime assertion only
+when the asserted condition is an inductive consequence of this proof plus the
+C0/C4 trusted-profile preconditions.
+
+For R5n, the discharged conditions are:
+
+* dispatch is entered only after STARTED is committed;
+* a nonzero outgoing task context implies `current_task` names the previously
+  selected task;
+* a zero outgoing context occurs only for first dispatch or the no-winner idle
+  loop, where `current_task` is INVALID;
+* `arghtos_select_next()` returns either INVALID or a READY configured task;
+* every configured task has a valid nonzero saved context by generated
+  configuration evidence;
+* the private task trampoline begins only from a dispatcher-selected configured
+  task and receives the generated non-NULL entry pointer;
+* the specialized periodic TASK_RETURN service returns OK or does not return
+  because a fatal path was entered.
+
+Omitting these checks does not add legal state transitions and therefore does
+not change the P1 transition system for supported execution.
+
+The minimum profile no longer claims runtime diagnostic detection for these
+proof-impossible combinations if a trusted premise or arbitrary memory
+integrity is violated. Generic/debug builds retain that diagnostic coverage.
+
+
+# R5y trusted periodic release-state refinement
+
+For the trusted generated minimum-size profile, the periodic release engine may
+omit the defensive impossible-state branch after the following P1 facts are
+combined:
+
+* periodic tasks never enter WAITING or SLEEPING;
+* a configured periodic task is DORMANT before/after jobs, READY while pending,
+  or RUNNING while executing;
+* fatal transition to FAULTED is terminal and normal scheduler execution does
+  not resume afterward.
+
+Therefore, on a normal call to the periodic release engine, a periodic task
+whose release becomes due is either:
+
+```text
+DORMANT  -> READY, current release is not missed
+READY    -> remains active, current release is missed
+RUNNING  -> remains active, current release is missed
+```
+
+The generated R5y profile may encode this as:
+
+```text
+if state == DORMANT:
+    state = READY
+    changed = true
+    missed = releases - 1
+else:
+    missed = releases
+```
+
+without a runtime READY/RUNNING membership check.
+
+This refinement is valid only for the trusted generated profile that already
+adopts the R5n proof-discharged scheduler invariants. Generic/debug profiles
+retain the explicit impossible-state fault check.

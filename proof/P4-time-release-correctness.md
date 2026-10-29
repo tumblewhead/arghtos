@@ -126,3 +126,20 @@ P7 consumes the constant-time catch-up property.
 The arithmetic proof is architectural.
 
 Implementation discharge requires unit/property tests of the exact 32-bit arithmetic and target confirmation that timer service cannot be delayed by HALF_RANGE ticks.
+
+# R5q generated class-partition scan refinement
+
+Under C0/R5p, task class is proved by the generated ID partition. Replacing one
+mixed-class scan with a periodic-prefix scan followed by an async-suffix scan
+does not alter any due-time comparison or release transition:
+
+* every periodic task is visited exactly once with its nonzero generated
+  period;
+* every async task is visited exactly once and only SLEEPING tasks participate
+  in deadline processing;
+* the same set of future deadlines is presented to the earliest-timer
+  selection;
+* delayed periodic catch-up remains the same constant-time arithmetic.
+
+Therefore the R5q scan partition is semantically equivalent to the ordinary C3
+timer scan and preserves the bounded-work statement.

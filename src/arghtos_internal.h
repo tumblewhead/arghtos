@@ -53,6 +53,276 @@
 #define ARGHTOS_ENTRY_NEXT_OVERLAY 0
 #endif
 
+#ifndef ARGHTOS_R5C_COMPACT_WAKE_RESULT
+#define ARGHTOS_R5C_COMPACT_WAKE_RESULT 0
+#endif
+
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT && !ARGHTOS_SPECIALIZED_SERVICES
+#error "R5c compact wake result requires specialized production services"
+#endif
+
+#ifndef ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+#define ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME 0
+#endif
+
+#if ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME && !ARGHTOS_SPECIALIZED_SERVICES
+#error "R5d compact service outcome requires specialized production services"
+#endif
+
+#ifndef ARGHTOS_R5E_AGE_NEXT_OVERLAY
+#define ARGHTOS_R5E_AGE_NEXT_OVERLAY 0
+#endif
+
+#if ARGHTOS_R5E_AGE_NEXT_OVERLAY && \
+    (!ARGHTOS_ENTRY_NEXT_OVERLAY || !ARGHTOS_SPLIT_META || ARGHTOS_RUNTIME_PROFILING)
+#error "R5e age/deadline overlay requires no-profile split entry/next profile"
+#endif
+
+#ifndef ARGHTOS_R5F_COMPRESSED_SCHEDULE
+#define ARGHTOS_R5F_COMPRESSED_SCHEDULE 0
+#endif
+
+#if ARGHTOS_R5F_COMPRESSED_SCHEDULE && \
+    (!ARGHTOS_UNIFIED_SLOT || !ARGHTOS_ENTRY_NEXT_OVERLAY || !ARGHTOS_SPLIT_META)
+#error "R5f compressed schedule requires unified split entry/next profile"
+#endif
+
+#define ARGHTOS_R5F_SCHEDULE_ESCAPE 0x7Fu
+
+#ifndef ARGHTOS_R5G_SCHEDULE16
+#define ARGHTOS_R5G_SCHEDULE16 0
+#endif
+
+#ifndef ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT
+#define ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT 0u
+#endif
+
+#if ARGHTOS_R5G_SCHEDULE16 && \
+    (!ARGHTOS_UNIFIED_SLOT || !ARGHTOS_R5E_AGE_NEXT_OVERLAY)
+#error "R5g schedule16 requires the accepted R5e unified profile"
+#endif
+
+#if ARGHTOS_R5F_COMPRESSED_SCHEDULE && ARGHTOS_R5G_SCHEDULE16
+#error "R5f and R5g schedule encodings are mutually exclusive"
+#endif
+
+#if ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT > ARGHTOS_MAX_TASKS
+#error "R5g schedule overflow count exceeds task capacity"
+#endif
+
+#define ARGHTOS_R5G_OVERFLOW_BASE 0x7F00u
+#define ARGHTOS_R5G_ASYNC_BASE    0x8000u
+
+#ifndef ARGHTOS_R5H_DIRECT_SCHEDULE16
+#define ARGHTOS_R5H_DIRECT_SCHEDULE16 0
+#endif
+
+#if ARGHTOS_R5H_DIRECT_SCHEDULE16 && \
+    (!ARGHTOS_R5G_SCHEDULE16 || ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT != 0u)
+#error "R5h direct schedule16 requires R5g with zero overflow entries"
+#endif
+
+#ifndef ARGHTOS_R5L_PREBUILT_CONTEXT
+#define ARGHTOS_R5L_PREBUILT_CONTEXT 0
+#endif
+
+#ifndef ARGHTOS_R5M_PRISTINE_INIT
+#define ARGHTOS_R5M_PRISTINE_INIT 0
+#endif
+
+#ifndef ARGHTOS_R5N_PROVEN_DISPATCH
+#define ARGHTOS_R5N_PROVEN_DISPATCH 0
+#endif
+
+#ifndef ARGHTOS_R5O_TWO_PASS_TIME
+#define ARGHTOS_R5O_TWO_PASS_TIME 0
+#endif
+
+#if ARGHTOS_R5O_TWO_PASS_TIME && !ARGHTOS_R5N_PROVEN_DISPATCH
+#error "R5o two-pass time experiment requires the R5n trusted profile"
+#endif
+
+#ifndef ARGHTOS_R5O_GENERATED_START_TIMER
+#define ARGHTOS_R5O_GENERATED_START_TIMER 0
+#endif
+
+#ifndef ARGHTOS_R5O_MIN_PERIOD
+#define ARGHTOS_R5O_MIN_PERIOD 0u
+#endif
+
+#if ARGHTOS_R5O_GENERATED_START_TIMER && !ARGHTOS_R5N_PROVEN_DISPATCH
+#error "R5o generated start timer requires accepted R5n generated profile"
+#endif
+
+#if ARGHTOS_R5O_MIN_PERIOD >= 0x80000000u
+#error "R5o minimum period must satisfy the scheduler half-range rule"
+#endif
+
+#ifndef ARGHTOS_R5P_GENERATED_ORDER
+#define ARGHTOS_R5P_GENERATED_ORDER 0
+#endif
+
+#ifndef ARGHTOS_R5P_PERIODIC_COUNT
+#define ARGHTOS_R5P_PERIODIC_COUNT 0u
+#endif
+
+#if ARGHTOS_R5P_GENERATED_ORDER && !ARGHTOS_R5O_GENERATED_START_TIMER
+#error "R5p generated ordering requires accepted R5o generated profile"
+#endif
+
+#if ARGHTOS_R5P_PERIODIC_COUNT > ARGHTOS_STATIC_TASK_COUNT
+#error "R5p periodic prefix exceeds configured task count"
+#endif
+
+#ifndef ARGHTOS_R5Z_RAW_CLASS_SCHEDULE
+#define ARGHTOS_R5Z_RAW_CLASS_SCHEDULE 0
+#endif
+
+#if ARGHTOS_R5Z_RAW_CLASS_SCHEDULE && \
+    (!ARGHTOS_R5P_GENERATED_ORDER || !ARGHTOS_R5I_SCHEDULE8 || \
+     ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT != 0u)
+#error "R5z raw class schedule requires generated-order zero-overflow schedule8"
+#endif
+
+#ifndef ARGHTOS_R5AB_SINGLE_ASYNC
+#define ARGHTOS_R5AB_SINGLE_ASYNC 0
+#endif
+
+#if ARGHTOS_R5AB_SINGLE_ASYNC && \
+    (!ARGHTOS_R5Z_RAW_CLASS_SCHEDULE || !ARGHTOS_R5R_ELIDE_AGE_RESETS || \
+     (ARGHTOS_R5P_PERIODIC_COUNT + 1u) != ARGHTOS_STATIC_TASK_COUNT)
+#error "R5ab single-async selector requires exactly one generated async task"
+#endif
+
+#ifndef ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE
+#define ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE 0
+#endif
+
+#if ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE && \
+    (!ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_MINIMAL_VALIDATION)
+#error "R5ac terminal fault-state elision requires trusted generated minimum profile"
+#endif
+
+#ifndef ARGHTOS_R5Q_PARTITIONED_TIME
+#define ARGHTOS_R5Q_PARTITIONED_TIME 0
+#endif
+
+#if ARGHTOS_R5Q_PARTITIONED_TIME && !ARGHTOS_R5P_GENERATED_ORDER
+#error "R5q partitioned time scan requires accepted R5p ordering"
+#endif
+
+#ifndef ARGHTOS_R5R_ELIDE_AGE_RESETS
+#define ARGHTOS_R5R_ELIDE_AGE_RESETS 0
+#endif
+
+#if ARGHTOS_R5R_ELIDE_AGE_RESETS && !ARGHTOS_R5Q_PARTITIONED_TIME
+#error "R5r age-reset elision requires accepted R5q generated profile"
+#endif
+
+#ifndef ARGHTOS_R5S_PRESEEDED_CRASH
+#define ARGHTOS_R5S_PRESEEDED_CRASH 0
+#endif
+
+#ifndef ARGHTOS_R5AD_COMPACT_API_VENEERS
+#define ARGHTOS_R5AD_COMPACT_API_VENEERS 0
+#endif
+
+#if ARGHTOS_R5AD_COMPACT_API_VENEERS && !ARGHTOS_PRODUCTION_PROFILE
+#error "R5ad compact API veneers require production profile"
+#endif
+
+#if ARGHTOS_R5S_PRESEEDED_CRASH && \
+    (!ARGHTOS_STATIC_CONFIG || !ARGHTOS_MINIMAL_VALIDATION || \
+     !ARGHTOS_R5L_PREBUILT_CONTEXT)
+#error "R5s preseeded crash record requires trusted generated static startup"
+#endif
+
+#ifndef ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+#define ARGHTOS_R5T_TIMER_ALWAYS_ARMED 0
+#endif
+
+#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED && \
+    (!ARGHTOS_R5Q_PARTITIONED_TIME || ARGHTOS_R5P_PERIODIC_COUNT < 1u)
+#error "R5t always-armed timer requires generated periodic tasks"
+#endif
+
+#ifndef ARGHTOS_R5AA_DELTA_ONLY_TIMER
+#define ARGHTOS_R5AA_DELTA_ONLY_TIMER 0
+#endif
+
+#if ARGHTOS_R5AA_DELTA_ONLY_TIMER && !ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+#error "R5aa delta-only timer requires accepted R5t always-armed timer"
+#endif
+
+#ifndef ARGHTOS_R5V_UNIT_PERIOD_TIMER
+#define ARGHTOS_R5V_UNIT_PERIOD_TIMER 0
+#endif
+
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER && \
+    (!ARGHTOS_R5T_TIMER_ALWAYS_ARMED || ARGHTOS_R5O_MIN_PERIOD != 1u)
+#error "R5v unit-period timer requires accepted R5t profile with minimum period 1"
+#endif
+
+#ifndef ARGHTOS_R5W_TRUSTED_CRASH_PORT
+#define ARGHTOS_R5W_TRUSTED_CRASH_PORT 0
+#endif
+
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT && \
+    (!ARGHTOS_R5S_PRESEEDED_CRASH || !ARGHTOS_R5N_PROVEN_DISPATCH)
+#error "R5w trusted crash port requires accepted R5s and R5n profiles"
+#endif
+
+#ifndef ARGHTOS_R5Y_PROVEN_PERIODIC_STATE
+#define ARGHTOS_R5Y_PROVEN_PERIODIC_STATE 0
+#endif
+
+#if ARGHTOS_R5Y_PROVEN_PERIODIC_STATE && \
+    (!ARGHTOS_R5Q_PARTITIONED_TIME || !ARGHTOS_R5N_PROVEN_DISPATCH)
+#error "R5y periodic-state proof requires generated partitioned R5n profile"
+#endif
+
+#if ARGHTOS_R5N_PROVEN_DISPATCH && !ARGHTOS_R5M_PRISTINE_INIT
+#error "R5n proven dispatch requires the trusted R5m generated profile"
+#endif
+
+#if ARGHTOS_R5M_PRISTINE_INIT && \
+    (!ARGHTOS_R5L_PREBUILT_CONTEXT || !ARGHTOS_TRUSTED_CONFIG || \
+     !ARGHTOS_MINIMAL_VALIDATION || !ARGHTOS_STATIC_CONFIG)
+#error "R5m pristine init requires trusted static R5l minimum profile"
+#endif
+
+#if ARGHTOS_R5L_PREBUILT_CONTEXT && \
+    (!ARGHTOS_STATIC_CONFIG || !ARGHTOS_UNIFIED_SLOT || \
+     !ARGHTOS_ENTRY_NEXT_OVERLAY || !ARGHTOS_MINIMAL_VALIDATION)
+#error "R5l prebuilt context requires trusted static unified minimum profile"
+#endif
+
+#ifndef ARGHTOS_R5I_SCHEDULE8
+#define ARGHTOS_R5I_SCHEDULE8 0
+#endif
+
+#ifndef ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT
+#define ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT 0u
+#endif
+
+#if ARGHTOS_R5I_SCHEDULE8 && \
+    (!ARGHTOS_UNIFIED_SLOT || !ARGHTOS_R5E_AGE_NEXT_OVERLAY)
+#error "R5i schedule8 requires the accepted R5e unified profile"
+#endif
+
+#if ARGHTOS_R5I_SCHEDULE8 && \
+    (ARGHTOS_R5F_COMPRESSED_SCHEDULE || ARGHTOS_R5G_SCHEDULE16)
+#error "R5i schedule8 is mutually exclusive with earlier schedule encodings"
+#endif
+
+#if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT > ARGHTOS_MAX_TASKS
+#error "R5i schedule overflow count exceeds task capacity"
+#endif
+
+#define ARGHTOS_R5I_OVERFLOW_BASE 0x60u
+#define ARGHTOS_R5I_OVERFLOW_LAST 0x77u
+#define ARGHTOS_R5I_ASYNC_BASE    0x80u
+
 #if ARGHTOS_COMPACT_DESCRIPTOR && !ARGHTOS_STATIC_CONFIG
 #error "ARGHTOS_COMPACT_DESCRIPTOR requires ARGHTOS_STATIC_CONFIG=1"
 #endif
@@ -131,6 +401,9 @@ typedef struct {
     union {
         arghtos_task_fn_t entry;
         arghtos_time_t    next_time;
+#if ARGHTOS_R5E_AGE_NEXT_OVERLAY
+        uint8_t           age_credit;
+#endif
     } entry_or_next;
 #else
     arghtos_time_t    next_time;
@@ -147,7 +420,9 @@ typedef struct {
 #if !ARGHTOS_ENTRY_NEXT_OVERLAY
     arghtos_task_fn_t entry;
 #endif
+#if !ARGHTOS_R5F_COMPRESSED_SCHEDULE && !ARGHTOS_R5G_SCHEDULE16 && !ARGHTOS_R5I_SCHEDULE8
     uint32_t          schedule;
+#endif
 #endif
 } arghtos_task_control_t;
 
@@ -162,14 +437,24 @@ typedef struct {
 #endif
 
 #if ARGHTOS_SPLIT_META
+#if ARGHTOS_R5E_AGE_NEXT_OVERLAY
+typedef struct {
+    uint8_t status;
+} arghtos_task_meta_t;
+#else
 typedef struct {
     uint8_t age_credit;
     uint8_t status;
 } arghtos_task_meta_t;
+#endif
 extern arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
 #define ARGHTOS_CTRL_META(c) \
     (arghtos_static_meta[(size_t)((c) - arghtos_static_slots)])
+#if ARGHTOS_R5E_AGE_NEXT_OVERLAY
+#define ARGHTOS_CTRL_AGE(c)    ((c)->entry_or_next.age_credit)
+#else
 #define ARGHTOS_CTRL_AGE(c)    (ARGHTOS_CTRL_META(c).age_credit)
+#endif
 #define ARGHTOS_CTRL_STATUS(c) (ARGHTOS_CTRL_META(c).status)
 #else
 #define ARGHTOS_CTRL_AGE(c)    ((c)->age_credit)
@@ -278,6 +563,18 @@ _Static_assert(sizeof(arghtos_crash_record_t) == 64u, "crash record ABI changed"
 #if ARGHTOS_UNIFIED_SLOT
 #if ARGHTOS_RUNTIME_PROFILING
 _Static_assert(sizeof(arghtos_task_control_t) == 24u, "32-bit unified task slot ABI changed");
+#elif ARGHTOS_R5I_SCHEDULE8
+_Static_assert(sizeof(arghtos_task_control_t) == 8u, "32-bit R5i core slot ABI changed");
+_Static_assert(sizeof(arghtos_task_meta_t) == 1u, "R5i metadata ABI changed");
+#elif ARGHTOS_R5G_SCHEDULE16
+_Static_assert(sizeof(arghtos_task_control_t) == 8u, "32-bit R5g core slot ABI changed");
+_Static_assert(sizeof(arghtos_task_meta_t) == 1u, "R5g metadata ABI changed");
+#elif ARGHTOS_R5F_COMPRESSED_SCHEDULE
+_Static_assert(sizeof(arghtos_task_control_t) == 8u, "32-bit R5f core slot ABI changed");
+_Static_assert(sizeof(arghtos_task_meta_t) == 1u, "R5f metadata ABI changed");
+#elif ARGHTOS_R5E_AGE_NEXT_OVERLAY
+_Static_assert(sizeof(arghtos_task_control_t) == 12u, "32-bit R5e core slot ABI changed");
+_Static_assert(sizeof(arghtos_task_meta_t) == 1u, "R5e metadata ABI changed");
 #elif ARGHTOS_ENTRY_NEXT_OVERLAY
 _Static_assert(sizeof(arghtos_task_control_t) == 12u, "32-bit entry-overlay core slot ABI changed");
 _Static_assert(sizeof(arghtos_task_meta_t) == 2u, "entry-overlay metadata ABI changed");

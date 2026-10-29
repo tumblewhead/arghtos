@@ -110,3 +110,15 @@ The proof remains conditional until actual implementation timing bounds and appl
 # Dependencies
 
 Depends on [P4](P4-time-release-correctness.md), [P5](P5-priority-domain-isolation.md), and [P7](P7-bounded-memory-and-work.md).
+
+# R5p generated RMS-order refinement
+
+C0 may encode periodic RMS order directly in generated task IDs for the trusted
+minimum-size profile. If periodic tasks occupy a prefix sorted by
+nondecreasing period, with deterministic increasing-ID order for equal periods,
+then selecting the first READY periodic task in that prefix is exactly
+equivalent to the `hp(i)` ordering used by this proof.
+
+This representation refinement does not change any `T_i`, `C_i`, deadline,
+release, jitter, or interference term. It only removes runtime reconstruction
+of an ordering already proved by the generator.

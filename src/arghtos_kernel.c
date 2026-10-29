@@ -18,11 +18,96 @@
 #if ARGHTOS_UNIFIED_SLOT
 extern arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS];
 #define ARGHTOS_TASK_ENTRY(id)    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[(id)])
+#if ARGHTOS_R5I_SCHEDULE8
+extern uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS];
+#if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT > 0u
+extern uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT];
+#endif
+
+#if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT == 0u
+#if ARGHTOS_R5Z_RAW_CLASS_SCHEDULE
+#define ARGHTOS_TASK_PERIOD(id)   ((uint32_t)arghtos_static_schedule8[(id)])
+#define ARGHTOS_TASK_PRIORITY(id) ((uint8_t)arghtos_static_schedule8[(id)])
+#else
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((arghtos_static_schedule8[(id)] & ARGHTOS_R5I_ASYNC_BASE) != 0u) ? \
+        0u : (uint32_t)arghtos_static_schedule8[(id)])
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(arghtos_static_schedule8[(id)] & 0x7Fu))
+#endif
+#else
+static uint32_t r5i_schedule_get(arghtos_task_id_t id)
+{
+    const uint8_t code = arghtos_static_schedule8[id];
+
+    if ((code >= ARGHTOS_R5I_OVERFLOW_BASE) &&
+        (code <= ARGHTOS_R5I_OVERFLOW_LAST)) {
+        return arghtos_static_schedule8_overflow[
+            (uint8_t)(code - ARGHTOS_R5I_OVERFLOW_BASE)];
+    }
+    if ((code & ARGHTOS_R5I_ASYNC_BASE) != 0u) {
+        return ARGHTOS_STATIC_ASYNC_TAG | (uint32_t)(code & 0x7Fu);
+    }
+    return (uint32_t)code;
+}
+
+#define ARGHTOS_TASK_SCHEDULE(id) r5i_schedule_get((id))
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_TAG) != 0u) ? \
+        0u : ARGHTOS_TASK_SCHEDULE(id))
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_MASK))
+#endif
+#elif ARGHTOS_R5G_SCHEDULE16
+extern uint16_t arghtos_static_schedule16[ARGHTOS_MAX_TASKS];
+#if ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT > 0u
+extern uint32_t arghtos_static_schedule_overflow[ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT];
+#endif
+
+#if ARGHTOS_R5H_DIRECT_SCHEDULE16
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((arghtos_static_schedule16[(id)] & ARGHTOS_R5G_ASYNC_BASE) != 0u) ? \
+        0u : (uint32_t)arghtos_static_schedule16[(id)])
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(arghtos_static_schedule16[(id)] & 0x00FFu))
+#else
+static uint32_t r5g_schedule_get(arghtos_task_id_t id)
+{
+    const uint16_t code = arghtos_static_schedule16[id];
+
+#if ARGHTOS_R5G_SCHEDULE_OVERFLOW_COUNT > 0u
+    if ((code & 0xFF00u) == ARGHTOS_R5G_OVERFLOW_BASE) {
+        return arghtos_static_schedule_overflow[code & 0x00FFu];
+    }
+#endif
+    if ((code & 0xFF00u) == ARGHTOS_R5G_ASYNC_BASE) {
+        return ARGHTOS_STATIC_ASYNC_TAG | (uint32_t)(code & 0x00FFu);
+    }
+    return (uint32_t)code;
+}
+
+#define ARGHTOS_TASK_SCHEDULE(id) r5g_schedule_get((id))
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_TAG) != 0u) ? \
+        0u : ARGHTOS_TASK_SCHEDULE(id))
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_MASK))
+#endif
+#elif ARGHTOS_R5F_COMPRESSED_SCHEDULE
+uint32_t arghtos_r5f_schedule_get(arghtos_task_id_t id);
+#define ARGHTOS_TASK_SCHEDULE(id) arghtos_r5f_schedule_get((id))
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_TAG) != 0u) ? \
+        0u : ARGHTOS_TASK_SCHEDULE(id))
+#define ARGHTOS_TASK_PRIORITY(id) \
+    ((uint8_t)(ARGHTOS_TASK_SCHEDULE(id) & ARGHTOS_STATIC_ASYNC_MASK))
+#else
 #define ARGHTOS_TASK_PERIOD(id) \
     (((arghtos_static_slots[(id)].schedule & ARGHTOS_STATIC_ASYNC_TAG) != 0u) ? \
         0u : arghtos_static_slots[(id)].schedule)
 #define ARGHTOS_TASK_PRIORITY(id) \
     ((uint8_t)(arghtos_static_slots[(id)].schedule & ARGHTOS_STATIC_ASYNC_MASK))
+#endif
 #else
 extern const arghtos_static_task_t arghtos_static_tasks[ARGHTOS_STATIC_TASK_COUNT];
 #define ARGHTOS_TASK_ENTRY(id)    (arghtos_static_tasks[(id)].entry)
@@ -108,11 +193,17 @@ static bool duration_valid(arghtos_duration_t dt)
 }
 #endif
 
+#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT
 static bool task_id_valid(arghtos_task_id_t id)
 {
     return id < ARGHTOS_TASK_COUNT;
 }
+#endif
 
+#if ARGHTOS_R5P_GENERATED_ORDER
+#define task_is_periodic(id) ((arghtos_task_id_t)(id) < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT)
+#define task_is_async(id)    ((arghtos_task_id_t)(id) >= (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT)
+#else
 static bool task_is_periodic(arghtos_task_id_t id)
 {
     return ARGHTOS_TASK_PERIOD(id) != 0u;
@@ -122,7 +213,9 @@ static bool task_is_async(arghtos_task_id_t id)
 {
     return ARGHTOS_TASK_PERIOD(id) == 0u;
 }
+#endif
 
+#if !ARGHTOS_R5M_PRISTINE_INIT || defined(ARGHTOS_TEST)
 static void control_clear(arghtos_task_id_t id, arghtos_task_control_t *c)
 {
     c->context = ARGHTOS_CONTEXT_NONE;
@@ -146,6 +239,7 @@ static void control_clear(arghtos_task_id_t id, arghtos_task_control_t *c)
     c->flags = 0u;
 #endif
 }
+#endif
 
 #if !ARGHTOS_TRUSTED_CONFIG
 static bool range_end(uintptr_t base, uint32_t size, uintptr_t *end)
@@ -268,6 +362,34 @@ static void missed_release_add(
 #endif
 }
 
+#if !ARGHTOS_R5V_UNIT_PERIOD_TIMER
+#if ARGHTOS_R5AA_DELTA_ONLY_TIMER
+static void timer_consider(
+    arghtos_time_t now,
+    arghtos_time_t t,
+    uint32_t *best_delta)
+{
+    const uint32_t delta = t - now;
+
+    if (delta < *best_delta) {
+        *best_delta = delta;
+    }
+}
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+static void timer_consider(
+    arghtos_time_t now,
+    arghtos_time_t t,
+    arghtos_time_t *best,
+    uint32_t *best_delta)
+{
+    const uint32_t delta = t - now;
+
+    if (delta < *best_delta) {
+        *best = t;
+        *best_delta = delta;
+    }
+}
+#else
 static void timer_consider(
     arghtos_time_t now,
     arghtos_time_t t,
@@ -283,15 +405,106 @@ static void timer_consider(
         *best_delta = delta;
     }
 }
+#endif
+#endif
 
 static bool process_time_locked(arghtos_time_t now)
 {
     bool changed = false;
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+    uint8_t id;
+#elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
+    uint32_t best_delta = UINT32_MAX;
+    uint8_t id;
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+    arghtos_time_t best_time = 0u;
+    uint32_t best_delta = UINT32_MAX;
+    uint8_t id;
+#else
     bool have_timer = false;
     arghtos_time_t best_time = 0u;
     uint32_t best_delta = 0u;
     uint8_t id;
+#endif
 
+#if ARGHTOS_R5Q_PARTITIONED_TIME
+    for (id = 0u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
+        const uint32_t period = ARGHTOS_TASK_PERIOD(id);
+        arghtos_task_control_t *c = &controls[id];
+
+        if (time_due(now, ARGHTOS_CTRL_NEXT(c))) {
+            const uint32_t late = now - ARGHTOS_CTRL_NEXT(c);
+            const uint32_t releases = 1u + (late / period);
+            uint32_t missed;
+
+            ARGHTOS_CTRL_NEXT(c) += releases * period;
+
+#if ARGHTOS_R5Y_PROVEN_PERIODIC_STATE
+            if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT) {
+                ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+                changed = true;
+                missed = releases - 1u;
+            } else {
+                missed = releases;
+            }
+#else
+            if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_DORMANT) {
+                ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+                changed = true;
+                missed = releases - 1u;
+            } else if ((ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) ||
+                       (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_RUNNING)) {
+                missed = releases;
+            } else {
+                arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+            }
+#endif
+
+            if (missed != 0u) {
+                missed_release_add(id, c, missed);
+            }
+        }
+
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+        (void)c;
+#elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
+        timer_consider(now, ARGHTOS_CTRL_NEXT(c), &best_delta);
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+        timer_consider(
+            now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
+#else
+        timer_consider(
+            now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
+#endif
+    }
+
+    for (id = (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT;
+         id < ARGHTOS_TASK_COUNT; ++id) {
+        arghtos_task_control_t *c = &controls[id];
+
+        if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_SLEEPING) {
+            if (time_due(now, ARGHTOS_CTRL_NEXT(c))) {
+                ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
+                ARGHTOS_CTRL_AGE_ID(id) = 0u;
+#endif
+                changed = true;
+            } else {
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+                (void)c;
+#elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
+                timer_consider(now, ARGHTOS_CTRL_NEXT(c), &best_delta);
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+                timer_consider(
+                    now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
+#else
+                timer_consider(
+                    now, ARGHTOS_CTRL_NEXT(c), &have_timer, &best_time, &best_delta);
+#endif
+            }
+        }
+    }
+#else
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         const uint32_t period = ARGHTOS_TASK_PERIOD(id);
         arghtos_task_control_t *c = &controls[id];
@@ -325,7 +538,9 @@ static bool process_time_locked(arghtos_time_t now)
         } else if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_SLEEPING) {
             if (time_due(now, ARGHTOS_CTRL_NEXT(c))) {
                 ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
                 ARGHTOS_CTRL_AGE_ID(id) = 0u;
+#endif
                 changed = true;
             } else {
                 timer_consider(
@@ -333,16 +548,61 @@ static bool process_time_locked(arghtos_time_t now)
             }
         }
     }
+#endif
 
+#if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+    arghtos_port_timer_arm(ARGHTOS_CTRL_NEXT(&controls[0]));
+#elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
+    arghtos_port_timer_arm(now + best_delta);
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+    arghtos_port_timer_arm(best_time);
+#else
     if (have_timer) {
         arghtos_port_timer_arm(best_time);
     } else {
         arghtos_port_timer_disarm();
     }
 
+#endif
+
     return changed;
 }
 
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+#define ARGHTOS_WAKE_DISPATCH_BIT 0x08u
+#define ARGHTOS_WAKE_RESULT_MASK  0x07u
+_Static_assert(ARGHTOS_ERR_BAD_CONFIG <= ARGHTOS_WAKE_RESULT_MASK,
+               "R5c wake encoding must cover all public result codes");
+
+static uint8_t wake_locked_compact(arghtos_task_id_t id)
+{
+    switch (ARGHTOS_CTRL_STATE_ID(id)) {
+    case ARGHTOS_TASK_DORMANT:
+    case ARGHTOS_TASK_WAITING:
+        ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
+        ARGHTOS_CTRL_AGE_ID(id) = 0u;
+#endif
+        ARGHTOS_CTRL_CLEAR_WAKE_ID(id);
+        return ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+
+    case ARGHTOS_TASK_READY:
+        return ARGHTOS_OK;
+
+    case ARGHTOS_TASK_RUNNING:
+    case ARGHTOS_TASK_SLEEPING:
+        ARGHTOS_CTRL_SET_WAKE_ID(id);
+        return ARGHTOS_OK;
+
+    case ARGHTOS_TASK_FAULTED:
+        return ARGHTOS_ERR_BAD_STATE;
+
+    default:
+        arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+    }
+    return ARGHTOS_ERR_BAD_STATE;
+}
+#else
 static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
 {
 #if !ARGHTOS_SPECIALIZED_SERVICES
@@ -361,7 +621,9 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
     case ARGHTOS_TASK_DORMANT:
     case ARGHTOS_TASK_WAITING:
         ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
         ARGHTOS_CTRL_AGE_ID(id) = 0u;
+#endif
         ARGHTOS_CTRL_CLEAR_WAKE_ID(id);
         *result = ARGHTOS_OK;
         return true;
@@ -385,6 +647,7 @@ static bool wake_locked(arghtos_task_id_t id, arghtos_result_t *result)
     }
     return false;
 }
+#endif
 
 #if !ARGHTOS_SPECIALIZED_SERVICES
 static bool current_running(arghtos_task_id_t *id)
@@ -402,6 +665,19 @@ static bool current_running(arghtos_task_id_t *id)
 
 arghtos_result_t arghtos_init(const arghtos_config_t *config)
 {
+#if ARGHTOS_R5M_PRISTINE_INIT
+    arghtos_result_t r;
+
+    (void)config;
+    r = arghtos_port_init();
+    if (r != ARGHTOS_OK) {
+        return r;
+    }
+
+    kernel.current_task = ARGHTOS_TASK_ID_INVALID;
+    kernel.flags = ARGHTOS_KF_INITIALIZED;
+    return ARGHTOS_OK;
+#else
     arghtos_result_t r;
     uint8_t id;
 #if !ARGHTOS_COMPACT_DESCRIPTOR
@@ -442,6 +718,15 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 
     for (id = 0u; id < init_count; ++id) {
 #if ARGHTOS_UNIFIED_SLOT
+#if ARGHTOS_R5L_PREBUILT_CONTEXT
+        /*
+         * Generated static configuration already supplies the exact saved
+         * target context in the application-owned task stack. Preserve the
+         * context token and reset only mutable runtime state.
+         */
+        ARGHTOS_CTRL_NEXT(&controls[id]) = 0u;
+        ARGHTOS_CTRL_STATUS_ID(id) = 0u;
+#else
         void *const stack_top = (void *)(uintptr_t)controls[id].context;
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
         const arghtos_task_fn_t entry = ARGHTOS_TASK_ENTRY(id);
@@ -457,6 +742,7 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
             stack_top,
             arghtos_task_start_trampoline,
             arghtos_task_return_guard);
+#endif
 #endif
 #elif ARGHTOS_COMPACT_DESCRIPTOR
         control_clear(id, &controls[id]);
@@ -506,15 +792,18 @@ arghtos_result_t arghtos_init(const arghtos_config_t *config)
 
     arghtos_port_timer_disarm();
     return ARGHTOS_OK;
+#endif
 }
 
 ARGHTOS_NORETURN void arghtos_start(void)
 {
     arghtos_time_t start;
     arghtos_irq_key_t key;
+#if !ARGHTOS_R5O_GENERATED_START_TIMER
     bool have_timer = false;
     arghtos_time_t earliest = 0u;
     uint32_t earliest_delta = 0u;
+#endif
     uint8_t id;
 
 #if !ARGHTOS_MINIMAL_VALIDATION
@@ -530,27 +819,45 @@ ARGHTOS_NORETURN void arghtos_start(void)
     kernel.start_time = start;
 #endif
 
+#if ARGHTOS_R5P_GENERATED_ORDER
+    for (id = 0u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
+        ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+        ARGHTOS_CTRL_NEXT(&controls[id]) = start + ARGHTOS_TASK_PERIOD(id);
+    }
+#else
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
         if (task_is_periodic(id)) {
             ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
             ARGHTOS_CTRL_NEXT(&controls[id]) = start + ARGHTOS_TASK_PERIOD(id);
+#if !ARGHTOS_R5O_GENERATED_START_TIMER
             timer_consider(start, ARGHTOS_CTRL_NEXT(&controls[id]),
                            &have_timer, &earliest, &earliest_delta);
+#endif
         }
     }
+#endif
 
     kernel.flags |= ARGHTOS_KF_STARTED;
 
+#if ARGHTOS_R5O_GENERATED_START_TIMER
+#if ARGHTOS_R5O_MIN_PERIOD > 0u
+    arghtos_port_timer_arm(start + (arghtos_time_t)ARGHTOS_R5O_MIN_PERIOD);
+#else
+    arghtos_port_timer_disarm();
+#endif
+#else
     if (have_timer) {
         arghtos_port_timer_arm(earliest);
     } else {
         arghtos_port_timer_disarm();
     }
+#endif
 
     arghtos_port_critical_exit(key);
     arghtos_port_start();
 }
 
+#if !ARGHTOS_R5AD_COMPACT_API_VENEERS
 arghtos_result_t arghtos_yield(void)
 {
 #if !ARGHTOS_PRODUCTION_PROFILE
@@ -582,6 +889,8 @@ arghtos_result_t arghtos_sleep_until(arghtos_time_t absolute_time)
         ARGHTOS_SERVICE_SLEEP_UNTIL, absolute_time);
 }
 
+#endif
+
 arghtos_result_t arghtos_sleep_for(arghtos_duration_t duration)
 {
     arghtos_time_t now;
@@ -605,6 +914,7 @@ arghtos_result_t arghtos_sleep_for(arghtos_duration_t duration)
         ARGHTOS_SERVICE_SLEEP_UNTIL, now + duration);
 }
 
+#if !ARGHTOS_R5AD_COMPACT_API_VENEERS
 arghtos_result_t arghtos_wake(arghtos_task_id_t task_id)
 {
 #if !ARGHTOS_PRODUCTION_PROFILE
@@ -615,11 +925,17 @@ arghtos_result_t arghtos_wake(arghtos_task_id_t task_id)
     return arghtos_port_service_call(ARGHTOS_SERVICE_WAKE, task_id);
 }
 
+#endif
+
 arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 {
     arghtos_irq_key_t key;
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+    uint8_t wake_result;
+#else
     arghtos_result_t result;
     bool dispatch;
+#endif
 
 #if !ARGHTOS_PRODUCTION_PROFILE
     if (!arghtos_port_is_handler_context()) {
@@ -636,14 +952,24 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     }
 #endif
 
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+    wake_result = wake_locked_compact(task_id);
+#else
     dispatch = wake_locked(task_id, &result);
+#endif
     arghtos_port_critical_exit(key);
 
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+    if ((wake_result & ARGHTOS_WAKE_DISPATCH_BIT) != 0u) {
+        arghtos_port_request_dispatch();
+    }
+    return (arghtos_result_t)(wake_result & ARGHTOS_WAKE_RESULT_MASK);
+#else
     if (dispatch) {
         arghtos_port_request_dispatch();
     }
-
     return result;
+#endif
 }
 
 #if ARGHTOS_RUNTIME_PROFILING
@@ -682,6 +1008,88 @@ arghtos_result_t arghtos_profile_get(
 }
 #endif
 
+#if ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
+{
+    arghtos_irq_key_t key;
+    const arghtos_task_id_t self = kernel.current_task;
+    uint8_t outcome = ARGHTOS_OK;
+
+    key = arghtos_port_critical_enter();
+
+    switch (service_id) {
+    case ARGHTOS_SERVICE_YIELD:
+        ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
+        if (task_is_async(self)) {
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
+        }
+#endif
+        outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+        break;
+
+    case ARGHTOS_SERVICE_WAIT:
+        if (ARGHTOS_CTRL_WAKE_PENDING_ID(self)) {
+            ARGHTOS_CTRL_CLEAR_WAKE_ID(self);
+        } else {
+            ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_WAITING);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
+#endif
+            outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+        }
+        break;
+
+    case ARGHTOS_SERVICE_SLEEP_UNTIL:
+        {
+            const arghtos_time_t now = arghtos_port_time_now();
+            const arghtos_time_t deadline = (arghtos_time_t)arg0;
+#if !ARGHTOS_MINIMAL_VALIDATION
+            const uint32_t delta = deadline - now;
+#endif
+
+            if (time_due(now, deadline)) {
+                break;
+            }
+#if !ARGHTOS_MINIMAL_VALIDATION
+            if (!duration_valid(delta)) {
+                outcome = ARGHTOS_ERR_BAD_TIME;
+                break;
+            }
+#endif
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
+#endif
+            ARGHTOS_CTRL_NEXT(&controls[self]) = deadline;
+            ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
+            (void)process_time_locked(now);
+            outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+        }
+        break;
+
+    case ARGHTOS_SERVICE_WAKE:
+        outcome = wake_locked_compact((arghtos_task_id_t)arg0);
+        break;
+
+    case ARGHTOS_SERVICE_TASK_RETURN:
+        ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_DORMANT);
+        outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+        break;
+
+    default:
+        arghtos_port_critical_exit(key);
+        arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+    }
+
+    arghtos_port_critical_exit(key);
+
+    if ((outcome & ARGHTOS_WAKE_DISPATCH_BIT) != 0u) {
+        arghtos_port_request_dispatch();
+    }
+
+    return (arghtos_result_t)(outcome & ARGHTOS_WAKE_RESULT_MASK);
+}
+#else
 arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 {
     arghtos_irq_key_t key;
@@ -748,16 +1156,25 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             (void)delta;
 #endif
 
+            ARGHTOS_CTRL_AGE_ID(self) = 0u;
             ARGHTOS_CTRL_NEXT(&controls[self]) = deadline;
             ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
-            ARGHTOS_CTRL_AGE_ID(self) = 0u;
             (void)process_time_locked(now);
             dispatch = true;
         }
         break;
 
     case ARGHTOS_SERVICE_WAKE:
+#if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
+        {
+            const uint8_t wake_result =
+                wake_locked_compact((arghtos_task_id_t)arg0);
+            dispatch = (wake_result & ARGHTOS_WAKE_DISPATCH_BIT) != 0u;
+            result = (arghtos_result_t)(wake_result & ARGHTOS_WAKE_RESULT_MASK);
+        }
+#else
         dispatch = wake_locked((arghtos_task_id_t)arg0, &result);
+#endif
         break;
 
     case ARGHTOS_SERVICE_TASK_RETURN:
@@ -785,29 +1202,48 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
     return result;
 }
 
+#endif
+
 arghtos_task_id_t arghtos_select_next(void)
 {
 #if ARGHTOS_SIZE_FIRST_SELECTOR
     arghtos_task_id_t best = ARGHTOS_TASK_ID_INVALID;
-    uint32_t best_period = UINT32_MAX;
     uint8_t id;
 
-    /* Ascending ID order supplies the equal-period tie break for free. */
-    for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
-        const uint32_t period = ARGHTOS_TASK_PERIOD(id);
-
-        if ((period != 0u) &&
-            (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) &&
-            (period < best_period)) {
-            best = id;
-            best_period = period;
+#if ARGHTOS_R5P_GENERATED_ORDER
+    for (id = 0u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
+        if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) {
+            return id;
         }
     }
+#else
+    {
+        uint32_t best_period = UINT32_MAX;
 
-    if (best != ARGHTOS_TASK_ID_INVALID) {
-        return best;
+        /* Ascending ID order supplies the equal-period tie break for free. */
+        for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
+            const uint32_t period = ARGHTOS_TASK_PERIOD(id);
+
+            if ((period != 0u) &&
+                (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) &&
+                (period < best_period)) {
+                best = id;
+                best_period = period;
+            }
+        }
+
+        if (best != ARGHTOS_TASK_ID_INVALID) {
+            return best;
+        }
     }
+#endif
 
+#if ARGHTOS_R5AB_SINGLE_ASYNC
+    id = (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT;
+    if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) {
+        best = id;
+    }
+#else
     {
         uint8_t best_effective = 0u;
         uint8_t best_age = 0u;
@@ -816,9 +1252,15 @@ arghtos_task_id_t arghtos_select_next(void)
          * Cache the incumbent score instead of recomputing it for every
          * challenger. Equal score/age keeps the first (lowest-ID) task.
          */
+#if ARGHTOS_R5P_GENERATED_ORDER
+        for (id = (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT;
+             id < ARGHTOS_TASK_COUNT; ++id) {
+            if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) {
+#else
         for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
             if (task_is_async(id) &&
                 (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY)) {
+#endif
                 uint8_t age = ARGHTOS_CTRL_AGE_ID(id);
                 const uint8_t ceiling =
                     (uint8_t)ARGHTOS_ASYNC_PRIORITY_MAX;
@@ -843,6 +1285,7 @@ arghtos_task_id_t arghtos_select_next(void)
             }
         }
     }
+#endif
 
     return best;
 #else
@@ -916,9 +1359,11 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
 #endif
     arghtos_task_id_t next;
 
+#if !ARGHTOS_R5N_PROVEN_DISPATCH
     if ((kernel.flags & ARGHTOS_KF_STARTED) == 0u) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
+#endif
 
     if (outgoing_context != ARGHTOS_CONTEXT_NONE) {
         arghtos_task_control_t *c;
@@ -926,10 +1371,12 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
         uint32_t elapsed;
 #endif
 
+#if !ARGHTOS_R5N_PROVEN_DISPATCH
         if ((kernel.current_task == ARGHTOS_TASK_ID_INVALID) ||
             !task_id_valid(kernel.current_task)) {
             arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
         }
+#endif
 
         c = &controls[kernel.current_task];
         c->context = outgoing_context;
@@ -951,13 +1398,19 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
 
         if (ARGHTOS_CTRL_STATE_ID(kernel.current_task) == ARGHTOS_TASK_RUNNING) {
             ARGHTOS_CTRL_SET_STATE_ID(kernel.current_task, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
             if (task_is_async(kernel.current_task)) {
                 ARGHTOS_CTRL_AGE_ID(kernel.current_task) = 0u;
             }
+#endif
         }
+#if ARGHTOS_R5N_PROVEN_DISPATCH
+    }
+#else
     } else if (kernel.current_task != ARGHTOS_TASK_ID_INVALID) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
+#endif
 
     next = arghtos_select_next();
 
@@ -966,15 +1419,19 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
         return ARGHTOS_CONTEXT_NONE;
     }
 
+#if !ARGHTOS_R5N_PROVEN_DISPATCH
     if ((ARGHTOS_CTRL_STATE_ID(next) != ARGHTOS_TASK_READY) ||
         (controls[next].context == ARGHTOS_CONTEXT_NONE)) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
+#endif
 
     ARGHTOS_CTRL_SET_STATE_ID(next, ARGHTOS_TASK_RUNNING);
+#if !ARGHTOS_R5AB_SINGLE_ASYNC
     if (task_is_async(next)) {
         ARGHTOS_CTRL_AGE_ID(next) = 0u;
     }
+#endif
 
     kernel.current_task = next;
 #if ARGHTOS_RUNTIME_PROFILING
@@ -1004,6 +1461,7 @@ void arghtos_timer_interrupt(void)
     }
 }
 
+#if !ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE
 static bool task_fault_attributed(arghtos_fault_reason_t reason)
 {
     return (reason == ARGHTOS_FAULT_ASYNC_RETURNED) ||
@@ -1011,13 +1469,16 @@ static bool task_fault_attributed(arghtos_fault_reason_t reason)
            (reason == ARGHTOS_FAULT_CONTEXT_CORRUPT) ||
            (reason == ARGHTOS_FAULT_CPU_EXCEPTION);
 }
+#endif
 
 ARGHTOS_NORETURN void arghtos_fatal(
     arghtos_fault_reason_t reason,
     const void *port_fault_context)
 {
     arghtos_crash_record_t *r;
+#if !ARGHTOS_R5S_PRESEEDED_CRASH
     uint8_t i;
+#endif
 
     if ((kernel.flags & ARGHTOS_KF_FAULT_ACTIVE) != 0u) {
         arghtos_port_fault_terminal();
@@ -1025,12 +1486,56 @@ ARGHTOS_NORETURN void arghtos_fatal(
 
     kernel.flags |= ARGHTOS_KF_FAULT_ACTIVE;
 
+#if !ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE
     if (task_fault_attributed(reason) &&
-        task_id_valid(kernel.current_task)) {
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+        (kernel.current_task != ARGHTOS_TASK_ID_INVALID)
+#else
+        task_id_valid(kernel.current_task)
+#endif
+    ) {
         ARGHTOS_CTRL_SET_STATE_ID(kernel.current_task, ARGHTOS_TASK_FAULTED);
     }
 
+#endif
     r = ARGHTOS_CRASH_RECORD;
+#if ARGHTOS_R5S_PRESEEDED_CRASH
+    /*
+     * The trusted generated startup image supplies the invariant header and
+     * invalid commit. R5w additionally preseeds PORT_STATE_VALID and relies on
+     * the selected port's 1..10 payload-count contract.
+     */
+#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT
+    r->commit_magic = 0u;
+#endif
+    r->reason = reason;
+    r->timestamp = arghtos_port_time_now();
+
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+    if (kernel.current_task != ARGHTOS_TASK_ID_INVALID) {
+        r->task_id = kernel.current_task;
+        r->flags |= ARGHTOS_CRASH_F_TASK_VALID;
+    }
+#else
+    if (task_id_valid(kernel.current_task)) {
+        r->task_id = kernel.current_task;
+        r->flags = ARGHTOS_CRASH_F_TASK_VALID;
+    }
+#endif
+
+    arghtos_port_crash_fill(r, port_fault_context);
+#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT
+    if (r->port_words > 10u) {
+        r->port_words = 10u;
+    }
+    if (r->port_words != 0u) {
+        r->flags |= ARGHTOS_CRASH_F_PORT_STATE_VALID;
+    }
+#endif
+
+    atomic_thread_fence(memory_order_release);
+    r->commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC;
+#else
     if (r != NULL) {
         r->commit_magic = 0u;
         r->magic = ARGHTOS_CRASH_MAGIC;
@@ -1044,7 +1549,6 @@ ARGHTOS_NORETURN void arghtos_fatal(
         r->port_words = 0u;
         r->reserved = 0u;
 
-
         if (task_id_valid(kernel.current_task)) {
             r->task_id = kernel.current_task;
             r->flags |= ARGHTOS_CRASH_F_TASK_VALID;
@@ -1053,7 +1557,6 @@ ARGHTOS_NORETURN void arghtos_fatal(
         for (i = 0u; i < 10u; ++i) {
             r->port_state[i] = 0u;
         }
-
 
         arghtos_port_crash_fill(r, port_fault_context);
         if (r->port_words > 10u) {
@@ -1066,6 +1569,7 @@ ARGHTOS_NORETURN void arghtos_fatal(
         atomic_thread_fence(memory_order_release);
         r->commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC;
     }
+#endif
 
     arghtos_port_fault_terminal();
 }
@@ -1078,6 +1582,7 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
 {
     arghtos_task_id_t id = kernel.current_task;
 
+#if !ARGHTOS_R5N_PROVEN_DISPATCH
     if (!task_id_valid(id)) {
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
@@ -1086,19 +1591,26 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
         arghtos_fatal(ARGHTOS_FAULT_BAD_DISPATCH, NULL);
     }
 #endif
+#endif
 
     if (ARGHTOS_TASK_PERIOD(id) != 0u) {
         for (;;) {
-            arghtos_result_t r;
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
             entry();
 #else
             ARGHTOS_TASK_ENTRY(id)();
 #endif
-            r = arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u);
-            if (r != ARGHTOS_OK) {
-                arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+#if ARGHTOS_R5N_PROVEN_DISPATCH
+            (void)arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u);
+#else
+            {
+                const arghtos_result_t r =
+                    arghtos_port_service_call(ARGHTOS_SERVICE_TASK_RETURN, 0u);
+                if (r != ARGHTOS_OK) {
+                    arghtos_fatal(ARGHTOS_FAULT_BAD_SERVICE, NULL);
+                }
             }
+#endif
         }
     }
 

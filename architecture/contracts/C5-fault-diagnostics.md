@@ -255,3 +255,102 @@ saving                   227 B
 ```
 
 The option is a footprint configuration, not a change to scheduler semantics.
+
+# R5s generated crash-record preseed refinement
+
+The trusted generated minimum-size profile may materialize the required
+64-byte crash record with invariant fields already initialized before
+`arghtos_init()`:
+
+```text
+magic        = ARGHTOS_CRASH_MAGIC
+version      = ARGHTOS_CRASH_VERSION
+size         = sizeof(arghtos_crash_record_t)
+task_id      = ARGHTOS_TASK_ID_INVALID
+flags        = 0
+port_format  = 0
+port_words   = 0
+reserved     = 0
+port_state[] = 0
+commit_magic = 0
+```
+
+The record remains writable ArghtOS-resident storage and still counts in full
+against the resident-footprint budget.
+
+This refinement is permitted only when the generated startup mechanism
+materializes that image before scheduler initialization. The fatal path still:
+
+1. clears `commit_magic` before dynamic capture;
+2. writes dynamic reason, timestamp, task attribution, and port payload;
+3. bounds/marks the port payload exactly as the ordinary path does;
+4. executes the release fence;
+5. writes `ARGHTOS_CRASH_COMMIT_MAGIC` last.
+
+A successful fatal capture never returns. A recursive fatal reaches the
+terminal hook before beginning another capture. Therefore one runtime does not
+perform a second successful capture that would require re-zeroing the preseeded
+payload or invariant fields.
+
+Generic/debug and non-preseeded profiles retain explicit full record
+initialization in `arghtos_fatal()`. Post-reset export/persistence policy
+remains outside C5.
+
+
+# R5w trusted generated crash-port refinement
+
+The trusted generated minimum-size profile may further specialize C5 when the
+selected port contract proves that every successful
+`arghtos_port_crash_fill()` invocation writes a valid nonzero payload count:
+
+```text
+1 <= port_words <= 10
+```
+
+The reference host and Cortex-M23 ports satisfy this premise.
+
+When combined with R5s generated crash preseed and R5n current-task invariants,
+the generated startup image may preseed:
+
+```text
+flags = ARGHTOS_CRASH_F_PORT_STATE_VALID
+commit_magic = 0
+```
+
+For this profile only:
+
+* the first fatal capture need not clear `commit_magic` again because the
+  startup image guarantees it is already invalid and recursive fatal exits
+  before recapture;
+* the portable fatal path need not clamp `port_words` or test it for zero;
+* task attribution adds `ARGHTOS_CRASH_F_TASK_VALID` without clearing the
+  preseeded port-state-valid bit;
+* `current_task` may be tested against `ARGHTOS_TASK_ID_INVALID` rather than
+  range-validated because R5n/P1 prove it is either INVALID or configured.
+
+The required 64-byte record, dynamic reason/timestamp/task ID, port payload,
+release fence, and commit-last protocol are unchanged.
+
+Generic/debug and non-R5w profiles retain the defensive clamp, zero-payload
+handling, and full task-ID validation.
+
+
+# R5ac terminal fault-state elision
+
+The trusted generated minimum-size profile may omit the final task-control
+mutation that marks the current task `FAULTED` inside `arghtos_fatal()`.
+
+This specialization is permitted only when the accepted R5n generated
+lifecycle/dispatch proof is active and the terminal hook remains non-returning.
+
+The reasoning is:
+
+* `arghtos_fatal()` does not return to scheduler execution;
+* `arghtos_port_fault_terminal()` does not return;
+* no subsequent scheduler transition can observe the task-control state;
+* the crash record still captures the fault reason and current task ID;
+* recursive fatal protection and commit-last crash integrity are unchanged.
+
+Therefore the `FAULTED` state write is redundant for valid execution of the
+terminal minimum profile. Generic/debug and other profiles retain task-state
+mutation for diagnostic visibility.

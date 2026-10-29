@@ -1,5 +1,27 @@
 #include "arghtos_port_private.h"
 
+#ifndef ARGHTOS_R5K_ASM_CRASH_FILL
+#define ARGHTOS_R5K_ASM_CRASH_FILL 0
+#endif
+
+#ifndef ARGHTOS_R5AF_ASM_HARDFAULT_ENTRY
+#define ARGHTOS_R5AF_ASM_HARDFAULT_ENTRY 0
+#endif
+
+#ifndef ARGHTOS_R5AG_LINK_ALIAS_TERMINAL
+#define ARGHTOS_R5AG_LINK_ALIAS_TERMINAL 0
+#endif
+
+#ifndef ARGHTOS_R5X_FORCE_CRASH_INLINE
+#define ARGHTOS_R5X_FORCE_CRASH_INLINE 0
+#endif
+
+#if ARGHTOS_R5X_FORCE_CRASH_INLINE
+#define ARGHTOS_R5X_ALWAYS_INLINE __attribute__((always_inline))
+#else
+#define ARGHTOS_R5X_ALWAYS_INLINE
+#endif
+
 static inline uint32_t m23_read_primask(void)
 {
     uint32_t v;
@@ -26,6 +48,7 @@ static inline uint32_t m23_read_control(void)
     return v;
 }
 
+#if !ARGHTOS_R5K_ASM_CRASH_FILL
 static inline uint32_t m23_read_msp(void)
 {
     uint32_t v;
@@ -39,6 +62,7 @@ static inline uint32_t m23_read_psp(void)
     __asm volatile("mrs %0, psp" : "=r"(v));
     return v;
 }
+#endif
 
 arghtos_result_t arghtos_port_init(void)
 {
@@ -230,7 +254,8 @@ arghtos_context_t arghtos_port_build_initial_context_top_arg(
 }
 #endif
 
-void arghtos_port_crash_fill(
+#if !ARGHTOS_R5K_ASM_CRASH_FILL
+ARGHTOS_R5X_ALWAYS_INLINE void arghtos_port_crash_fill(
     arghtos_crash_record_t *record,
     const void *port_fault_context)
 {
@@ -263,13 +288,17 @@ void arghtos_port_crash_fill(
         record->port_words = 3u;
     }
 }
+#endif
 
+#if !ARGHTOS_R5AG_LINK_ALIAS_TERMINAL
 ARGHTOS_NORETURN void arghtos_port_fault_terminal(void)
 {
     arghtos_m23_board_fault_terminal();
 }
+#endif
 
 
+#if !ARGHTOS_R5AF_ASM_HARDFAULT_ENTRY
 ARGHTOS_NORETURN void arghtos_m23_hardfault_entry(
     uint32_t exc_return,
     const uint32_t *basic_frame,
@@ -285,3 +314,4 @@ ARGHTOS_NORETURN void arghtos_m23_hardfault_entry(
 
     arghtos_fatal(ARGHTOS_FAULT_CPU_EXCEPTION, &ctx);
 }
+#endif

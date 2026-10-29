@@ -230,3 +230,93 @@ The R3c minimum-footprint production profile instead treats these as build/appli
 R3c still checks port initialization failure and initial-context construction failure.
 
 This specialization does not change behavior for valid startup sequences.
+
+# R5l generated prebuilt-context refinement
+
+The trusted generated minimum-size profile may supply each configured task with
+an already-built initial opaque target context instead of asking the portable
+kernel to construct that context at runtime.
+
+This refinement is allowed only when build/generator evidence establishes:
+
+* the task stack region and alignment satisfy the selected port contract;
+* the saved context token points inside that task's own stack;
+* the prebuilt frame is byte-equivalent to the frame that the selected port's
+  ordinary initial-context builder would produce for the same trampoline,
+  return guard, and task entry;
+* all mutable scheduler-owned runtime fields begin in their documented
+  initialization state;
+* unused generated slots, if any, begin zero/inactive;
+* the application startup mechanism materializes the prebuilt frame before
+  `arghtos_init()` executes.
+
+For Cortex-M23 R5l, the application-owned stack RAM size is unchanged. The
+trade is that the generated initial frame is load-initialized rather than
+`NOLOAD`, increasing load-image/startup initialization bytes.
+
+The public runtime-config ABI and generic/debug initialization path are
+unchanged.
+
+# R5m pristine generated startup state
+
+The trusted generated prebuilt-context profile may also treat initial mutable
+scheduler state as build/startup evidence rather than rewrite it in
+`arghtos_init()`.
+
+This refinement requires:
+
+* `arghtos_init()` is called exactly once;
+* every active generated context token is valid before the call;
+* task next-time/age storage begins zero;
+* packed task status begins DORMANT with no pending wake or missed releases;
+* unused generated task slots, if any, begin zero/inactive;
+* C4 `arghtos_port_init()` succeeds before the scheduler is considered
+  initialized;
+* application code does not invoke scheduler APIs after a failed init.
+
+Under those premises, the R5m minimum profile does not rescan or clear generated
+task state at runtime. It still propagates port initialization failure and
+sets the live kernel current-task/initialized state after port initialization
+succeeds.
+
+The generic/debug initialization path continues to validate and initialize
+runtime state explicitly.
+
+# R5p generated class/order refinement
+
+The trusted generated minimum-size profile may choose the generated descriptor
+order so task class and RMS order are encoded by task ID.
+
+For that profile the generator emits one constant periodic count `P` and
+establishes:
+
+```text
+task IDs [0, P)  = periodic tasks
+task IDs [P, N)  = async tasks
+```
+
+The periodic prefix is sorted by nondecreasing period. For equal periods, the
+generator assigns increasing task IDs in the deterministic tie order used by
+C6.
+
+Task ID remains exactly the zero-based index of the generated task table. Any
+application-facing generated task-ID constants refer to this final generated
+index. The generic/runtime-config profile retains its existing descriptor
+ordering and does not depend on this refinement.
+
+The refinement therefore changes representation/order only in the trusted
+generated profile; it does not change RMS priority semantics, async priority
+semantics, lifecycle behavior, or the public task-ID type.
+
+# R5s generated crash startup image
+
+The trusted generated minimum-size profile may include C5's 64-byte crash
+record in the generated startup image with the invariant header and zero
+payload required by C5 R5s.
+
+Build/generator evidence must establish that this image is materialized before
+`arghtos_init()`. This is the same class of startup-image premise used by the
+R5l/R5m generated task context/state refinements.
+
+The crash record remains scheduler-owned writable storage and its full 64 bytes
+remain part of the ArghtOS resident-footprint accounting.

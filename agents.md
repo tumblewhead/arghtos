@@ -367,6 +367,29 @@ When starting a new post-R4 experiment phase, branch from canonical `main`
 after PR #3 is merged and add one live challenger beside the frozen R4y
 control.
 
+## R5 target-crossing guardrail
+
+PR #4 has an accepted target-crossing control:
+
+```text
+R5ag complete resident footprint = 1534 B
+soft target                      = 1536 B
+margin                           =    2 B
+```
+
+Treat R5ag as immutable control for any post-target experiment. Add challengers
+beside it; do not mutate its measured build in place.
+
+The target depends on trusted generated-profile proofs, including generated
+task ordering/class assumptions and the measured 23-periodic + 1-async
+fixture. Do not generalize those assumptions to arbitrary runtime config.
+
+Because the margin is only 2 B, any cleanup or toolchain/linker change must
+re-link the Cortex-M23 control before claiming the target remains met.
+
+See [continue.md](continue.md) and
+[implementation/R5-target-crossing-1534.md](implementation/R5-target-crossing-1534.md).
+
 ## User preferences
 
 The user values:
