@@ -134,7 +134,13 @@ uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
 #endif
 #endif
 #if ARGHTOS_SPLIT_META
+#if ARGHTOS_R6K_PRESEEDED_PERIODIC_READY
+arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS] = {
+    { .status = ARGHTOS_TASK_READY }
+};
+#else
 arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
+#endif
 #endif
 #elif ARGHTOS_COMPACT_DESCRIPTOR
 const arghtos_static_task_t arghtos_static_tasks[2] = {
@@ -170,6 +176,9 @@ static void reset_all(void)
     (void)async_task;
 #endif
     arghtos_test_reset();
+#if ARGHTOS_R6K_PRESEEDED_PERIODIC_READY
+    arghtos_static_meta[0].status = ARGHTOS_TASK_READY;
+#endif
 #if ARGHTOS_UNIFIED_SLOT
 #if ARGHTOS_R5L_PREBUILT_CONTEXT
     arghtos_static_slots[0].context =
@@ -234,6 +243,11 @@ static void test_static_init_ignores_runtime_config(void)
     arghtos_host_set_time(100u);
 
     assert(arghtos_init(NULL) == ARGHTOS_OK);
+#if ARGHTOS_R6K_PRESEEDED_PERIODIC_READY
+    c = arghtos_test_controls();
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_DORMANT);
+#endif
 #if ARGHTOS_ENTRY_NEXT_OVERLAY && !ARGHTOS_R5L_PREBUILT_CONTEXT
 #if ARGHTOS_TEST_THREE_TASKS
     assert(arghtos_host_initial_arg() == (uintptr_t)periodic_task);
