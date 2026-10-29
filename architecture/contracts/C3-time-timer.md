@@ -308,3 +308,27 @@ test that single task for SLEEPING and release it to READY when due.
 Replacing the one-iteration loop with one direct slot operation visits the same
 singleton task exactly once. R6t's dominant period-1 timer arm remains
 unchanged.
+
+# R6v unconditional unit-tick dispatch request
+
+The trusted R6t/R6u minimum profile may request scheduler dispatch after every
+scheduler-timer interrupt, rather than only when the time engine changed task
+eligibility.
+
+This is a size/runtime trade permitted only when:
+
+* the generated unit-period timer profile is active;
+* runtime profiling is disabled;
+* async age-reset side effects are already elided;
+* dispatcher invariants are proved by R5n.
+
+When a timer tick changes eligibility, the dispatch request is already required.
+When it changes no eligibility, the extra PendSV is redundant: the current
+RUNNING task was the selector winner at the preceding dispatch boundary, and
+with no eligibility change it remains the winner after the dispatcher
+temporarily materializes RUNNING -> READY for preemption. The same saved context
+is therefore selected again unless another independent scheduling indication
+was already pending, in which case a dispatch was required anyway.
+
+The extra dispatch changes bounded execution cost, not the legal task-state
+result. Its cost must be included in P6 kernel overhead.
