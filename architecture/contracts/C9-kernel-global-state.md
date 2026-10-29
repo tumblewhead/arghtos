@@ -221,3 +221,18 @@ option.
 
 R4a linker evidence records a complete resident-footprint reduction from
 3072 B to 2845 B at the 24-task default.
+
+# R6o preseeded INVALID current task
+
+The trusted generated minimum-size profile may materialize C9
+`current_task = ARGHTOS_TASK_ID_INVALID` in the initial kernel-state image.
+
+This moves only an invariant initial value from runtime initialization to the
+generated image. It does not preseed `ARGHTOS_KF_INITIALIZED`.
+
+`arghtos_init()` must still call `arghtos_port_init()` and may set
+INITIALIZED only after that port initialization succeeds. Therefore failure and
+retry semantics for the initialization flag are unchanged.
+
+The resident size of C9 state is unchanged. Generic/debug profiles retain the
+runtime current-task initialization store.
