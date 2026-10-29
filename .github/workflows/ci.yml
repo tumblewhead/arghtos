@@ -58,8 +58,11 @@ jobs:
       - name: Host R6l pre-masked-start control
         run: make host-test-r6l
 
-      - name: Host R6m commit-recursion challenger
+      - name: Host R6m commit-recursion control
         run: make host-test-r6m
+
+      - name: Host R6n dispatch-only-service challenger
+        run: make host-test-r6n
 
       - name: Host sanitizers
         run: make host-sanitize
@@ -103,8 +106,11 @@ jobs:
       - name: Cortex-M23 R6l pre-masked-start control
         run: make m23-footprint-r6l
 
-      - name: Cortex-M23 R6m commit-recursion challenger
+      - name: Cortex-M23 R6m commit-recursion control
         run: make m23-footprint-r6m
+
+      - name: Cortex-M23 R6n dispatch-only-service challenger
+        run: make m23-footprint-r6n
 
       - name: Enforce R5ag 1536-byte resident target
         run: |
@@ -120,7 +126,7 @@ jobs:
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m; do
+          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -146,6 +152,7 @@ jobs:
             build/footprint-r6k.json
             build/footprint-r6l.json
             build/footprint-r6m.json
+            build/footprint-r6n.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5ag.map
@@ -159,6 +166,7 @@ jobs:
             build/m23-r6k.map
             build/m23-r6l.map
             build/m23-r6m.map
+            build/m23-r6n.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5ag-symbols.txt
@@ -172,6 +180,7 @@ jobs:
             build/m23-r6k-symbols.txt
             build/m23-r6l-symbols.txt
             build/m23-r6m-symbols.txt
+            build/m23-r6n-symbols.txt
             build/m23-r4y.elf
             build/m23-r5ag.elf
             build/m23-r6b.elf
@@ -184,4 +193,5 @@ jobs:
             build/m23-r6k.elf
             build/m23-r6l.elf
             build/m23-r6m.elf
+            build/m23-r6n.elf
             build/*.su
