@@ -333,3 +333,24 @@ release fence, and commit-last protocol are unchanged.
 
 Generic/debug and non-R5w profiles retain the defensive clamp, zero-payload
 handling, and full task-ID validation.
+
+
+# R5ac terminal fault-state elision
+
+The trusted generated minimum-size profile may omit the final task-control
+mutation that marks the current task `FAULTED` inside `arghtos_fatal()`.
+
+This specialization is permitted only when the accepted R5n generated
+lifecycle/dispatch proof is active and the terminal hook remains non-returning.
+
+The reasoning is:
+
+* `arghtos_fatal()` does not return to scheduler execution;
+* `arghtos_port_fault_terminal()` does not return;
+* no subsequent scheduler transition can observe the task-control state;
+* the crash record still captures the fault reason and current task ID;
+* recursive fatal protection and commit-last crash integrity are unchanged.
+
+Therefore the `FAULTED` state write is redundant for valid execution of the
+terminal minimum profile. Generic/debug and other profiles retain task-state
+mutation for diagnostic visibility.
