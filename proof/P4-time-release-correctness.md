@@ -173,3 +173,20 @@ No other scheduler-mutating handler can preempt the timer transaction, task/SVC
 mutation masks the timer handler while active, and PendSV is less urgent.
 Therefore the bounded release scan, sleep release, earliest-deadline update,
 and dispatch-request decision remain one serialized scheduler transaction.
+
+# R6h single-async suffix refinement
+
+Under R5p/R5ab generated ordering, the trusted minimum profile contains exactly
+one async task and it occupies the first ID after the periodic prefix.
+
+Replacing:
+
+```text
+for id in [P,N):
+    process async timed state
+```
+
+with the direct operation at `id=P` visits the same singleton set exactly
+once. Therefore async sleep release, earliest-deadline selection, periodic
+catch-up, wrap-safe due comparison, and the O(N) bounded-work claim are
+unchanged.
