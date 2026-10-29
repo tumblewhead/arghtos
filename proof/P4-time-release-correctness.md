@@ -190,3 +190,22 @@ with the direct operation at `id=P` visits the same singleton set exactly
 once. Therefore async sleep release, earliest-deadline selection, periodic
 catch-up, wrap-safe due comparison, and the O(N) bounded-work claim are
 unchanged.
+
+# R6q preseeded first-deadline offset refinement
+
+For every generated periodic task i, R6q initializes its pre-start
+`next_time` word to `T_i`. No timer/release path is reachable before STARTED.
+
+At the common start epoch S, R6q performs:
+
+```text
+next_time_i <- next_time_i + S
+            = T_i + S
+```
+
+which is identical modulo 2^32 to the ordinary assignment
+`next_time_i = S + T_i`.
+
+After that conversion, the existing P4 release/catch-up proof operates on the
+same absolute deadlines and the same schedule periods. Therefore release phase,
+wrap behavior, missed-release arithmetic, and timer selection are unchanged.
