@@ -295,3 +295,16 @@ This is valid only for the generated profile with:
 * ordinary wrap-safe half-range timing rules.
 
 Generic profiles retain normal earliest-deadline selection.
+
+# R6u singleton async release under unit-period dominance
+
+R6u composes the already-proved singleton-async suffix refinement with R6t.
+
+When the generated profile has exactly one async task at
+`ARGHTOS_R5P_PERIODIC_COUNT`, and R6t has eliminated all async timer-candidate
+tracking, the async suffix of the time engine has only one remaining purpose:
+test that single task for SLEEPING and release it to READY when due.
+
+Replacing the one-iteration loop with one direct slot operation visits the same
+singleton task exactly once. R6t's dominant period-1 timer arm remains
+unchanged.
