@@ -19,7 +19,7 @@ M23_COMMON := --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -std=c11 \
 
 
 
-.PHONY: all portability-check host-test host-test-size-selector host-test-r3c host-test-r4u host-test-r5c host-test-r5d host-test-r5e host-test-r5f host-test-r5g host-test-r5h host-test-r5i host-test-r5l host-test-r5m host-test-r5n host-test-r5o host-test-r5p host-test-r5q host-test-r5r host-test-r5s host-test-r5t host-test-r5v host-test-r5w host-test-r5y host-sanitize m23-compile m23-footprint m23-footprint-r3c m23-footprint-r4y m23-footprint-r5a m23-footprint-r5b m23-footprint-r5c m23-footprint-r5d m23-footprint-r5e m23-footprint-r5f m23-footprint-r5g m23-footprint-r5h m23-footprint-r5i m23-footprint-r5j m23-footprint-r5k m23-footprint-r5l m23-footprint-r5m m23-footprint-r5n m23-footprint-r5o m23-footprint-r5p m23-footprint-r5q m23-footprint-r5r m23-footprint-r5s m23-footprint-r5t m23-footprint-r5u m23-footprint-r5v m23-footprint-r5w m23-footprint-r5x m23-footprint-r5y footprint-report clean
+.PHONY: all portability-check host-test host-test-size-selector host-test-r3c host-test-r4u host-test-r5c host-test-r5d host-test-r5e host-test-r5f host-test-r5g host-test-r5h host-test-r5i host-test-r5l host-test-r5m host-test-r5n host-test-r5o host-test-r5p host-test-r5q host-test-r5r host-test-r5s host-test-r5t host-test-r5v host-test-r5w host-test-r5y host-test-r5z host-sanitize m23-compile m23-footprint m23-footprint-r3c m23-footprint-r4y m23-footprint-r5a m23-footprint-r5b m23-footprint-r5c m23-footprint-r5d m23-footprint-r5e m23-footprint-r5f m23-footprint-r5g m23-footprint-r5h m23-footprint-r5i m23-footprint-r5j m23-footprint-r5k m23-footprint-r5l m23-footprint-r5m m23-footprint-r5n m23-footprint-r5o m23-footprint-r5p m23-footprint-r5q m23-footprint-r5r m23-footprint-r5s m23-footprint-r5t m23-footprint-r5u m23-footprint-r5v m23-footprint-r5w m23-footprint-r5x m23-footprint-r5y m23-footprint-r5z footprint-report clean
 
 
 
@@ -376,6 +376,29 @@ host-test-r5y: | $(BUILD)
 		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
 		-o $(BUILD)/host-tests-r5y
 	$(BUILD)/host-tests-r5y
+
+host-test-r5z: | $(BUILD)
+	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
+		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=2 \
+		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
+		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
+		-DARGHTOS_SPECIALIZED_SERVICES=1 -DARGHTOS_MINIMAL_VALIDATION=1 \
+		-DARGHTOS_RUNTIME_PROFILING=0 -DARGHTOS_SIZE_FIRST_SELECTOR=1 \
+		-DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 -DARGHTOS_SIZE_FIRST_NO_START_TIME=1 \
+		-DARGHTOS_SPLIT_META=1 -DARGHTOS_ENTRY_NEXT_OVERLAY=1 \
+		-DARGHTOS_R5D_COMPACT_SERVICE_OUTCOME=1 -DARGHTOS_R5E_AGE_NEXT_OVERLAY=1 \
+		-DARGHTOS_R5I_SCHEDULE8=1 -DARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT=0 \
+		-DARGHTOS_R5L_PREBUILT_CONTEXT=1 -DARGHTOS_R5M_PRISTINE_INIT=1 \
+		-DARGHTOS_R5N_PROVEN_DISPATCH=1 -DARGHTOS_R5O_GENERATED_START_TIMER=1 \
+		-DARGHTOS_R5O_MIN_PERIOD=10 -DARGHTOS_R5P_GENERATED_ORDER=1 \
+		-DARGHTOS_R5P_PERIODIC_COUNT=1 -DARGHTOS_R5Q_PARTITIONED_TIME=1 \
+		-DARGHTOS_R5R_ELIDE_AGE_RESETS=1 -DARGHTOS_R5S_PRESEEDED_CRASH=1 \
+		-DARGHTOS_R5T_TIMER_ALWAYS_ARMED=1 \
+		-DARGHTOS_R5Y_PROVEN_PERIODIC_STATE=1 \
+		-DARGHTOS_R5Z_RAW_CLASS_SCHEDULE=1 \
+		src/arghtos_kernel.c port/host/arghtos_port.c tests/test_static_profile.c \
+		-o $(BUILD)/host-tests-r5z
+	$(BUILD)/host-tests-r5z
 
 host-test-r5w: | $(BUILD)
 	$(HOST_CC) $(HOST_CFLAGS) -DARGHTOS_TRUSTED_CONFIG=1 \
@@ -3228,6 +3251,67 @@ m23-footprint-r5y: | $(BUILD)
 		--msp $(M23_ARGHTOS_MSP_R5T) --json \
 		> $(BUILD)/footprint-r5y.json
 	cat $(BUILD)/footprint-r5y.json
+
+m23-footprint-r5z: | $(BUILD)
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables -DARGHTOS_TRUSTED_CONFIG=1 \
+		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
+		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
+		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
+		-DARGHTOS_SPECIALIZED_SERVICES=1 -DARGHTOS_MINIMAL_VALIDATION=1 \
+		-DARGHTOS_RUNTIME_PROFILING=0 -DARGHTOS_SIZE_FIRST_SELECTOR=1 \
+		-DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 -DARGHTOS_SIZE_FIRST_NO_START_TIME=1 \
+		-DARGHTOS_SPLIT_META=1 -DARGHTOS_ENTRY_NEXT_OVERLAY=1 \
+		-DARGHTOS_R5D_COMPACT_SERVICE_OUTCOME=1 -DARGHTOS_R5E_AGE_NEXT_OVERLAY=1 \
+		-DARGHTOS_R5I_SCHEDULE8=1 -DARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT=0 \
+		-DARGHTOS_R5L_PREBUILT_CONTEXT=1 -DARGHTOS_R5M_PRISTINE_INIT=1 \
+		-DARGHTOS_R5N_PROVEN_DISPATCH=1 -DARGHTOS_R5O_GENERATED_START_TIMER=1 \
+		-DARGHTOS_R5O_MIN_PERIOD=1 -DARGHTOS_R5P_GENERATED_ORDER=1 \
+		-DARGHTOS_R5P_PERIODIC_COUNT=23 -DARGHTOS_R5Q_PARTITIONED_TIME=1 \
+		-DARGHTOS_R5R_ELIDE_AGE_RESETS=1 -DARGHTOS_R5S_PRESEEDED_CRASH=1 \
+		-DARGHTOS_R5T_TIMER_ALWAYS_ARMED=1 -DARGHTOS_R5Y_PROVEN_PERIODIC_STATE=1 \
+		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_r5z.o
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables \
+		-DARGHTOS_ENTRY_NEXT_OVERLAY=1 -c port/cortex_m23/arghtos_port.c \
+		-o $(BUILD)/arghtos_port_m23_r5z.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb \
+		-DARGHTOS_COMPACT_PENDSV=1 -DARGHTOS_COMPACT_SVC_RETURN=1 -DARGHTOS_R5A_COMPACT_PENDSV_TAIL=1 -DARGHTOS_R5B_COMPACT_EXC_CHECKS=1 -ffunction-sections -c port/cortex_m23/arghtos_context.S \
+		-o $(BUILD)/arghtos_context_m23_r5z.o
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables -c footprint/m23_board_stub.c \
+		-o $(BUILD)/m23_board_stub_r5z.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -c footprint/m23_prebuilt_stacks.S \
+		-o $(BUILD)/m23_prebuilt_stacks_r5z.o
+	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables -DARGHTOS_TRUSTED_CONFIG=1 \
+		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
+		-DARGHTOS_COMPACT_RUNTIME=1 -DARGHTOS_COMPACT_DESCRIPTOR=1 \
+		-DARGHTOS_UNIFIED_SLOT=1 -DARGHTOS_PRODUCTION_PROFILE=1 \
+		-DARGHTOS_SPECIALIZED_SERVICES=1 -DARGHTOS_MINIMAL_VALIDATION=1 \
+		-DARGHTOS_RUNTIME_PROFILING=0 -DARGHTOS_SIZE_FIRST_SELECTOR=1 \
+		-DARGHTOS_SIZE_FIRST_NO_DISPATCH_TIME=1 -DARGHTOS_SIZE_FIRST_NO_START_TIME=1 \
+		-DARGHTOS_SPLIT_META=1 -DARGHTOS_ENTRY_NEXT_OVERLAY=1 \
+		-DARGHTOS_R5E_AGE_NEXT_OVERLAY=1 -DARGHTOS_R5I_SCHEDULE8=1 \
+		-DARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT=0 -DARGHTOS_R5L_PREBUILT_CONTEXT=1 \
+		-DARGHTOS_R5M_PRISTINE_INIT=1 -DARGHTOS_R5N_PROVEN_DISPATCH=1 \
+		-DARGHTOS_R5O_GENERATED_START_TIMER=1 -DARGHTOS_R5O_MIN_PERIOD=1 \
+		-DARGHTOS_R5P_GENERATED_ORDER=1 -DARGHTOS_R5P_PERIODIC_COUNT=23 \
+		-DARGHTOS_R5Q_PARTITIONED_TIME=1 -DARGHTOS_R5R_ELIDE_AGE_RESETS=1 \
+		-DARGHTOS_R5S_PRESEEDED_CRASH=1 -DARGHTOS_R5T_TIMER_ALWAYS_ARMED=1 \
+		-DARGHTOS_R5Y_PROVEN_PERIODIC_STATE=1 \
+		-DARGHTOS_R5Z_RAW_CLASS_SCHEDULE=1 \
+		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_r5z.o
+	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib -flto -fomit-frame-pointer -fno-jump-tables \
+		-fuse-ld=lld -Wl,--gc-sections -Wl,-Map=$(BUILD)/m23-r5z.map \
+		-Wl,-T,footprint/m23_prebuilt_context.ld -o $(BUILD)/m23-r5z.elf \
+		$(BUILD)/arghtos_kernel_m23_r5z.o \
+		$(BUILD)/arghtos_port_m23_r5z.o \
+		$(BUILD)/arghtos_context_m23_r5z.o \
+		$(BUILD)/m23_prebuilt_stacks_r5z.o \
+		$(BUILD)/m23_board_stub_r5z.o \
+		$(BUILD)/m23_footprint_r5z.o
+	size -A $(BUILD)/m23-r5z.elf
+	$(PYTHON) tools/footprint_report.py --map $(BUILD)/m23-r5z.map \
+		--msp $(M23_ARGHTOS_MSP_R5T) --json \
+		> $(BUILD)/footprint-r5z.json
+	cat $(BUILD)/footprint-r5z.json
 
 m23-footprint-r5v: | $(BUILD)
 	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables -DARGHTOS_TRUSTED_CONFIG=1 \
