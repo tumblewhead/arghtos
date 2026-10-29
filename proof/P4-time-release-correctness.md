@@ -143,3 +143,22 @@ does not alter any due-time comparison or release transition:
 
 Therefore the R5q scan partition is semantically equivalent to the ordinary C3
 timer scan and preserves the bounded-work statement.
+
+# R6b timer-entry guard refinement
+
+For the trusted generated minimum-size profile, C3 may require that the
+scheduler timer is disarmed before start, STARTED is committed before the
+first arm, and a disarmed timer cannot invoke the kernel timer entry.
+
+Given those preconditions:
+
+```text
+arghtos_timer_interrupt reachable => scheduler timer previously armed
+scheduler timer previously armed  => STARTED already committed
+therefore timer entry              => STARTED
+```
+
+Eliding the pre-start guard from that profile does not change any reachable
+release, catch-up, sleep, timer-selection, or dispatch behavior. The ordinary
+portable profile retains the guard for ports that do not make this stronger
+integration guarantee.
