@@ -11,7 +11,7 @@ repo:   https://github.com/tumblewhead/arghtos
 base:   main @ bf44d8495074360f2fb6283322e323ff7f62d24f
 branch: implementation/r5-size-specialization-001
 PR:     #4 (draft)
-phase:  R5 target-crossing checkpoint
+phase:  R5 freeze/cleanup validation
 ```
 
 R4 remains frozen on main. R5 research is isolated on PR #4.
@@ -156,22 +156,48 @@ Any of these may move the image back over 1536 B:
 Never claim the target is still met without re-linking the Cortex-M23 R5ag
 profile and reading the physical footprint report.
 
+## Freeze / cleanup checkpoint
+
+R5ag remains the frozen accepted control. Cleanup changes are build-system and
+CI-surface changes only; they do not intentionally change R5ag semantics.
+
+Cleanup commits:
+
+```text
+ad2b286aa6ddc4528cd2fb201601cd4eaafca774  freeze Makefile around durable controls
+8b1bcffdcd81be2d18a2ac9973cd9e5c6f10060e  freeze CI around supported controls
+```
+
+The Makefile experiment surface was collapsed from 4791 lines to 264 lines.
+Historical experiment documents under `implementation/` remain preserved as
+evidence. The supported/reference build surface now retains:
+
+* generic portability and host tests;
+* accepted size-first selector host regression;
+* R3c profiling-enabled reference;
+* R4u host minimum-source reference;
+* R5ag host semantic profile using the accepted R5 core specializations;
+* ASan/UBSan;
+* generic Cortex-M23 compile;
+* R3c physical footprint reference;
+* frozen R4y physical footprint;
+* frozen R5ag physical footprint.
+
+CI now explicitly fails if `build/footprint-r5ag.json` reports
+`arghtos_resident_total > 1536` or `target_met != true`.
+
+No historical experiment document was deleted.
+
 ## Exact next action
 
-R5ag has met the soft target. Do not add another speculative optimization to
-the accepted profile until the target-crossing checkpoint is protected.
-
-Next useful sequence:
-
-1. Let CI finish on the documentation-only checkpoint.
-2. Treat R5ag = 1534 B as the accepted R5 control.
-3. If continuing research, create the next challenger beside R5ag rather than
-   mutating it in place.
-4. If preparing PR #4 for merge, perform a cleanup/freeze pass:
-   * retain accepted production/reference targets;
-   * preserve rejected experiment documents as evidence;
-   * collapse duplicate Makefile experiment recipes;
-   * refresh CI around the frozen R5ag control;
-   * re-link R5ag after cleanup and require <=1536 B.
-5. Do not merge PR #4 unless the user explicitly requests it.
+1. Validate the current PR head CI after the cleanup commits.
+2. Require every portability, host, sanitizer, Cortex-M23, and footprint gate
+   in the cleaned workflow to pass.
+3. Read `build/footprint-r5ag.json` from the successful run and record the
+   exact cleaned R5ag resident footprint.
+4. Require the cleaned result to remain <=1536 B before claiming the target is
+   preserved.
+5. Update this file with the final CI run ID, head SHA, and cleaned footprint.
+6. Only then consider marking PR #4 ready for review.
+7. Do not merge PR #4 unless the user explicitly requests it.
 
