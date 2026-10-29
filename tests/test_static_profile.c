@@ -439,10 +439,12 @@ static void test_recursive_fatal_uses_commit_guard(void)
 static void test_preseeded_kernel_current_invalid(void)
 {
     assert(arghtos_test_kernel()->current_task == ARGHTOS_TASK_ID_INVALID);
+#if !ARGHTOS_R6R_FLAGLESS_KERNEL_STATE
 #if ARGHTOS_R6P_INFALLIBLE_PORT_INIT
     assert(arghtos_test_kernel()->flags == ARGHTOS_KF_INITIALIZED);
 #else
     assert(arghtos_test_kernel()->flags == 0u);
+#endif
 #endif
 }
 #endif
