@@ -95,13 +95,28 @@ compiler, linker, source-order, linker-script, generated-fixture, or profile
 change without re-linking the physical Cortex-M23 image and reading the
 footprint report.
 
+## Active post-R5 research
+
+```text
+branch: implementation/r6-size-research-001
+PR:     #5 (draft)
+phase:  R6a compact wake code-generation experiment
+control: R5ag = 1534 B
+```
+
+R6a tests one isolated hypothesis: the six-state compact wake transition may
+link smaller as an explicit comparison tree than as the existing C switch on
+Cortex-M23. There is no intended semantic or contract change.
+
+R5ag remains untouched and is built in the same CI revision as the challenger.
+
 ## Exact next action
 
-1. Create a new post-R5 research branch from current canonical `main`.
-2. Keep R5ag = 1534 B untouched as the control.
-3. Add only one live challenger beside the frozen control.
-4. Start with measurement/inspection of the frozen linked image to identify the
-   next byte-saving hypothesis rather than making an unmeasured source edit.
-5. For any architecture-level change, update proof/contract first.
-6. Keep `continue.md` refreshed with the challenger, exact byte delta, CI
-   evidence, and next action.
+1. Let PR #5 CI build frozen R5ag and R6a in the same revision.
+2. Compare `arghtos_resident_total` and the linked size of
+   `wake_locked_compact`.
+3. Accept R6a only if it produces a strict physical byte reduction with all
+   host, sanitizer, portability, and Cortex-M23 gates green.
+4. If neutral or larger, reject R6a, preserve the result, and restore the live
+   Makefile/CI surface to R5ag plus the next challenger.
+5. Do not merge PR #5 without explicit user permission.
