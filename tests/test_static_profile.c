@@ -413,7 +413,14 @@ static void test_compact_runtime_saturation(void)
     assert(ARGHTOS_CTRL_MISSED(&ctrl[0]) == ARGHTOS_CTRL_MISSED_MAX);
 #if ARGHTOS_R6V_ALWAYS_DISPATCH_TICK
     assert(arghtos_host_dispatch_request_count() == 1u);
+#if ARGHTOS_R6W_PERIODIC_READY_NORMALIZE
+    assert(ARGHTOS_CTRL_STATE(&ctrl[0]) == ARGHTOS_TASK_READY);
+    ctx = arghtos_kernel_dispatch(ctx);
+    assert(ctx == ctrl[0].context);
     assert(ARGHTOS_CTRL_STATE(&ctrl[0]) == ARGHTOS_TASK_RUNNING);
+#else
+    assert(ARGHTOS_CTRL_STATE(&ctrl[0]) == ARGHTOS_TASK_RUNNING);
+#endif
 #endif
 }
 #endif
