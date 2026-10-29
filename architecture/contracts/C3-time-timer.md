@@ -202,3 +202,22 @@ these integration conditions are part of the selected port/profile contract:
 
 Under those conditions every reachable timer entry occurs after STARTED is
 committed. The generic profile retains the defensive pre-start guard.
+
+# R6h single-async timer-suffix specialization
+
+The trusted generated minimum-size profile may replace the async suffix loop in
+the partitioned time scan with one direct slot operation when generated
+configuration proves:
+
+```text
+ARGHTOS_STATIC_TASK_COUNT - ARGHTOS_R5P_PERIODIC_COUNT == 1
+```
+
+and the generated ordering contract places that sole async task at
+`ARGHTOS_R5P_PERIODIC_COUNT`.
+
+The direct operation performs exactly the same SLEEPING due test, SLEEPING to
+READY transition, pending timer consideration, and dispatch-change reporting as
+the one-iteration loop. The periodic prefix scan is unchanged.
+
+The generic and multi-async profiles retain the loop.
