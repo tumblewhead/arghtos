@@ -202,3 +202,23 @@ Thus, on every execution admitted by the trusted minimum profile,
 Eliding those two diagnostic branches does not change any reachable transition,
 wake result, pending-wake effect, or dispatch decision. Generic/debug builds
 retain both diagnostics.
+
+# R6k preseeded periodic READY refinement
+
+For the trusted generated R6k profile, a periodic task's physical packed state
+may contain READY before STARTED, but R5n/R6b and the production API
+preconditions make that state unobservable to scheduler execution until
+`arghtos_start()` commits STARTED.
+
+The logical transition remains the synchronous release-zero transition:
+
+```text
+pre-start inactive -> release at common start epoch -> READY
+```
+
+R6k moves only the READY bit materialization from runtime start code to the
+generated initial image. `next_time` is still formed from the runtime start
+epoch, and no task can dispatch before STARTED.
+
+Therefore the first dispatch sees the same set of READY periodic tasks and all
+subsequent P1 transitions are unchanged.
