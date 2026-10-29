@@ -399,11 +399,38 @@ static void test_compact_runtime_saturation(void)
 }
 #endif
 
+#if ARGHTOS_R6M_COMMIT_RECURSION_GUARD
+static void test_recursive_fatal_uses_commit_guard(void)
+{
+    jmp_buf env;
+
+    reset_all();
+    assert(arghtos_init(NULL) == ARGHTOS_OK);
+    start_and_escape();
+
+    assert(arghtos_static_crash_record.commit_magic == 0u);
+    arghtos_host_set_recursive_fault_on_crash_fill(true);
+    arghtos_host_set_fault_jmp(&env);
+    if (setjmp(env) == 0) {
+        arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+        assert(!"fatal returned");
+    }
+    arghtos_host_set_fault_jmp(NULL);
+
+    assert(arghtos_host_crash_fill_count() == 1u);
+    assert(arghtos_static_crash_record.commit_magic ==
+           ARGHTOS_R6M_CAPTURE_IN_PROGRESS);
+}
+#endif
+
 int main(void)
 {
     test_static_init_ignores_runtime_config();
     test_static_dispatch_and_async_wake();
     test_static_crash_record_symbol_is_used();
+#if ARGHTOS_R6M_COMMIT_RECURSION_GUARD
+    test_recursive_fatal_uses_commit_guard();
+#endif
 #if ARGHTOS_COMPACT_RUNTIME
     test_compact_runtime_saturation();
 #endif
