@@ -160,3 +160,16 @@ The dispatch and idle loop remain fully masked while scheduler state is read or
 mutated. Interrupts become eligible at the same restore point immediately
 before exception return. Therefore P2 context integrity and C4 race-free idle
 ownership are unchanged.
+
+# R6l startup mask-ownership refinement
+
+R6l changes only who owns the scheduler mask on entry to
+`arghtos_start()`.
+
+The generated integration establishes PRIMASK=1 before the call. The portable
+start transaction never unmasks, and `arghtos_port_start()` remains
+non-returning and restores the normal interrupt state before first dispatch.
+
+Therefore there is no additional context-switch interleaving, no changed
+MSP/PSP ownership, and no window in which PendSV can observe partially
+initialized scheduler state. The first-dispatch context proof is unchanged.
