@@ -352,7 +352,16 @@ static void missed_release_add(
     arghtos_task_control_t *c,
     uint32_t count)
 {
-#if ARGHTOS_COMPACT_RUNTIME
+#if ARGHTOS_R6X_BOUNDED_MISSED_LOOP
+    uint8_t status = ARGHTOS_CTRL_STATUS_ID(id);
+
+    (void)c;
+    while ((count != 0u) && (status < 0xF0u)) {
+        status = (uint8_t)(status + 0x10u);
+        --count;
+    }
+    ARGHTOS_CTRL_STATUS_ID(id) = status;
+#elif ARGHTOS_COMPACT_RUNTIME
     const uint32_t current = ARGHTOS_CTRL_MISSED_ID(id);
     const uint32_t room = ARGHTOS_CTRL_MISSED_MAX - current;
 
