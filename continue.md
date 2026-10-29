@@ -10,7 +10,7 @@ Read [agents.md](agents.md) first. Repository state is authoritative.
 repo:   https://github.com/tumblewhead/arghtos
 base:   main @ bf44d8495074360f2fb6283322e323ff7f62d24f
 branch: implementation/r5-size-specialization-001
-PR:     #4 (draft)
+PR:     #4 (ready for review)
 phase:  R5 freeze/cleanup validation
 ```
 
@@ -223,12 +223,24 @@ explicit CI resident-footprint assertion also passed.
 This proves the Makefile/CI cleanup did not disturb the frozen R5ag target
 crossing.
 
+## PR state
+
+PR #4 is now ready for review.
+
+The cleaned documentation-head validation was:
+
+```text
+head:       48ab4de3c192409de0a9f84543e98a2db468dfe4
+CI run:     40814905429
+conclusion: success
+```
+
+No merge has been performed.
+
 ## Exact next action
 
 1. Treat R5ag = 1534 B as the frozen R5 control.
-2. This continuation update is documentation-only; confirm CI remains green on
-   the resulting PR head before changing PR state.
-3. If that CI is green, PR #4 may be marked ready for review.
-4. Do not merge PR #4 unless the user explicitly requests it.
-5. Any further size research must start as a new challenger beside R5ag, not by
-   mutating the frozen control.
+2. Confirm CI remains green on this documentation-only continuation update.
+3. Do not merge PR #4 unless the user explicitly requests it.
+4. If more size research is desired, start a new challenger beside R5ag rather
+   than modifying the frozen control.
