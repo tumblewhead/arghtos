@@ -121,3 +121,18 @@ well defined:
 Therefore the wake transaction remains indivisible with respect to every other
 scheduler-state mutation even when the wake handler omits its own redundant
 PRIMASK enter/exit pair. The two P3 linearization cases are unchanged.
+
+# R6e SVC serialization refinement
+
+R6e extends R6d by placing SVC in the same non-preempting scheduler-exception
+class as timer and interrupt-wake handlers.
+
+The wait transaction is therefore atomic with respect to wake without a local
+PRIMASK pair inside `arghtos_kernel_service()`:
+
+* while SVC executes WAIT, no scheduler-mutating wake handler can preempt it;
+* while a wake handler executes, SVC cannot exist concurrently because SVC is
+  entered synchronously from Thread mode, not from that active handler;
+* PendSV is less urgent and cannot preempt either transaction.
+
+Thus the two P3 linearization cases remain complete and unchanged.
