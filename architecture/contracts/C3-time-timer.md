@@ -221,3 +221,35 @@ READY transition, pending timer consideration, and dispatch-change reporting as
 the one-iteration loop. The periodic prefix scan is unchanged.
 
 The generic and multi-async profiles retain the loop.
+
+# R6s physical-board delta-only timer selection
+
+The trusted generated minimum profile may retain only the smallest unsigned
+deadline delta while scanning timer candidates instead of retaining both the
+winning absolute deadline and its delta.
+
+For each candidate absolute deadline `t` at sampled time `now`:
+
+```text
+delta = t - now
+```
+
+The winner is selected by the same unsigned delta comparison used by the
+ordinary always-armed implementation. After the scan, the port is armed with:
+
+```text
+now + best_delta
+```
+
+Unsigned scheduler-time arithmetic gives:
+
+```text
+now + (t - now) == t   modulo 2^32
+```
+
+so the reconstructed absolute deadline is exactly the same bit pattern as the
+winning candidate.
+
+This refinement changes only temporary representation inside the bounded timer
+scan. Due testing, half-range legality, periodic catch-up, async sleep release,
+and the one-shot timer ABI are unchanged.
