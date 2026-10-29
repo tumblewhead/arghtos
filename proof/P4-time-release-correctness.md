@@ -162,3 +162,14 @@ Eliding the pre-start guard from that profile does not change any reachable
 release, catch-up, sleep, timer-selection, or dispatch behavior. The ordinary
 portable profile retains the guard for ports that do not make this stronger
 integration guarantee.
+
+# R6d timer-handler serialization refinement
+
+In the R6d generated Cortex-M23 profile, the scheduler timer handler may omit
+its local PRIMASK enter/exit pair when C4's serialized scheduler-handler
+precondition holds.
+
+No other scheduler-mutating handler can preempt the timer transaction, task/SVC
+mutation masks the timer handler while active, and PendSV is less urgent.
+Therefore the bounded release scan, sleep release, earliest-deadline update,
+and dispatch-request decision remain one serialized scheduler transaction.
