@@ -191,3 +191,16 @@ The generic formula based on separate C0/C8 structures remains valid for the
 compatibility profile. The generated R2c profile is a specialized
 implementation of the same static-resource principle and has its own linked
 measurement above.
+
+# R6p generated initialization refinement
+
+For the selected generated Cortex-M23 profile, C4 establishes that
+`arghtos_port_init()` is bounded and infallible.
+
+R6p therefore moves the invariant post-init C9 values
+`current_task=INVALID` and `flags=INITIALIZED` into the generated image.
+The public init call still executes the port initialization exactly once.
+
+Because the selected port cannot fail, the state observed after the call and
+the returned result are identical to the ordinary successful initialization
+path. No storage cardinality changes and no new runtime resource is introduced.
