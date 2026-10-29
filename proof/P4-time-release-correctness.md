@@ -230,3 +230,38 @@ always-armed path for every admitted scheduler state.
 No release predicate, catch-up count, wake/sleep transition, or wrap-safe
 ordering changes. The proof is algebraic and independent of the physical-board
 harness; the physical harness merely makes the code-size effect measurable.
+
+# R6t unit-period timer-dominance proof
+
+Assume generated task 0 has period `T0 = 1`.
+
+After each call to the time engine, task 0's next release is the first
+representable scheduler tick strictly after `now`.
+
+If task 0 is due:
+
+```text
+late     = now - old_next
+releases = 1 + late / 1
+new_next = old_next + releases
+         = old_next + 1 + now - old_next
+         = now + 1            modulo 2^32
+```
+
+If task 0 is not due, the induction hypothesis from the prior time-engine call
+already places its next deadline at the first future tick. Since scheduler time
+is integer-valued, this is also `now+1`.
+
+Every other future candidate accepted by C3 has unsigned positive delta at
+least 1. Thus:
+
+```text
+delta(task0) = 1 <= delta(any other candidate)
+```
+
+Therefore arming `next_time[0]` is equivalent to selecting the minimum
+deadline across all periodic and sleeping-async candidates.
+
+The optimization removes only minimum-tracking work. Release detection,
+periodic catch-up, missed-release accounting, async sleep expiration, and
+dispatch-change reporting are unchanged.
