@@ -869,7 +869,9 @@ ARGHTOS_NORETURN void arghtos_start(void)
 
 #if ARGHTOS_R5P_GENERATED_ORDER
     for (id = 0u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
+#if !ARGHTOS_R6K_PRESEEDED_PERIODIC_READY
         ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#endif
         ARGHTOS_CTRL_NEXT(&controls[id]) = start + ARGHTOS_TASK_PERIOD(id);
     }
 #else
