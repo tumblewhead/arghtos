@@ -199,9 +199,12 @@ jobs:
       - name: Cortex-M23 live R5ac terminal fault-state elision
         run: make m23-footprint-r5ac
 
+      - name: Cortex-M23 live R5ad compact API veneers
+        run: make m23-footprint-r5ad
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h r5i r5k r5l r5m r5n r5o r5p r5q r5r r5s r5t r5v r5w r5x r5y r5z r5aa r5ab r5ac; do
+          for p in r3c r4y r5a r5b r5c r5d r5e r5f r5g r5h r5i r5k r5l r5m r5n r5o r5p r5q r5r r5s r5t r5v r5w r5x r5y r5z r5aa r5ab r5ac r5ad; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -245,6 +248,7 @@ jobs:
             build/footprint-r5aa.json
             build/footprint-r5ab.json
             build/footprint-r5ac.json
+            build/footprint-r5ad.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5a.map
@@ -274,6 +278,7 @@ jobs:
             build/m23-r5aa.map
             build/m23-r5ab.map
             build/m23-r5ac.map
+            build/m23-r5ad.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5a-symbols.txt
@@ -303,6 +308,7 @@ jobs:
             build/m23-r5aa-symbols.txt
             build/m23-r5ab-symbols.txt
             build/m23-r5ac-symbols.txt
+            build/m23-r5ad-symbols.txt
             build/m23-r4y.elf
             build/m23-r5a.elf
             build/m23-r5b.elf
@@ -331,4 +337,5 @@ jobs:
             build/m23-r5aa.elf
             build/m23-r5ab.elf
             build/m23-r5ac.elf
+            build/m23-r5ad.elf
             build/*.su
