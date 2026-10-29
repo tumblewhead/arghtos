@@ -112,43 +112,40 @@ R6h:    rejected neutral          = 1478 B
 R6i:    accepted                  = 1470 B
 R6j:    accepted                  = 1450 B
 R6k:    accepted                  = 1434 B
-R6l:    accepted control          = 1422 B
-phase:  R6m crash commit-word recursion-guard experiment
+R6l:    accepted                  = 1422 B
+R6m:    accepted control          = 1414 B
+phase:  R6n dispatch-only trusted service outcome experiment
 ```
 
-R6l is preserved in
-[implementation/R6l-premasked-start.md](implementation/R6l-premasked-start.md).
+R6m is preserved in
+[implementation/R6m-commit-recursion-guard.md](implementation/R6m-commit-recursion-guard.md).
 
-R6m tests a new crash-path representation rather than revisiting R5w. The
-trusted R5s generated image guarantees `commit_magic=0` before init. R6m
-uses the same crash-record word as the recursive-fatal guard:
+R6n consumes the now-closed trusted service domain:
 
-```text
-commit == 0          -> first fatal
-commit = 1           -> capture in progress, record invalid
-commit = COMMIT_MAGIC -> capture complete, record valid
-any nonzero on fatal entry -> recursive/second fatal, terminal immediately
-```
+* R6f proves only defined service IDs reach the dispatcher;
+* generated lifecycle ownership proves each service is invoked by a legal task
+  class/target;
+* minimal validation moves invalid timing arguments outside the production
+  contract;
+* R6j proves wake cannot return BAD_STATE.
 
-This removes the separate C9 FAULT_ACTIVE test/store in the generated minimum
-profile while retaining commit-last validity and recursive-fatal protection.
-
-A host fault-injection seam deliberately re-enters `arghtos_fatal()` from
-`arghtos_port_crash_fill()`; R6m must terminate before a second crash-fill
-call and leave the record invalid/in-progress.
+Therefore every reachable trusted service returns `ARGHTOS_OK`. R6n changes
+the internal wake/service outcome to dispatch-only state and returns OK
+directly. Generic/debug profiles retain the complete public error domain.
 
 Owning refinements:
 
-* [architecture/contracts/C5-fault-diagnostics.md](architecture/contracts/C5-fault-diagnostics.md)
-* [proof/P7-bounded-memory-and-work.md](proof/P7-bounded-memory-and-work.md)
+* [architecture/contracts/C1-task-api-lifecycle.md](architecture/contracts/C1-task-api-lifecycle.md)
+* [architecture/contracts/C2-wake.md](architecture/contracts/C2-wake.md)
+* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build R6l and R6m in the same revision.
-2. Require the recursive crash-fill injection test to pass.
-3. Compare complete resident bytes and `arghtos_fatal` symbol size.
-4. Accept R6m only for a strict physical reduction with all retained gates green.
-5. If accepted, preserve the exact R5s startup/commit-word preconditions in an
-   R6m implementation checkpoint.
-6. If neutral/regressive, reject and preserve the result before selecting R6n.
-7. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI build R6m and R6n in the same revision.
+2. Compare total resident bytes plus `wake_locked_compact`,
+   `arghtos_wake_from_interrupt`, and `arghtos_kernel_service`.
+3. Accept R6n only for a strict physical reduction with all retained gates green.
+4. If accepted, preserve the exact OK-only service-domain preconditions in an
+   R6n implementation checkpoint.
+5. If neutral/regressive, reject and preserve the result before selecting R6o.
+6. Do not merge PR #5 without explicit user permission.
