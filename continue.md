@@ -132,6 +132,14 @@ measured head:
             62dabb5dab89bfc8861fd91a7ab0868a4e5f8a8f
 ```
 
+R6i checkpoint validation:
+
+```text
+run:        40818413025
+conclusion: success
+head:       8d63daa785a00394dd8b70429caf89898ca8f87f
+```
+
 R6i physical accounting:
 
 ```text
@@ -151,10 +159,9 @@ R5ag remains immutable and continues to build as the merged R5 reference.
 ## Exact next action
 
 1. Treat R6i = 1470 B as the accepted R6 control.
-2. Let CI validate this result-documentation-only head.
-3. Inspect remaining large symbols before selecting R6j. Current primary
+2. Inspect remaining large symbols before selecting R6j. Current primary
    candidates are `process_time_locked`, `arghtos_fatal`,
    `arghtos_kernel_service`, and `arghtos_kernel_dispatch`.
-4. Avoid revisiting R6g/R6h without a materially different hypothesis.
-5. Keep R6j as a side-by-side challenger against R6i and preserve R5ag.
-6. Do not merge PR #5 without explicit user permission.
+3. Avoid revisiting R6g/R6h without a materially different hypothesis.
+4. Keep R6j as a side-by-side challenger against R6i and preserve R5ag.
+5. Do not merge PR #5 without explicit user permission.
