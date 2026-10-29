@@ -125,7 +125,11 @@ uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT] 
 #else
 uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
     ARGHTOS_TEST_PERIOD,
+#if ARGHTOS_R5Z_RAW_CLASS_SCHEDULE
+    3u
+#else
     ARGHTOS_R5I_ASYNC_BASE | 3u
+#endif
 };
 #endif
 #endif
