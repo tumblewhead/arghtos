@@ -434,3 +434,27 @@ precondition strong enough to discharge several portable dispatcher assertions:
 The generic/debug profile continues to check these combinations at runtime.
 R5n may compile those redundant checks out of the minimum-size image without
 changing the context ABI or legal scheduler behavior.
+
+
+# R5ad compact target service veneers
+
+The trusted minimum-size target profile may provide the public task-context
+service veneers in target assembly instead of the portable C translation unit.
+
+This specialization is permitted only when the veneer is ABI-equivalent to the
+portable wrapper:
+
+* `arghtos_yield()` invokes `ARGHTOS_SERVICE_YIELD`;
+* `arghtos_wait()` invokes `ARGHTOS_SERVICE_WAIT`;
+* `arghtos_sleep_until(t)` invokes `ARGHTOS_SERVICE_SLEEP_UNTIL` with
+  `arg0=t`;
+* `arghtos_wake(id)` invokes `ARGHTOS_SERVICE_WAKE` with `arg0=id`;
+* each veneer returns the service result in R0 using the ordinary public C ABI.
+
+For YIELD and WAIT, the kernel service cases do not inspect `arg0`. Therefore
+the target veneer need not initialize R1 before SVC. This is an internal
+calling-convention optimization only; the public functions remain no-argument
+operations.
+
+The generic/debug and non-specialized builds retain the portable C veneers.
+The portable scheduler core remains target-independent C11.
