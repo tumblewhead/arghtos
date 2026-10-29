@@ -932,7 +932,9 @@ arghtos_result_t arghtos_wake(arghtos_task_id_t task_id)
 
 arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 {
+#if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     arghtos_irq_key_t key;
+#endif
 #if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     uint8_t wake_result;
 #else
@@ -946,7 +948,9 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     }
 #endif
 
+#if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     key = arghtos_port_critical_enter();
+#endif
 
 #if !ARGHTOS_MINIMAL_VALIDATION
     if ((kernel.flags & ARGHTOS_KF_STARTED) == 0u) {
@@ -960,7 +964,9 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 #else
     dispatch = wake_locked(task_id, &result);
 #endif
+#if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     arghtos_port_critical_exit(key);
+#endif
 
 #if ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     if ((wake_result & ARGHTOS_WAKE_DISPATCH_BIT) != 0u) {
@@ -1447,7 +1453,9 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
 
 void arghtos_timer_interrupt(void)
 {
+#if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     arghtos_irq_key_t key;
+#endif
     bool changed;
 
 #if !ARGHTOS_R6B_TRUSTED_TIMER_ENTRY
@@ -1457,9 +1465,13 @@ void arghtos_timer_interrupt(void)
     }
 #endif
 
+#if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     key = arghtos_port_critical_enter();
+#endif
     changed = process_time_locked(arghtos_port_time_now());
+#if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     arghtos_port_critical_exit(key);
+#endif
 
     if (changed) {
         arghtos_port_request_dispatch();
