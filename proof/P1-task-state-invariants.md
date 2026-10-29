@@ -240,3 +240,15 @@ Thus the public result for every admitted service execution is exactly
 `ARGHTOS_OK`. Replacing the encoded result-plus-dispatch byte with a
 dispatch-only internal value preserves every reachable P1 state transition and
 every public result.
+
+# R6o current-task seed refinement
+
+R6o moves the initial INVALID value of `kernel.current_task` from a runtime
+store to the generated image.
+
+No task-state transition depends on the physical time of that write.
+INITIALIZED remains clear until successful port initialization, and dispatch is
+already proved unreachable before STARTED in the trusted profile.
+
+Therefore the dispatcher begins from the same INVALID current-task state and
+all P1 transitions are unchanged.
