@@ -188,16 +188,47 @@ CI now explicitly fails if `build/footprint-r5ag.json` reports
 
 No historical experiment document was deleted.
 
+## Cleaned validation result
+
+The freeze/cleanup build-system head was:
+
+```text
+a9df59100571938073d76151b9da83158ffc766e
+```
+
+Authoritative cleaned CI:
+
+```text
+run:        40814851219
+workflow:   arghtos-ci
+conclusion: success
+```
+
+Cleaned R5ag physical accounting from that run:
+
+```text
+linked before MSP  1470 B
+ArghtOS-only MSP      64 B
+-------------------------
+complete resident   1534 B
+target              1536 B
+margin                 2 B
+target_met           true
+```
+
+Every retained portability, host, sanitizer, generic Cortex-M23, R3c, R4y,
+R5ag, symbol-report, and artifact-upload gate completed successfully. The
+explicit CI resident-footprint assertion also passed.
+
+This proves the Makefile/CI cleanup did not disturb the frozen R5ag target
+crossing.
+
 ## Exact next action
 
-1. Validate the current PR head CI after the cleanup commits.
-2. Require every portability, host, sanitizer, Cortex-M23, and footprint gate
-   in the cleaned workflow to pass.
-3. Read `build/footprint-r5ag.json` from the successful run and record the
-   exact cleaned R5ag resident footprint.
-4. Require the cleaned result to remain <=1536 B before claiming the target is
-   preserved.
-5. Update this file with the final CI run ID, head SHA, and cleaned footprint.
-6. Only then consider marking PR #4 ready for review.
-7. Do not merge PR #4 unless the user explicitly requests it.
-
+1. Treat R5ag = 1534 B as the frozen R5 control.
+2. This continuation update is documentation-only; confirm CI remains green on
+   the resulting PR head before changing PR state.
+3. If that CI is green, PR #4 may be marked ready for review.
+4. Do not merge PR #4 unless the user explicitly requests it.
+5. Any further size research must start as a new challenger beside R5ag, not by
+   mutating the frozen control.
