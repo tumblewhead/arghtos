@@ -227,12 +227,19 @@ static void start_and_escape(void)
 {
     jmp_buf env;
 
+#if ARGHTOS_R6L_PREMASKED_START
+    (void)arghtos_port_critical_enter();
+    assert(arghtos_host_interrupts_masked());
+#endif
     arghtos_host_set_start_jmp(&env);
     if (setjmp(env) == 0) {
         arghtos_start();
         assert(!"arghtos_start returned");
     }
     arghtos_host_set_start_jmp(NULL);
+#if ARGHTOS_R6L_PREMASKED_START
+    assert(!arghtos_host_interrupts_masked());
+#endif
 }
 
 static void test_static_init_ignores_runtime_config(void)
