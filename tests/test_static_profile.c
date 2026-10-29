@@ -295,6 +295,11 @@ static void test_static_dispatch_and_async_wake(void)
     assert(arghtos_test_kernel()->current_task == 1u);
 #endif
     assert(ARGHTOS_CTRL_AGE(&c[1]) == 0u);
+
+    arghtos_host_clear_dispatch_requests();
+    assert(arghtos_sleep_for(0u) == ARGHTOS_OK);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_RUNNING);
+    assert(arghtos_host_dispatch_request_count() == 0u);
 }
 
 static void test_static_crash_record_symbol_is_used(void)
