@@ -115,41 +115,45 @@ R6k:    accepted                  = 1434 B
 R6l:    accepted                  = 1422 B
 R6m:    accepted                  = 1414 B
 R6n:    accepted                  = 1394 B
-R6o:    accepted control          = 1393 B
-phase:  R6p preinitialized generated kernel experiment
+R6o:    accepted                  = 1393 B
+R6p:    accepted control          = 1384 B
+phase:  R6q preseeded periodic deadline-offset experiment
 ```
 
-R6o is preserved in
-[implementation/R6o-preseeded-current-invalid.md](implementation/R6o-preseeded-current-invalid.md).
+R6p is preserved in
+[implementation/R6p-preinitialized-kernel.md](implementation/R6p-preinitialized-kernel.md).
 
-R6p strengthens only the selected generated Cortex-M23 port contract:
-`arghtos_port_init()` is a fixed bounded register/disarm sequence that returns
-ARGHTOS_OK unconditionally.
+R6q repurposes each generated periodic slot's pre-start `next_time` word as
+its relative period offset. No supported scheduler observer reaches timed state
+before STARTED.
 
-The generated C9 image therefore preseeds both:
+At scheduler start, R6q converts the offset in place:
 
 ```text
-current_task = ARGHTOS_TASK_ID_INVALID
-flags        = ARGHTOS_KF_INITIALIZED
+next_time += start_epoch
 ```
 
-and the public `arghtos_init(config)` reduces to calling the required port
-initializer and returning its result. Generic/fallible ports retain the runtime
-INITIALIZED commit.
+instead of reloading the period from `schedule8` and assigning
+`start_epoch + period`. The async slot remains zero. The schedule table stays
+authoritative for runtime catch-up after start.
+
+The host regression verifies both sides of the representation boundary:
+
+* before start: periodic next_time == period, async next_time == 0;
+* after start: periodic next_time == start_epoch + period.
 
 Owning refinements:
 
-* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
-* [architecture/contracts/C9-kernel-global-state.md](architecture/contracts/C9-kernel-global-state.md)
-* [proof/P0-static-configuration-validity.md](proof/P0-static-configuration-validity.md)
+* [architecture/contracts/C0-static-task-configuration.md](architecture/contracts/C0-static-task-configuration.md)
+* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build R6o and R6p in the same revision.
-2. Require host startup to observe INVALID|INITIALIZED before init and successful
-   port init behavior after the public call.
-3. Compare complete resident bytes and `arghtos_init` symbol size.
-4. Accept R6p only for a strict physical reduction with all retained gates green.
-5. If accepted, consider a separate linker-alias challenger only after freezing
-   this C-level result.
+1. Let PR #5 CI build R6p and R6q in the same revision.
+2. Require the pre-start offset and post-start absolute-deadline host
+   regressions to pass.
+3. Compare complete resident bytes and `arghtos_start` symbol size.
+4. Accept R6q only for a strict linked physical reduction with all retained
+   gates green and no generated metadata growth.
+5. If neutral/regressive, reject and preserve the result before selecting R6r.
 6. Do not merge PR #5 without explicit user permission.
