@@ -193,7 +193,7 @@ static bool duration_valid(arghtos_duration_t dt)
 }
 #endif
 
-#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT
+#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT && !ARGHTOS_R6G_PROVEN_CURRENT_DOMAIN
 static bool task_id_valid(arghtos_task_id_t id)
 {
     return id < ARGHTOS_TASK_COUNT;
