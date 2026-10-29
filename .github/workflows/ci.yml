@@ -40,8 +40,11 @@ jobs:
       - name: Host R6c zero-sleep control
         run: make host-test-r6c
 
-      - name: Host R6d serialized-handler challenger
+      - name: Host R6d serialized-handler control
         run: make host-test-r6d
+
+      - name: Host R6e serialized-SVC challenger
+        run: make host-test-r6e
 
       - name: Host sanitizers
         run: make host-sanitize
@@ -64,8 +67,11 @@ jobs:
       - name: Cortex-M23 R6c zero-sleep control
         run: make m23-footprint-r6c
 
-      - name: Cortex-M23 R6d serialized-handler challenger
+      - name: Cortex-M23 R6d serialized-handler control
         run: make m23-footprint-r6d
+
+      - name: Cortex-M23 R6e serialized-SVC challenger
+        run: make m23-footprint-r6e
 
       - name: Enforce R5ag 1536-byte resident target
         run: |
@@ -81,7 +87,7 @@ jobs:
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5ag r6b r6c r6d; do
+          for p in r3c r4y r5ag r6b r6c r6d r6e; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -100,21 +106,25 @@ jobs:
             build/footprint-r6b.json
             build/footprint-r6c.json
             build/footprint-r6d.json
+            build/footprint-r6e.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5ag.map
             build/m23-r6b.map
             build/m23-r6c.map
             build/m23-r6d.map
+            build/m23-r6e.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5ag-symbols.txt
             build/m23-r6b-symbols.txt
             build/m23-r6c-symbols.txt
             build/m23-r6d-symbols.txt
+            build/m23-r6e-symbols.txt
             build/m23-r4y.elf
             build/m23-r5ag.elf
             build/m23-r6b.elf
             build/m23-r6c.elf
             build/m23-r6d.elf
+            build/m23-r6e.elf
             build/*.su
