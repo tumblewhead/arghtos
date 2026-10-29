@@ -605,6 +605,23 @@ _Static_assert(ARGHTOS_ERR_BAD_CONFIG <= ARGHTOS_WAKE_RESULT_MASK,
 
 static uint8_t wake_locked_compact(arghtos_task_id_t id)
 {
+#if ARGHTOS_R6J_PROVEN_WAKE_DOMAIN
+    const uint8_t state = ARGHTOS_CTRL_STATE_ID(id);
+
+    if ((state == ARGHTOS_TASK_DORMANT) || (state == ARGHTOS_TASK_WAITING)) {
+        ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
+#if !ARGHTOS_R5R_ELIDE_AGE_RESETS
+        ARGHTOS_CTRL_AGE_ID(id) = 0u;
+#endif
+        ARGHTOS_CTRL_CLEAR_WAKE_ID(id);
+        return ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
+    }
+
+    if ((state == ARGHTOS_TASK_RUNNING) || (state == ARGHTOS_TASK_SLEEPING)) {
+        ARGHTOS_CTRL_SET_WAKE_ID(id);
+    }
+    return ARGHTOS_OK;
+#else
     switch (ARGHTOS_CTRL_STATE_ID(id)) {
     case ARGHTOS_TASK_DORMANT:
     case ARGHTOS_TASK_WAITING:
@@ -630,6 +647,7 @@ static uint8_t wake_locked_compact(arghtos_task_id_t id)
         arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
     }
     return ARGHTOS_ERR_BAD_STATE;
+#endif
 }
 
 #else
