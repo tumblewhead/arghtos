@@ -120,30 +120,38 @@ historical legacy harness
 
 physical-board harness
   R6q physical control         = 1504 B
-  R6r accepted control         = 1492 B
-  phase: R6s delta-only timer challenger
+  R6r accepted                 = 1492 B
+  R6s accepted control         = 1480 B
+  phase: R6t unit-period timer challenger
 ```
 
-R6r is preserved in
-[implementation/R6r-flagless-kernel-state.md](implementation/R6r-flagless-kernel-state.md).
+Accepted physical checkpoints:
 
-Authoritative harness-isolation / R6r validation:
+* [implementation/R6r-flagless-kernel-state.md](implementation/R6r-flagless-kernel-state.md)
+* [implementation/R6s-delta-only-timer.md](implementation/R6s-delta-only-timer.md)
+
+R6s authoritative CI:
 
 ```text
-run:        40922006295
+run:        40922680748
 conclusion: success
 
-legacy R5ag            1534 B
-legacy R6q             1356 B
-physical R6q           1504 B
 physical R6r           1492 B
-R6r physical delta      -12 B
+physical R6s           1480 B
+delta                    -12 B
+
+process_time_locked:
+  R6r                   252 B
+  R6s                   240 B
 ```
 
-R6s revisits the earlier delta-only timer representation under the corrected
-physical-board harness. The ordinary always-armed scan retains both the winning
-absolute deadline and its delta. R6s retains only the minimum delta and
-reconstructs the exact same absolute deadline with `now + best_delta`.
+R6t uses the generated period-1 task as a proof-dominant timer source. After
+the periodic scan, task 0's next deadline is exactly `now+1`. Every other
+legal future periodic or async-sleep deadline has positive integer delta at
+least one tick, so none can precede task 0.
+
+R6t therefore removes timer minimum tracking and arms
+`controls[0].next_time` directly after processing due transitions.
 
 Owning refinements:
 
@@ -152,12 +160,10 @@ Owning refinements:
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6r and R6s in the same revision.
-2. Compare complete resident bytes and `process_time_locked` symbol size.
-3. Accept R6s only for a strict physical-board reduction with all retained gates
-   green.
-4. If accepted, preserve the physical result in an R6s implementation checkpoint.
-5. If neutral/regressive, preserve the result and keep R6r = 1492 B as control.
-6. Never compare a legacy-harness number directly against a physical-board
-   challenger delta.
-7. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI build physical R6s and R6t in the same revision.
+2. Require host semantics, sanitizers, portability, historical reproduction,
+   and all physical gates green.
+3. Compare complete resident bytes and `process_time_locked`.
+4. Accept R6t only for a strict physical-board reduction.
+5. If neutral/regressive, preserve the result and keep R6s = 1480 B as control.
+6. Do not merge PR #5 without explicit user permission.
