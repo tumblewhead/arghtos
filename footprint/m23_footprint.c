@@ -46,13 +46,19 @@ static void task_stub(void)
 #define ARGHTOS_META_SLOT_INIT .age_credit = 0u, .status = 0u,
 #endif
 #if ARGHTOS_R5L_PREBUILT_CONTEXT
-#define ARGHTOS_TIME_ENTRY_INIT .entry_or_next.next_time = 0u,
+#if ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS
+#define ARGHTOS_TIME_ENTRY_INIT(i, p) \
+    .entry_or_next.next_time = \
+        (((i) < ARGHTOS_R5P_PERIODIC_COUNT) ? (p) : 0u),
+#else
+#define ARGHTOS_TIME_ENTRY_INIT(i, p) .entry_or_next.next_time = 0u,
+#endif
 #define ARGHTOS_ENTRY_FIELD_INIT
 #elif ARGHTOS_ENTRY_NEXT_OVERLAY
-#define ARGHTOS_TIME_ENTRY_INIT .entry_or_next.entry = task_stub,
+#define ARGHTOS_TIME_ENTRY_INIT(i, p) .entry_or_next.entry = task_stub,
 #define ARGHTOS_ENTRY_FIELD_INIT
 #else
-#define ARGHTOS_TIME_ENTRY_INIT .next_time = 0u,
+#define ARGHTOS_TIME_ENTRY_INIT(i, p) .next_time = 0u,
 #define ARGHTOS_ENTRY_FIELD_INIT .entry = task_stub,
 #endif
 #if ARGHTOS_R5F_COMPRESSED_SCHEDULE || ARGHTOS_R5G_SCHEDULE16 || ARGHTOS_R5I_SCHEDULE8
@@ -69,7 +75,7 @@ static void task_stub(void)
 #endif
 #define SLOT(i, p) { \
     .context = ARGHTOS_INITIAL_CONTEXT(i), \
-    ARGHTOS_TIME_ENTRY_INIT \
+    ARGHTOS_TIME_ENTRY_INIT(i, p) \
     ARGHTOS_PROFILE_SLOT_INIT \
     ARGHTOS_META_SLOT_INIT \
     ARGHTOS_ENTRY_FIELD_INIT \
