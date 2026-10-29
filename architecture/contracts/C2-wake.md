@@ -159,3 +159,15 @@ The R3 production profile assumes:
 The FAULTED-state check and wake/wait handshake remain active.
 
 These assumptions are intended for generated driver integration where wake targets are compile-time constants.
+
+# R6d serialized interrupt-wake refinement
+
+For the trusted serialized-handler profile defined by C4, the atomic wake
+state/latch update remains linearizable without a handler-local PRIMASK pair
+because no other scheduler-mutating handler may preempt the active wake
+handler. Task/SVC mutation remains protected by the ordinary C4 critical
+section and therefore masks the wake handler while the wait transition is
+being committed.
+
+The public wake semantics and the one-bit pending-wake handshake are unchanged.
+The generic profile retains the explicit handler-side critical section.
