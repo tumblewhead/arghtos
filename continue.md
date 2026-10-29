@@ -104,57 +104,33 @@ R5ag:   frozen merged reference = 1534 B
 R6a:    rejected neutral         = 1534 B
 R6b:    accepted                  = 1522 B
 R6c:    accepted                  = 1514 B
-R6d:    accepted current control  = 1494 B
-saved from R5ag                  =   40 B
-saved from R4y                   =  800 B
+R6d:    accepted control          = 1494 B
+phase:  R6e unified scheduler-exception serialization experiment
 ```
 
-Accepted R6 checkpoints:
+R6e extends R6d's generated non-preempting scheduler-handler class to SVC.
+When the generated Cortex-M23 exception-priority configuration guarantees that
+SVC, scheduler timer, and scheduler-mutating device handlers cannot preempt one
+another, the local PRIMASK enter/exit pair in `arghtos_kernel_service()` is
+redundant.
 
-* [implementation/R6b-trusted-timer-entry.md](implementation/R6b-trusted-timer-entry.md)
-* [implementation/R6c-zero-sleep-service.md](implementation/R6c-zero-sleep-service.md)
-* [implementation/R6d-serialized-handler-mutation.md](implementation/R6d-serialized-handler-mutation.md)
+The generic profile retains service-side PRIMASK serialization. R6d remains the
+same-revision accepted control.
 
-R6d authoritative measurement CI:
+Owning refinements:
 
-```text
-run:        40816356031
-conclusion: success
-measured head:
-            5336fd318c1b099a0ee6a1e0a52ed659981b062b
-```
-
-Documentation/checkpoint validation:
-
-```text
-run:        40816434442
-conclusion: success
-head:       591f2e9f335c6d18ebf0fd8e5f52f0c830010f30
-```
-
-R6d physical accounting:
-
-```text
-linked before MSP  1430 B
-ArghtOS-only MSP      64 B
--------------------------
-complete resident   1494 B
-```
-
-R6d depends on the generated board-level non-preempting scheduler-handler
-priority contract documented in C4/C2 and proved in P3/P4. The generic profile
-continues to use PRIMASK critical sections in handler-facing APIs.
-
-R5ag remains immutable and continues to build as the merged R5 reference.
+* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
+* [architecture/contracts/C1-task-api-lifecycle.md](architecture/contracts/C1-task-api-lifecycle.md)
+* [proof/P3-wake-wait-race-freedom.md](proof/P3-wake-wait-race-freedom.md)
+* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
 
 ## Exact next action
 
-1. Treat R6d = 1494 B as the accepted R6 control.
-2. Inspect the R6d linked symbol/map evidence before selecting R6e.
-3. Prefer the next hypothesis from remaining large live kernel symbols
-   (`process_time_locked`, `arghtos_kernel_service`, `arghtos_fatal`,
-   `arghtos_kernel_dispatch`, `PendSV_Handler`) rather than fixture-only
-   schedule assumptions.
-4. Keep any R6e change as a side-by-side challenger against R6d and preserve
-   R5ag as the immutable merged reference.
-5. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI build R6d and R6e in the same revision.
+2. Compare complete resident bytes and `arghtos_kernel_service` symbol size.
+3. Accept R6e only for a strict physical reduction with all retained host,
+   sanitizer, portability, Cortex-M23, R5ag, and R6d gates green.
+4. If accepted, preserve the exact generated exception-priority preconditions
+   in an R6e implementation checkpoint.
+5. If neutral/regressive, reject and preserve the result before selecting R6f.
+6. Do not merge PR #5 without explicit user permission.
