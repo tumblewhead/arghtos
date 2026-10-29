@@ -265,3 +265,21 @@ deadline across all periodic and sleeping-async candidates.
 The optimization removes only minimum-tracking work. Release detection,
 periodic catch-up, missed-release accounting, async sleep expiration, and
 dispatch-change reporting are unchanged.
+
+# R6u singleton async release under R6t
+
+R6h already proved that replacing the async suffix loop by a direct operation is
+equivalent when the generated async set is the singleton `{P}`.
+
+R6t removes timer-candidate consideration from that suffix. The remaining
+operation is only:
+
+```text
+if async[P] is SLEEPING and due:
+    SLEEPING -> READY
+    changed = true
+```
+
+Thus direct execution at ID `P` and a one-iteration loop over `[P,P+1)`
+have identical state effects. R6t's timer deadline is supplied independently by
+period-1 task 0, so no timer-selection dependency is introduced.
