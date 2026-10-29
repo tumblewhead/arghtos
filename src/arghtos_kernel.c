@@ -1232,6 +1232,12 @@ arghtos_task_id_t arghtos_select_next(void)
     }
 #endif
 
+#if ARGHTOS_R5AB_SINGLE_ASYNC
+    id = (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT;
+    if (ARGHTOS_CTRL_STATE_ID(id) == ARGHTOS_TASK_READY) {
+        best = id;
+    }
+#else
     {
         uint8_t best_effective = 0u;
         uint8_t best_age = 0u;
@@ -1273,6 +1279,7 @@ arghtos_task_id_t arghtos_select_next(void)
             }
         }
     }
+#endif
 
     return best;
 #else
@@ -1414,9 +1421,11 @@ arghtos_context_t arghtos_kernel_dispatch(arghtos_context_t outgoing_context)
 #endif
 
     ARGHTOS_CTRL_SET_STATE_ID(next, ARGHTOS_TASK_RUNNING);
+#if !ARGHTOS_R5AB_SINGLE_ASYNC
     if (task_is_async(next)) {
         ARGHTOS_CTRL_AGE_ID(next) = 0u;
     }
+#endif
 
     kernel.current_task = next;
 #if ARGHTOS_RUNTIME_PROFILING
