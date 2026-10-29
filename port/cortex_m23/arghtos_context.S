@@ -232,6 +232,33 @@ HardFault_Handler:
 #endif
 .size HardFault_Handler, .-HardFault_Handler
 
+#if ARGHTOS_R5AF_ASM_HARDFAULT_ENTRY
+.global arghtos_m23_hardfault_entry
+.type arghtos_m23_hardfault_entry, %function
+.thumb_func
+arghtos_m23_hardfault_entry:
+    /*
+     * Entry ABI:
+     *   r0 = EXC_RETURN
+     *   r1 = selected basic frame
+     *   r2 = MSP at exception entry
+     *   r3 = PSP at exception entry
+     *
+     * Two pushes create arghtos_m23_fault_context_t exactly:
+     *   [sp+0]  msp
+     *   [sp+4]  psp
+     *   [sp+8]  exc_return
+     *   [sp+12] basic_frame
+     */
+    push {r0, r1}
+    push {r2, r3}
+    mov r1, sp
+    movs r0, #1
+    lsls r0, r0, #8
+    b arghtos_fatal
+.size arghtos_m23_hardfault_entry, .-arghtos_m23_hardfault_entry
+#endif
+
 #if ARGHTOS_R5K_ASM_CRASH_FILL
 .global arghtos_port_crash_fill
 .type arghtos_port_crash_fill, %function
