@@ -332,3 +332,22 @@ was already pending, in which case a dispatch was required anyway.
 
 The extra dispatch changes bounded execution cost, not the legal task-state
 result. Its cost must be included in P6 kernel overhead.
+
+# R6w due-periodic READY normalization
+
+R6w is valid only on top of R6v's unconditional timer-side dispatch.
+
+For a due periodic task, R5y proves the only reachable states are DORMANT,
+READY, and RUNNING. R6w computes missed-release accounting from the pre-update
+state, then writes READY unconditionally.
+
+For DORMANT and READY this is the ordinary release result. For RUNNING, the
+RUNNING -> READY preemption transition is moved from the immediately pending
+PendSV dispatcher into the serialized timer transaction.
+
+Because R6v guarantees PendSV is requested before return to Thread mode, and the
+trusted handler-priority contract excludes a normal scheduler-state observer
+between the timer transaction and PendSV, no application execution observes the
+transition at a different logical boundary.
+
+PendSV saves the interrupted continuation and runs the unchanged selector.
