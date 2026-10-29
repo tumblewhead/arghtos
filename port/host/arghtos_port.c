@@ -15,6 +15,8 @@ static bool host_masked;
 static uint32_t host_idle_calls;
 static jmp_buf *host_start_env;
 static jmp_buf *host_fault_env;
+static bool host_recursive_fault_on_crash_fill;
+static uint32_t host_crash_fill_calls;
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
 static uintptr_t host_initial_arg_value;
 #endif
@@ -32,6 +34,8 @@ void arghtos_host_reset(void)
     host_idle_calls = 0u;
     host_start_env = NULL;
     host_fault_env = NULL;
+    host_recursive_fault_on_crash_fill = false;
+    host_crash_fill_calls = 0u;
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
     host_initial_arg_value = 0u;
 #endif
@@ -51,6 +55,11 @@ bool arghtos_host_interrupts_masked(void) { return host_masked; }
 uint32_t arghtos_host_idle_count(void) { return host_idle_calls; }
 void arghtos_host_set_start_jmp(jmp_buf *env) { host_start_env = env; }
 void arghtos_host_set_fault_jmp(jmp_buf *env) { host_fault_env = env; }
+void arghtos_host_set_recursive_fault_on_crash_fill(bool enable)
+{
+    host_recursive_fault_on_crash_fill = enable;
+}
+uint32_t arghtos_host_crash_fill_count(void) { return host_crash_fill_calls; }
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
 uintptr_t arghtos_host_initial_arg(void) { return host_initial_arg_value; }
 #endif
@@ -193,6 +202,11 @@ void arghtos_port_crash_fill(
     const void *port_fault_context)
 {
     (void)port_fault_context;
+    host_crash_fill_calls++;
+    if (host_recursive_fault_on_crash_fill) {
+        host_recursive_fault_on_crash_fill = false;
+        arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+    }
     record->port_format = 0x484Fu;
     record->port_words = 1u;
     record->port_state[0] = (uint32_t)host_mode;
