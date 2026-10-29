@@ -122,33 +122,56 @@ physical-board harness
   R6q physical control         = 1504 B
   R6r accepted                 = 1492 B
   R6s accepted                 = 1480 B
-  R6t accepted control         = 1424 B
-  saved from physical R6q      =   80 B
-  margin below 1536 target     =  112 B
-  phase: R6u singleton-async release under unit-period timer
+  R6t accepted                 = 1424 B
+  R6u accepted control         = 1420 B
+  saved from physical R6q      =   84 B
+  margin below 1536 target     =  116 B
+  phase: R6v unconditional unit-tick dispatch experiment
 ```
 
-R6t is preserved in
-[implementation/R6t-unit-period-timer.md](implementation/R6t-unit-period-timer.md).
+R6u is preserved in
+[implementation/R6u-single-async-unit-timer.md](implementation/R6u-single-async-unit-timer.md).
 
-R6u revisits the previously neutral singleton-async time-suffix specialization
-in a materially different code-generation context. R6t removed all
-earliest-deadline tracking from the async suffix, leaving only the one async
-task's SLEEPING/due release check.
+Authoritative R6u CI:
 
-R6u enables the already-proved direct singleton operation on top of R6t.
+```text
+run:        40923612503
+conclusion: success
+
+physical R6t           1424 B
+physical R6u           1420 B
+delta                     -4 B
+
+process_time_locked:
+  R6t                   184 B
+  R6u                   180 B
+```
+
+R6v trades bounded runtime cycles for bytes. Under the unit-period profile,
+timer entry requests PendSV every tick, even when the time engine creates no
+new READY work. Because profiling is off and async age-reset side effects are
+elided, a redundant dispatch over an unchanged eligibility set preempts and
+reselects the same current task. Any already-pending scheduling indication
+already required PendSV.
+
+This allows the time engine to drop its `changed` result and all persistent
+change bookkeeping. P6 explicitly charges the possible extra PendSV/dispatcher
+pass to kernel overhead.
 
 Owning refinements:
 
 * [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
-* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
+* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
+* [proof/P6-rms-schedulability.md](proof/P6-rms-schedulability.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6t and R6u in the same revision.
-2. Require host semantics, sanitizers, portability, historical reproduction,
-   and all physical gates green.
-3. Compare complete resident bytes and `process_time_locked`.
-4. Accept R6u only for a strict physical-board reduction.
-5. If neutral/regressive, preserve the result and keep R6t = 1424 B as control.
+1. Let PR #5 CI build physical R6u and R6v in the same revision.
+2. Require the new redundant-dispatch host regression, all semantic gates,
+   historical reproduction, and physical controls green.
+3. Compare complete resident bytes, `process_time_locked`, and
+   `arghtos_timer_interrupt`.
+4. Accept R6v only for a strict physical reduction.
+5. If accepted, preserve the bounded runtime-cost caveat in the implementation
+   checkpoint and P6.
 6. Do not merge PR #5 without explicit user permission.
