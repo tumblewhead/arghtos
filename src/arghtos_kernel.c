@@ -906,7 +906,11 @@ ARGHTOS_NORETURN void arghtos_start(void)
 #if !ARGHTOS_R6K_PRESEEDED_PERIODIC_READY
         ARGHTOS_CTRL_SET_STATE_ID(id, ARGHTOS_TASK_READY);
 #endif
+#if ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS
+        ARGHTOS_CTRL_NEXT(&controls[id]) += start;
+#else
         ARGHTOS_CTRL_NEXT(&controls[id]) = start + ARGHTOS_TASK_PERIOD(id);
+#endif
     }
 #else
     for (id = 0u; id < ARGHTOS_TASK_COUNT; ++id) {
