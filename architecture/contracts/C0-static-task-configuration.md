@@ -382,3 +382,29 @@ port initialization result and INITIALIZED flag commit.
 
 After successful `arghtos_init()`, the observable kernel state is identical to
 the ordinary minimum profile.
+
+# R6q preseeded periodic deadline offsets
+
+The trusted generated minimum-size profile may preload each periodic task's
+runtime `next_time` storage with its generated period before scheduler start.
+
+Before STARTED, that word is interpreted only as a relative offset from the
+future common start epoch. R5n/R6b and the production lifecycle preconditions
+already prove that no supported scheduler observer consumes the field as an
+absolute deadline before start.
+
+At `arghtos_start()`, the runtime transaction converts each offset in place:
+
+```text
+next_time += start_epoch
+```
+
+which yields exactly the ordinary first future release deadline:
+
+```text
+start_epoch + period
+```
+
+The generated schedule table remains unchanged and is still authoritative for
+subsequent periodic catch-up. Generic profiles retain the ordinary
+`next_time = start + period` materialization.
