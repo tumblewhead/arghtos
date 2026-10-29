@@ -1448,10 +1448,12 @@ void arghtos_timer_interrupt(void)
     arghtos_irq_key_t key;
     bool changed;
 
+#if !ARGHTOS_R6B_TRUSTED_TIMER_ENTRY
     if ((kernel.flags & ARGHTOS_KF_STARTED) == 0u) {
         arghtos_port_timer_disarm();
         return;
     }
+#endif
 
     key = arghtos_port_critical_enter();
     changed = process_time_locked(arghtos_port_time_now());
