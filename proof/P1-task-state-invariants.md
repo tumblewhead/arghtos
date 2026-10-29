@@ -181,3 +181,24 @@ R6g reuses that invariant in fatal capture. Replacing the repeated range test
 with an INVALID test does not create a new task-state transition and cannot
 attribute a supported fatal event to an unconfigured task. Generic/debug builds
 continue to validate the full ID range at runtime.
+
+# R6j non-faulted wake-domain refinement
+
+R5ac removes the FAULTED state mutation only in a profile where every fatal
+path is terminal. Normal scheduler execution therefore cannot resume after a
+fault that would otherwise create RUNNING -> FAULTED.
+
+Starting from pristine generated DORMANT state, the remaining nonfatal P1
+transition relation closes over:
+
+```text
+DORMANT, READY, RUNNING, WAITING, SLEEPING
+```
+
+for any task that can be passed to wake.
+
+Thus, on every execution admitted by the trusted minimum profile,
+`wake_locked_compact()` cannot observe FAULTED or an unknown state encoding.
+Eliding those two diagnostic branches does not change any reachable transition,
+wake result, pending-wake effect, or dispatch decision. Generic/debug builds
+retain both diagnostics.
