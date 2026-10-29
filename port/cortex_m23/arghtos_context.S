@@ -150,8 +150,12 @@ PendSV_Handler:
     movs r0, #0
 
 2:
+#if ARGHTOS_R6I_KNOWN_UNMASKED_PENDSV
+    cpsid i
+#else
     mrs r4, primask
     cpsid i
+#endif
 
 3:
     bl arghtos_kernel_dispatch
@@ -162,7 +166,9 @@ PendSV_Handler:
     b 3b
 
 4:
+#if !ARGHTOS_R6I_KNOWN_UNMASKED_PENDSV
     mov r1, r4
+#endif
 #if ARGHTOS_COMPACT_PENDSV
     ldmia r0!, {r4-r7}
     ldmia r0!, {r2-r3}
@@ -172,7 +178,11 @@ PendSV_Handler:
     mov r10, r2
     mov r11, r3
     msr psp, r0
+#if ARGHTOS_R6I_KNOWN_UNMASKED_PENDSV
+    cpsie i
+#else
     msr primask, r1
+#endif
     movs r2, #2
     mvns r2, r2
 #else
@@ -190,7 +200,11 @@ PendSV_Handler:
     mov r11, r2
     adds r0, #32
     msr psp, r0
+#if ARGHTOS_R6I_KNOWN_UNMASKED_PENDSV
+    cpsie i
+#else
     msr primask, r1
+#endif
     ldr r2, =0xFFFFFFFD
 #endif
 #if ARGHTOS_R5A_COMPACT_PENDSV_TAIL
