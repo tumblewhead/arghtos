@@ -1562,11 +1562,19 @@ ARGHTOS_NORETURN void arghtos_fatal(
     uint8_t i;
 #endif
 
+#if ARGHTOS_R6M_COMMIT_RECURSION_GUARD
+    r = ARGHTOS_CRASH_RECORD;
+    if (r->commit_magic != 0u) {
+        arghtos_port_fault_terminal();
+    }
+    r->commit_magic = ARGHTOS_R6M_CAPTURE_IN_PROGRESS;
+#else
     if ((kernel.flags & ARGHTOS_KF_FAULT_ACTIVE) != 0u) {
         arghtos_port_fault_terminal();
     }
 
     kernel.flags |= ARGHTOS_KF_FAULT_ACTIVE;
+#endif
 
 #if !ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE
     if (task_fault_attributed(reason) &&
@@ -1580,14 +1588,16 @@ ARGHTOS_NORETURN void arghtos_fatal(
     }
 
 #endif
+#if !ARGHTOS_R6M_COMMIT_RECURSION_GUARD
     r = ARGHTOS_CRASH_RECORD;
+#endif
 #if ARGHTOS_R5S_PRESEEDED_CRASH
     /*
      * The trusted generated startup image supplies the invariant header and
      * invalid commit. R5w additionally preseeds PORT_STATE_VALID and relies on
      * the selected port's 1..10 payload-count contract.
      */
-#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT
+#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT && !ARGHTOS_R6M_COMMIT_RECURSION_GUARD
     r->commit_magic = 0u;
 #endif
     r->reason = reason;
