@@ -363,7 +363,19 @@ static void missed_release_add(
 }
 
 #if !ARGHTOS_R5V_UNIT_PERIOD_TIMER
-#if ARGHTOS_R5T_TIMER_ALWAYS_ARMED
+#if ARGHTOS_R5AA_DELTA_ONLY_TIMER
+static void timer_consider(
+    arghtos_time_t now,
+    arghtos_time_t t,
+    uint32_t *best_delta)
+{
+    const uint32_t delta = t - now;
+
+    if (delta < *best_delta) {
+        *best_delta = delta;
+    }
+}
+#elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
 static void timer_consider(
     arghtos_time_t now,
     arghtos_time_t t,
@@ -400,6 +412,9 @@ static bool process_time_locked(arghtos_time_t now)
 {
     bool changed = false;
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+    uint8_t id;
+#elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
+    uint32_t best_delta = UINT32_MAX;
     uint8_t id;
 #elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
     arghtos_time_t best_time = 0u;
@@ -452,6 +467,8 @@ static bool process_time_locked(arghtos_time_t now)
 
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
         (void)c;
+#elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
+        timer_consider(now, ARGHTOS_CTRL_NEXT(c), &best_delta);
 #elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
         timer_consider(
             now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
@@ -475,6 +492,8 @@ static bool process_time_locked(arghtos_time_t now)
             } else {
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
                 (void)c;
+#elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
+                timer_consider(now, ARGHTOS_CTRL_NEXT(c), &best_delta);
 #elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
                 timer_consider(
                     now, ARGHTOS_CTRL_NEXT(c), &best_time, &best_delta);
@@ -533,6 +552,8 @@ static bool process_time_locked(arghtos_time_t now)
 
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
     arghtos_port_timer_arm(ARGHTOS_CTRL_NEXT(&controls[0]));
+#elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
+    arghtos_port_timer_arm(now + best_delta);
 #elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
     arghtos_port_timer_arm(best_time);
 #else
