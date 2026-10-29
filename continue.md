@@ -107,32 +107,33 @@ R6c:    accepted                  = 1514 B
 R6d:    accepted                  = 1494 B
 R6e:    accepted                  = 1482 B
 R6f:    accepted control          = 1478 B
-phase:  R6g fatal current-task-domain experiment
+R6g:    rejected neutral          = 1478 B
+phase:  R6h singleton async-time suffix experiment
 ```
 
-R6g consumes the existing R5n dispatcher invariant that
-`kernel.current_task` is either INVALID or a configured task ID on supported
-generated-profile execution.
+R6g is preserved in
+[implementation/R6g-proven-current-domain.md](implementation/R6g-proven-current-domain.md)
+and removed from the live build/CI surface.
 
-The generated fatal path therefore tests
-`current_task != ARGHTOS_TASK_ID_INVALID` instead of repeating
-`current_task < task_count` before attributing the crash record to a task.
+R6h uses the accepted R5ab/R5p generated invariant that the measured profile
+has exactly one async task, located immediately after the periodic prefix.
+The async suffix loop in `process_time_locked()` is replaced with a direct
+operation on that one slot.
 
-R6g does not enable or reuse the rejected R5w trusted-crash-port split. The
-generic/debug profile retains full task-ID validation.
+The generic and multi-async paths retain the loop.
 
 Owning refinements:
 
-* [architecture/contracts/C5-fault-diagnostics.md](architecture/contracts/C5-fault-diagnostics.md)
-* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
+* [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
+* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build R6f and R6g in the same revision.
-2. Compare complete resident bytes and `arghtos_fatal` symbol size.
-3. Accept R6g only for a strict linked physical reduction with all retained
+1. Let PR #5 CI build R6f and R6h in the same revision.
+2. Compare complete resident bytes and `process_time_locked` symbol size.
+3. Accept R6h only for a strict linked physical reduction with all retained
    gates green.
-4. If accepted, preserve the exact R5n current-task-domain dependency in an R6g
-   implementation checkpoint.
-5. If neutral/regressive, reject and preserve the result before selecting R6h.
+4. If accepted, preserve the exact single-async generated precondition in an
+   R6h implementation checkpoint.
+5. If neutral/regressive, reject and preserve the result before selecting R6i.
 6. Do not merge PR #5 without explicit user permission.
