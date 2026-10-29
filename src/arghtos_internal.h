@@ -250,6 +250,15 @@
 #define ARGHTOS_R6W_PERIODIC_READY_NORMALIZE 0
 #endif
 
+#ifndef ARGHTOS_R6X_BOUNDED_MISSED_LOOP
+#define ARGHTOS_R6X_BOUNDED_MISSED_LOOP 0
+#endif
+
+#if ARGHTOS_R6X_BOUNDED_MISSED_LOOP && \
+    (!ARGHTOS_R6V_ALWAYS_DISPATCH_TICK || !ARGHTOS_COMPACT_RUNTIME)
+#error "R6x bounded missed loop requires the compact trusted R6v profile"
+#endif
+
 #if ARGHTOS_R6W_PERIODIC_READY_NORMALIZE && \
     (!ARGHTOS_R6V_ALWAYS_DISPATCH_TICK || !ARGHTOS_R5Y_PROVEN_PERIODIC_STATE)
 #error "R6w periodic READY normalization requires R6v and proven periodic states"
