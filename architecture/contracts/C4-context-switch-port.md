@@ -458,3 +458,27 @@ operations.
 
 The generic/debug and non-specialized builds retain the portable C veneers.
 The portable scheduler core remains target-independent C11.
+
+# R6d serialized scheduler-handler profile
+
+A trusted generated Cortex-M23 profile may elide handler-local
+`arghtos_port_critical_enter/exit()` around scheduler mutation in
+`arghtos_timer_interrupt()` and `arghtos_wake_from_interrupt()` only when
+the board integration guarantees all of the following:
+
+1. every maskable handler that may call a scheduler-mutating ArghtOS handler
+   entry executes at one non-preempting scheduler-handler priority class;
+2. no member of that class can preempt another member while it is active;
+3. PendSV remains strictly less urgent than that class;
+4. NMI and fatal-fault handlers never call normal scheduler APIs; and
+5. task-context scheduler mutation still enters the ordinary C4 critical
+   section, so a scheduler-mutating handler cannot interleave with an SVC
+   mutation.
+
+Under those conditions Handler-mode execution itself is the serialization
+mechanism between timer/wake callbacks. The generic profile retains PRIMASK
+enter/exit in each handler-facing API.
+
+This specialization is an integration property, not a portable-kernel
+assumption. A generated build must not enable it unless the exception-priority
+configuration is fixed and verified.
