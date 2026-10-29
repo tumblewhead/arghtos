@@ -514,3 +514,28 @@ The minimum profile may therefore omit the PRIMASK enter/exit pair inside
 
 The generic profile retains the explicit critical section. This is a
 Cortex-M23 integration specialization, not a portable scheduler assumption.
+
+# R6f trusted service-ID domain
+
+The trusted generated minimum-size Cortex-M23 profile may additionally treat the
+private service-ID domain entering `arghtos_kernel_service()` as closed.
+
+This refinement is valid only when:
+
+1. task code reaches scheduler lifecycle services only through the public
+   ArghtOS task APIs and the generated task-return trampoline;
+2. the selected Cortex-M23 service veneers emit only the five defined private
+   IDs: YIELD, WAIT, SLEEP_UNTIL, WAKE, and TASK_RETURN;
+3. application code does not call the private port service gateway directly;
+4. no generated veneer accepts a runtime-selected service ID; and
+5. the SVC handler forwards the veneer-supplied ID unchanged.
+
+Under those conditions an unknown service ID is unreachable in the generated
+profile, so the minimum `arghtos_kernel_service()` implementation need not
+carry a runtime BAD_SERVICE default branch. The generic/debug profile retains
+the fatal unknown-service check.
+
+This specialization does not use an unreachable compiler intrinsic and does
+not introduce undefined C behavior. If the generated-profile precondition is
+violated, behavior is outside that profile contract rather than relying on
+undefined execution.
