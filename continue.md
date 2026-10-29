@@ -100,23 +100,34 @@ footprint report.
 ```text
 branch: implementation/r6-size-research-001
 PR:     #5 (draft)
-phase:  R6a compact wake code-generation experiment
 control: R5ag = 1534 B
+R6a:    rejected neutral, 1534 B, 0 B delta
+phase:  R6b trusted timer-entry experiment
 ```
 
-R6a tests one isolated hypothesis: the six-state compact wake transition may
-link smaller as an explicit comparison tree than as the existing C switch on
-Cortex-M23. There is no intended semantic or contract change.
+R6a is preserved in
+[implementation/R6a-compact-wake-tree.md](implementation/R6a-compact-wake-tree.md).
 
-R5ag remains untouched and is built in the same CI revision as the challenger.
+R6b tests a proof-backed generated-profile specialization: elide the defensive
+pre-start guard in `arghtos_timer_interrupt()` only when the selected
+generated port/profile guarantees that the scheduler timer is disarmed before
+start, STARTED is committed before first arm, and a disarmed timer cannot call
+the timer entry.
+
+The generic profile retains the guard. R5ag remains untouched.
+
+Owning refinements:
+
+* [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
+* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build frozen R5ag and R6a in the same revision.
-2. Compare `arghtos_resident_total` and the linked size of
-   `wake_locked_compact`.
-3. Accept R6a only if it produces a strict physical byte reduction with all
-   host, sanitizer, portability, and Cortex-M23 gates green.
-4. If neutral or larger, reject R6a, preserve the result, and restore the live
-   Makefile/CI surface to R5ag plus the next challenger.
-5. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI build frozen R5ag and R6b in the same revision.
+2. Compare complete resident bytes and `arghtos_timer_interrupt` symbol size.
+3. Accept R6b only for a strict linked physical reduction with all gates green.
+4. If accepted, record the exact generated-profile preconditions and freeze the
+   new control beside R5ag evidence.
+5. If neutral/regressive, reject it and preserve the result before choosing the
+   next challenger.
+6. Do not merge PR #5 without explicit user permission.
