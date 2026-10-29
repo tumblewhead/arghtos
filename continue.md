@@ -113,39 +113,35 @@ R6i:    accepted                  = 1470 B
 R6j:    accepted                  = 1450 B
 R6k:    accepted                  = 1434 B
 R6l:    accepted                  = 1422 B
-R6m:    accepted control          = 1414 B
-phase:  R6n dispatch-only trusted service outcome experiment
+R6m:    accepted                  = 1414 B
+R6n:    accepted control          = 1394 B
+phase:  R6o preseeded INVALID current-task experiment
 ```
 
-R6m is preserved in
-[implementation/R6m-commit-recursion-guard.md](implementation/R6m-commit-recursion-guard.md).
+R6n is preserved in
+[implementation/R6n-dispatch-only-services.md](implementation/R6n-dispatch-only-services.md).
 
-R6n consumes the now-closed trusted service domain:
+R6o moves only the invariant initial value
+`kernel.current_task = ARGHTOS_TASK_ID_INVALID` into the generated kernel
+image. The INITIALIZED flag remains a runtime commit after successful
+`arghtos_port_init()`; initialization failure semantics are therefore
+unchanged.
 
-* R6f proves only defined service IDs reach the dispatcher;
-* generated lifecycle ownership proves each service is invoked by a legal task
-  class/target;
-* minimal validation moves invalid timing arguments outside the production
-  contract;
-* R6j proves wake cannot return BAD_STATE.
-
-Therefore every reachable trusted service returns `ARGHTOS_OK`. R6n changes
-the internal wake/service outcome to dispatch-only state and returns OK
-directly. Generic/debug profiles retain the complete public error domain.
+The C9 resident state remains the same size. The experiment asks only whether
+the runtime store can be removed without linker/data-layout cost.
 
 Owning refinements:
 
-* [architecture/contracts/C1-task-api-lifecycle.md](architecture/contracts/C1-task-api-lifecycle.md)
-* [architecture/contracts/C2-wake.md](architecture/contracts/C2-wake.md)
+* [architecture/contracts/C9-kernel-global-state.md](architecture/contracts/C9-kernel-global-state.md)
+* [architecture/contracts/C0-static-task-configuration.md](architecture/contracts/C0-static-task-configuration.md)
 * [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build R6m and R6n in the same revision.
-2. Compare total resident bytes plus `wake_locked_compact`,
-   `arghtos_wake_from_interrupt`, and `arghtos_kernel_service`.
-3. Accept R6n only for a strict physical reduction with all retained gates green.
-4. If accepted, preserve the exact OK-only service-domain preconditions in an
-   R6n implementation checkpoint.
-5. If neutral/regressive, reject and preserve the result before selecting R6o.
+1. Let PR #5 CI build R6n and R6o in the same revision.
+2. Require the generated-image host regression to see current_task INVALID and
+   flags zero before any reset/init.
+3. Compare complete resident bytes and `arghtos_init` symbol size.
+4. Accept R6o only for a strict physical reduction with no C9 resident growth.
+5. If neutral/regressive, reject and preserve the result before selecting R6p.
 6. Do not merge PR #5 without explicit user permission.
