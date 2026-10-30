@@ -301,3 +301,15 @@ service outcome is whether the operation requests dispatch.
 The generated minimum profile may therefore carry a dispatch-only internal
 outcome and return `ARGHTOS_OK` directly. Generic/debug profiles retain the
 full public result domain and all misuse/error reporting.
+
+# R6ab singleton wake API refinement
+
+For the trusted single-async generated profile, the only legal target of the
+public task-context wake API is the sole generated async worker.
+
+The API signature remains unchanged for source compatibility, but the minimum
+target implementation may ignore the runtime argument because C2 proves it is
+always equal to the generated `WAKE_ID` on admitted executions.
+
+The externally observable wake transition, return value, pending-wake latch,
+and dispatch intent are unchanged.
