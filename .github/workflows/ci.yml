@@ -115,6 +115,9 @@ jobs:
       - name: Host R6aj direct-async-prebuilt-entry control
         run: make host-test-r6aj
 
+      - name: Host R6an reason-recursion challenger
+        run: make host-test-r6an
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -220,8 +223,11 @@ jobs:
       - name: Cortex-M23 R6ak R4 assembly-trampoline physical control
         run: make m23-footprint-r6ak
 
-      - name: Cortex-M23 R6am aligned-first-dispatch physical challenger
+      - name: Cortex-M23 R6am aligned-first-dispatch physical control
         run: make m23-footprint-r6am
+
+      - name: Cortex-M23 R6an reason-recursion physical challenger
+        run: make m23-footprint-r6an
 
       - name: Enforce R5ag 1536-byte resident target
         run: |
@@ -471,9 +477,23 @@ jobs:
           print(f"physical R6ak control: {akv} B; R6am: {amv} B; delta: {amv-akv} B")
           PY
 
+      - name: Evaluate R6an physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6am.json", "r", encoding="utf-8") as f:
+              am = json.load(f)
+          with open("build/footprint-r6an.json", "r", encoding="utf-8") as f:
+              an = json.load(f)
+          amv = am["arghtos_resident_total"]
+          anv = an["arghtos_resident_total"]
+          assert anv <= 1536, f"physical R6an misses target: {anv} B > 1536 B"
+          print(f"physical R6am control: {amv} B; R6an: {anv} B; delta: {anv-amv} B")
+          PY
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v r6z r6aa r6ab r6ac r6ad r6ae r6ag r6ai r6aj r6ak r6am; do
+          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v r6z r6aa r6ab r6ac r6ad r6ae r6ag r6ai r6aj r6ak r6am r6an; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -520,6 +540,7 @@ jobs:
             build/footprint-r6aj.json
             build/footprint-r6ak.json
             build/footprint-r6am.json
+            build/footprint-r6an.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5ag.map
@@ -554,6 +575,7 @@ jobs:
             build/m23-r6aj.map
             build/m23-r6ak.map
             build/m23-r6am.map
+            build/m23-r6an.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5ag-symbols.txt
@@ -588,6 +610,7 @@ jobs:
             build/m23-r6aj-symbols.txt
             build/m23-r6ak-symbols.txt
             build/m23-r6am-symbols.txt
+            build/m23-r6an-symbols.txt
             build/m23-r4y.elf
             build/m23-r5ag.elf
             build/m23-r6b.elf
@@ -621,4 +644,5 @@ jobs:
             build/m23-r6aj.elf
             build/m23-r6ak.elf
             build/m23-r6am.elf
+            build/m23-r6an.elf
             build/*.su
