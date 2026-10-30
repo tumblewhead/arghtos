@@ -143,7 +143,8 @@ physical-board harness
   R6ap accepted                = 1318 B
   R6aq rejected regressive     = 1358 B
   R6ar accepted current ctl    = 1292 B
-  phase: R6as two-bit packed periodic deltas
+  R6as rejected regressive     = 1322 B
+  phase: R6at cached nibble decoder
 ```
 
 Correctness repair chain:
@@ -308,30 +309,42 @@ arghtos_timer_interrupt:
   R6ar       180 B
 ```
 
-R6as strengthens the generated delta bound from 0..15 to 0..3 and packs four
-adjacent period deltas per byte. The canonical 22 deltas therefore occupy six
-bytes.
+R6as is preserved in
+[implementation/R6as-two-bit-period-deltas.md](implementation/R6as-two-bit-period-deltas.md).
 
-The sequential decoder becomes branchless:
+R6as authoritative CI:
 
 ```text
-packed = table[k >> 2]
-shift  = (k & 3) * 2
-delta  = (packed >> shift) & 3
-period += delta
+run:        41016430756
+conclusion: success
+R6ar:      1292 B
+R6as:      1322 B
+delta:      +30 B
+
+period table:
+  R6ar        11 B
+  R6as         6 B
+
+arghtos_timer_interrupt:
+  R6ar       180 B
+  R6as       204 B
 ```
 
-Generator evidence must prove every adjacent periodic delta fits 0..3; zero
-continues to represent equal-period peers.
+R6at keeps R6ar's accepted 11-byte nibble table and changes only sequential
+decode mechanics. Each packed byte is loaded on the odd task ID, its low nibble
+is consumed immediately, then the cached high nibble is used by the following
+even task ID.
+
+This preserves the exact R6ar table format and period sequence while halving
+table loads and removing repeated index-shift work.
 
 ## Exact next action
 
-1. Let PR #5 CI build host R6as and physical R6ar/R6as in the same revision.
+1. Let PR #5 CI build host R6at and physical R6ar/R6at in the same revision.
 2. Require generated-frame audits, async-return-fatal repair, host semantics,
    sanitizer, portability, historical controls, and physical controls green.
-3. Compare complete resident bytes, packed period-table size, and
-   `arghtos_timer_interrupt`.
-4. Accept R6as only for a strict physical reduction below 1292 B.
-5. If decoder cost outweighs the five saved data bytes, preserve the result and
-   keep R6ar as control.
+3. Compare complete resident bytes and `arghtos_timer_interrupt`; period-table
+   size remains 11 B in both.
+4. Accept R6at only for a strict physical reduction below 1292 B.
+5. If neutral/regressive, preserve the result and keep R6ar as control.
 6. Do not merge PR #5 without explicit user permission.
