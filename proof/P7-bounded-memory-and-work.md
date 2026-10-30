@@ -197,3 +197,103 @@ remaining excess        1309 B
 R4a removes profiling-only counters, `run_start`, snapshot code, and execution
 accounting. It does not remove crash state, missed-release evidence, or async
 age credit.
+
+# R6m commit-word recursion-bound refinement
+
+R6m replaces the separate C9 recursive-fatal flag with the already-resident C5
+commit word in the trusted R5s generated profile.
+
+At first fatal entry, generated startup guarantees `commit_magic == 0`.
+The path writes a nonzero invalid in-progress marker before any dynamic capture.
+A recursive fatal therefore performs one fixed comparison and transfers
+directly to the non-returning terminal hook. It cannot begin another crash-fill
+operation.
+
+After the release fence, the first capture writes the valid nonzero commit
+magic and immediately enters the terminal hook. If another fatal entry occurs
+during that terminal interval, the same nonzero test also terminates without
+recapture.
+
+Thus recursive-fatal work remains fixed and bounded, no allocation or loop is
+added, and the required 64-byte crash record remains unchanged. The eliminated
+C9 flag is not replaced by any additional resident storage.
+
+# R6x bounded missed-counter loop
+
+R6x deliberately trades bounded cycles for code size.
+
+For one due periodic task, the missed-counter loop executes at most 15
+iterations because the compact counter saturates at 15 and each iteration
+increments it by one. Once saturated, arbitrarily large delayed-release counts
+perform zero further iterations.
+
+Thus the time engine remains bounded by task count and a fixed representation
+constant:
+
+```text
+work <= periodic_scan_work + 15 * periodic_task_count + fixed_async_work
+```
+
+The bound is independent of the number of releases actually missed. R6x
+therefore preserves P7's prohibition on catch-up work that grows without bound
+with delayed-release history.
+
+# R6y packed missed-release arithmetic refinement
+
+R6y replaces the compact room/subtraction saturator with one bounded arithmetic
+expression and one clamp branch.
+
+For each due periodic task:
+
+```text
+total = old_missed + count
+new   = min(total, 15)
+```
+
+No loop or history-dependent work is introduced. The work remains constant per
+due task.
+
+The addition is overflow-safe under C3/P4 timing bounds because
+`count <= 0x80000000` and `old_missed <= 15`, hence:
+
+```text
+total <= 0x8000000F < UINT32_MAX
+```
+
+Therefore R6y preserves P7 bounded work and C5 saturation semantics exactly.
+
+# R6ad unconditional wake-dispatch bound
+
+Each accepted R6ad wake adds at most one dispatch request.
+
+The resulting PendSV path performs the already-bounded selector/dispatch work;
+it does not loop on wake history, allocate storage, or add event multiplicity.
+
+Thus wake-triggered work remains bounded per API invocation by:
+
+```text
+fixed wake mutation + one bounded PendSV/dispatch pass
+```
+
+Repeated external wakes can cause repeated bounded invocations, exactly as
+ordinary interrupt activity already can. No individual scheduler operation
+becomes history-dependent or unbounded.
+
+# R6an reason-owned recursion-bound refinement
+
+R6an replaces R6m's separate nonzero in-progress commit marker with the
+already-required nonzero crash reason.
+
+Generated startup supplies \`reason = NONE = 0\`. Every admitted selected-profile
+fatal caller supplies a fixed nonzero reason. The first fatal entry writes that
+reason before any port crash-fill operation.
+
+A recursive entry therefore performs one fixed reason comparison and transfers
+directly to the non-returning terminal hook. It cannot start a second fill.
+
+The first capture still performs one release fence and one final
+\`commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC\` write. No loop, allocation, or
+history-dependent work is added.
+
+Thus recursive-fatal work remains fixed and bounded, while one in-progress
+commit-word store is removed.

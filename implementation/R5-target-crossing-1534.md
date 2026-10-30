@@ -210,3 +210,30 @@ meet the 1536-byte complete resident-footprint soft target.
 The 2-byte margin is real but small. Any cleanup, linker-script change,
 toolchain update, or source reorganization must re-link R5ag and re-check the
 physical footprint before claiming the target remains met.
+
+# Post-freeze semantic erratum
+
+R6ai later discovered that R5z raw schedule encoding made the shared task-start
+trampoline misclassify the raw async-priority byte as a nonzero period.
+
+Accordingly, the historical R5ag 1534 B result remains authoritative footprint
+evidence, but the merged minimum profile does **not** by itself establish the
+claimed async-return-fatal behavior. A generated-context repair is required
+before this size lineage can again be described as preserving that invariant.
+
+See [R5z raw schedule erratum](R5z-raw-class-schedule.md).
+
+# Post-freeze erratum resolution
+
+R6aj demonstrates a zero-resident-byte repair for the async-return semantic
+defect discovered in the R5z lineage.
+
+The generated Cortex-M23 initial frame now discharges task class before runtime:
+periodic frames enter the periodic trampoline, while the sole async frame enters
+its application entry directly and returns only into the async-fatal guard.
+
+The historical merged R5ag 1534 B binary is unchanged and remains footprint
+provenance rather than a retroactively repaired artifact. The active R6 lineage
+restores the missing semantic invariant at 1340 B.
+
+See [R6aj direct async prebuilt entry](R6aj-direct-async-prebuilt-entry.md).

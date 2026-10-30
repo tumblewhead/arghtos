@@ -320,3 +320,205 @@ R5l/R5m generated task context/state refinements.
 
 The crash record remains scheduler-owned writable storage and its full 64 bytes
 remain part of the ArghtOS resident-footprint accounting.
+
+# R6k preseeded periodic release-zero state
+
+The trusted generated minimum-size profile may refine R5m pristine startup by
+preseeding the packed state of every generated periodic task to READY while
+leaving every generated async task DORMANT.
+
+This is permitted only when the profile also proves that no supported scheduler
+observer can execute before C9 STARTED is committed:
+
+* R5n prevents dispatch before STARTED;
+* R6b prevents scheduler-timer entry before STARTED;
+* production interrupt-wake/service preconditions exclude lifecycle mutation
+  before scheduler start;
+* no public diagnostic state query is present in the no-profiling minimum
+  profile.
+
+The periodic READY encoding before STARTED is therefore an internal generated
+representation of the synchronous release-zero transaction, not an early task
+release visible to supported execution.
+
+At `arghtos_start()`, the kernel still reads the common start epoch, computes
+each periodic `next_time = start + period`, commits STARTED, arms the generated
+first timer, and enters the port start path. The only removed work is rewriting
+READY into metadata that already contains READY.
+
+Generic/debug and ordinary R5m profiles retain DORMANT periodic metadata before
+start and perform DORMANT -> READY at runtime.
+
+# R6l pre-serialized start transaction
+
+R6l does not remove serialization from the C0 start transaction. It moves
+ownership of that serialization across the API boundary.
+
+For the trusted generated profile, the caller enters `arghtos_start()` with
+the C4 scheduler serialization state already active. The start transaction
+still executes atomically:
+
+1. read the common start epoch;
+2. materialize runtime periodic deadlines;
+3. commit STARTED;
+4. arm the first scheduler timer;
+5. transfer permanently to `arghtos_port_start()`.
+
+Because interrupts remain masked through step 4, no timer, wake, SVC, or
+PendSV path can observe a partially started scheduler. The port start path owns
+the eventual transition back to normal interrupt eligibility.
+
+Generic profiles continue to enter and exit serialization inside
+`arghtos_start()`.
+
+# R6o generated kernel-state seed
+
+The trusted generated image may seed the minimum C9 kernel state with
+`current_task=INVALID` before `arghtos_init()`.
+
+This seed is static configuration evidence, analogous to other accepted
+generated initial-state materialization. The runtime initializer still owns the
+port initialization result and INITIALIZED flag commit.
+
+After successful `arghtos_init()`, the observable kernel state is identical to
+the ordinary minimum profile.
+
+# R6q preseeded periodic deadline offsets
+
+The trusted generated minimum-size profile may preload each periodic task's
+runtime `next_time` storage with its generated period before scheduler start.
+
+Before STARTED, that word is interpreted only as a relative offset from the
+future common start epoch. R5n/R6b and the production lifecycle preconditions
+already prove that no supported scheduler observer consumes the field as an
+absolute deadline before start.
+
+At `arghtos_start()`, the runtime transaction converts each offset in place:
+
+```text
+next_time += start_epoch
+```
+
+which yields exactly the ordinary first future release deadline:
+
+```text
+start_epoch + period
+```
+
+The generated schedule table remains unchanged and is still authoritative for
+subsequent periodic catch-up. Generic profiles retain the ordinary
+`next_time = start + period` materialization.
+
+# R6aj generated direct async initial context
+
+The trusted R5l/R5p/R5ab generated profile may specialize the prebuilt initial
+context by task class.
+
+For periodic IDs in \`[0,P)\`, the generated frame retains the ordinary
+periodic task-start trampoline and passes the immutable application entry in
+the initial argument register.
+
+For the sole async ID \`P\`, the generated frame may instead place the
+application entry directly in stacked PC and place the async-return fatal guard
+in stacked LR.
+
+This discharges task class at generation time rather than re-reading the raw
+R5z schedule byte at runtime.
+
+The generated frame still has exactly the same Cortex-M23 saved-context size,
+alignment, stack ownership, and saved PSP token.
+
+# R6ao periodic-only raw schedule table
+
+The trusted generated R5z/R5ab/R6aj minimum profile may omit the raw schedule
+byte for the sole asynchronous task.
+
+R5p and R5ab establish:
+
+~~~text
+periodic IDs = [0, P)
+async IDs    = {P}
+N            = P + 1
+~~~
+
+R5z stores raw periodic periods in the periodic prefix and raw async priority
+in the async suffix.
+
+In the accepted single-async profile, the sole async priority has no remaining
+runtime consumer:
+
+* residual-capacity selection has only one async candidate and therefore does
+  not compare async priorities;
+* R6aj/R6ak discharge task class in the generated initial context and do not
+  read the async schedule byte;
+* periodic start/time processing accesses schedule values only for IDs in
+  \`[0,P)\`.
+
+The generated schedule8 table may therefore contain exactly P bytes, one period
+for each periodic task. Generic, multi-async, and runtime-classification
+profiles retain the full N-entry schedule table.
+
+# R6ap omitted unit-period schedule entry
+
+The trusted generated profile may omit task 0's schedule byte when all of the
+following already hold:
+
+* R5p generated ordering;
+* R6ao periodic-only schedule8 storage;
+* R6t proves task 0 has period exactly one scheduler tick;
+* the remaining periodic task IDs are 1 through P-1.
+
+The generated schedule object then stores only periods for periodic IDs 1..P-1:
+
+~~~text
+schedule8[0] = period(task 1)
+...
+schedule8[P-2] = period(task P-1)
+~~~
+
+Task 0's period is supplied by the R6t unit-period contract rather than stored
+again in generated data.
+
+Generic and non-unit-period profiles retain the ordinary periodic-only table.
+
+# R6ar nibble-packed periodic deltas
+
+The trusted generated profile may replace R6ap's byte-per-period table with
+4-bit deltas between successive periodic periods when the generator proves:
+
+* task 0 period is one tick;
+* periodic IDs are sorted by nondecreasing period;
+* for every periodic ID i in [1,P), \`period[i] - period[i-1] <= 15\`.
+
+The generator stores the P-1 unsigned deltas in ID order, low nibble first:
+
+~~~text
+byte 0: delta(1) | delta(2)<<4
+byte 1: delta(3) | delta(4)<<4
+...
+~~~
+
+A zero delta is valid and represents equal-period RMS peers. The generated
+task-ID order remains the equal-period tie break.
+
+For P=23, the schedule object contains 22 deltas = 11 bytes.
+
+# R6as two-bit periodic deltas
+
+A generated R6ar profile may further pack adjacent periodic deltas into two bits
+when the generator proves every delta is in the range 0..3.
+
+Four deltas are stored per byte, least-significant pair first:
+
+~~~text
+byte 0:
+  bits 1:0 = delta(1)
+  bits 3:2 = delta(2)
+  bits 5:4 = delta(3)
+  bits 7:6 = delta(4)
+~~~
+
+Equal-period peers remain represented by delta zero. Generated ID order remains
+the deterministic equal-period RMS tie break.
+
+For P=23, the 22 deltas require ceil(22/4) = 6 bytes.

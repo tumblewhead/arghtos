@@ -130,3 +130,184 @@ apply.
 
 A target build should retain a static/golden-frame check or relocation audit,
 and hardware register-canary/first-dispatch testing remains required.
+
+# R6i PendSV mask-state refinement
+
+R6i does not change the saved PSP frame, callee-saved register set, exception
+return token, or MSP/PSP ownership.
+
+Under C4's trusted generated precondition that every supported PendSV entry has
+`PRIMASK=0`, replacing the save/restore sequence:
+
+```text
+read prior PRIMASK
+mask
+...
+restore prior PRIMASK
+```
+
+with:
+
+```text
+mask
+...
+enable
+```
+
+restores the same architectural mask state on every admitted execution.
+
+The dispatch and idle loop remain fully masked while scheduler state is read or
+mutated. Interrupts become eligible at the same restore point immediately
+before exception return. Therefore P2 context integrity and C4 race-free idle
+ownership are unchanged.
+
+# R6l startup mask-ownership refinement
+
+R6l changes only who owns the scheduler mask on entry to
+`arghtos_start()`.
+
+The generated integration establishes PRIMASK=1 before the call. The portable
+start transaction never unmasks, and `arghtos_port_start()` remains
+non-returning and restores the normal interrupt state before first dispatch.
+
+Therefore there is no additional context-switch interleaving, no changed
+MSP/PSP ownership, and no window in which PendSV can observe partially
+initialized scheduler state. The first-dispatch context proof is unchanged.
+
+# R6z crash-payload range refinement
+
+The Cortex-M23 crash filler has three bounded control-flow outcomes:
+
+```text
+NULL context             -> port_words = 2
+context, no basic frame  -> port_words = 3
+context + basic frame    -> port_words = 10
+```
+
+Each count names only words that the same branch writes, and every count lies
+within the public ten-word payload.
+
+Thus the selected port establishes the invariant:
+
+```text
+1 <= port_words <= 10
+```
+
+before returning to portable fatal capture.
+
+R6z consumes this invariant to remove redundant portable range/zero checks. It
+does not change fault-context interpretation, stack ownership, register
+extraction, record layout, or commit ordering.
+
+# R6ac crash-format preseed refinement
+
+The selected port's payload decoder contract uses one fixed format identifier
+and no runtime path changes that interpretation.
+
+Moving that constant from `arghtos_port_crash_fill()` into the generated
+initial crash record changes only the time at which the same 16-bit value is
+materialized. The payload words, count, context extraction, and commit ordering
+are unchanged.
+
+# R6aj class-specialized initial-frame proof
+
+R6aj changes only two generated words in the sole async initial hardware frame:
+stacked PC and stacked LR. Frame size, alignment, saved R4-R11 area, xPSR,
+stack interval, and saved PSP token are unchanged.
+
+The async frame's stacked PC names the generated immutable application entry.
+Its stacked LR names a non-returning async-return guard. Therefore normal
+function return uses the ordinary Cortex-M23 ABI and cannot escape into
+unowned memory.
+
+Periodic initial frames remain byte-equivalent to the accepted R5l form.
+
+Target evidence must verify the generated async slot uses direct application PC
+plus the async-return guard before this profile is accepted.
+
+# R6ak generated R4 entry-pointer proof
+
+R6ak changes one word of each periodic generated software-saved frame:
+
+~~~text
+R4: 0 -> immutable periodic application entry pointer
+~~~
+
+and clears the no-longer-needed stacked R0 entry argument.
+
+R4 already belongs to the P2 software-saved register set and is restored before
+exception return. The saved-context size, PSP token, hardware frame, xPSR,
+alignment, and stack interval are unchanged.
+
+The target frame audit SHALL verify:
+
+* all 23 periodic R4 relocation words target the generated application entry;
+* periodic stacked R0 words carry no entry relocation;
+* all 23 periodic stacked PCs target the assembly trampoline;
+* the sole async stacked PC still targets the application entry directly; and
+* all 24 stacked LRs target the return guard.
+
+Thus the new initial frame remains structurally compatible with ordinary
+PendSV save/restore.
+
+# R6am fixed first-dispatch MSP reclamation proof
+
+Let \`S\` be MSP at entry to the selected \`arghtos_port_start()\`.
+
+The selected call is an external Cortex-M23 C ABI boundary, so:
+
+~~~text
+S mod 8 = 0
+~~~
+
+R6am additionally requires machine-checked compiler evidence that
+\`arghtos_port_start()\` has zero static stack usage and source inspection shows
+no MSP-changing inline assembly before the pending scheduler exception becomes
+eligible. Hence MSP is still \`S\` when the first Thread-mode exception stacks.
+
+A Cortex-M23 basic frame occupies 32 bytes. Because \`S\` is already 8-byte
+aligned:
+
+~~~text
+(S - 32) mod 8 = 0
+~~~
+
+so no alignment padding word is required and xPSR[9] is clear.
+
+If a higher-priority handler executes before PendSV, it uses/restores MSP in
+the ordinary nested-exception mechanism. If PendSV is tail-chained, the same
+original Thread hardware frame remains the frame to be reclaimed. Therefore
+the first-dispatch reclaim remains exactly 32 bytes.
+
+Replacing:
+
+~~~text
+read xPSR[9]
+reclaim 32 or 36
+~~~
+
+with:
+
+~~~text
+reclaim 32
+~~~
+
+restores the same pre-exception startup MSP on every admitted R6am execution.
+
+R6am does not change task PSP frames, R4-R11 save/restore, EXC_RETURN, idle
+masking, or the ArghtOS-only MSP accounting. The generic profile retains
+alignment-padding support.
+
+## R6am final evidence form
+
+An initial experiment attempted to consume Clang \`-fstack-usage\` output for
+the LTO port object. Clang emitted no \`.su\` file for that LTO object, so that
+route provided no evidence and the build failed closed.
+
+The final challenger instead replaces only the selected
+\`arghtos_port_start()\` with assembly that has no SP/MSP write at all.
+Consequently the proof premise "startup routine preserves entry MSP" is
+established from the actual linked target implementation rather than inferred
+from unavailable compiler metadata.
+
+The generic C startup path remains unchanged.

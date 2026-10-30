@@ -354,3 +354,192 @@ The reasoning is:
 Therefore the `FAULTED` state write is redundant for valid execution of the
 terminal minimum profile. Generic/debug and other profiles retain task-state
 mutation for diagnostic visibility.
+
+# R6g proven current-task domain in fatal capture
+
+The trusted generated minimum-size profile may consume the R5n dispatcher
+invariant that C9 `current_task` is always either:
+
+* `ARGHTOS_TASK_ID_INVALID`; or
+* the ID of a configured task previously selected by the dispatcher.
+
+For that profile, fatal capture may test task attribution with
+`current_task != ARGHTOS_TASK_ID_INVALID` instead of repeating an
+`id < task_count` validation.
+
+This refinement changes no crash-record field or commit rule. It only removes a
+runtime range check whose stronger domain property is already proved by R5n.
+The generic/debug profile retains ordinary task-ID validation.
+
+# R6m commit-word recursion guard
+
+The trusted generated minimum-size profile may use the crash record's
+`commit_magic` word as both the capture-validity marker and the recursive-fatal
+guard.
+
+This specialization requires R5s generated startup, which materializes
+`commit_magic = 0` before `arghtos_init()`, and a static valid crash-record
+address.
+
+For this profile, the fatal entry protocol is:
+
+```text
+if commit_magic != 0:
+    terminal immediately
+
+commit_magic = CAPTURE_IN_PROGRESS   # nonzero and != ARGHTOS_CRASH_COMMIT_MAGIC
+write dynamic crash fields
+fill port payload
+release fence
+commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC
+terminal
+```
+
+A record is valid only when the commit word equals
+`ARGHTOS_CRASH_COMMIT_MAGIC`. Therefore the in-progress value invalidates the
+record before dynamic capture exactly as required by the commit-last protocol.
+
+Because a successful fatal path never returns, any second fatal entry in the
+same runtime is recursive. It observes either the in-progress marker or the
+final valid commit marker, both nonzero, and transfers directly to the terminal
+hook without recapturing.
+
+The generated minimum profile may therefore omit the separate C9
+`ARGHTOS_KF_FAULT_ACTIVE` test/store. Generic/debug profiles retain the C9
+guard and the ordinary zero-before-capture protocol.
+
+Post-reset crash export/persistence remains outside C5; R6m inherits R5s's
+requirement that generated startup rematerializes the initial zero commit word.
+
+# R6x bounded iterative missed-release saturation
+
+The trusted compact minimum profile may update the packed four-bit periodic
+missed-release counter with a bounded iterative saturator instead of
+room/subtraction arithmetic.
+
+The packed status high nibble is the missed count and the low nibble contains
+state/wake bits. Starting from the current status, each loop iteration adds
+`0x10`, preserving the low nibble, until either:
+
+* the requested missed-release increment is exhausted; or
+* the high nibble reaches `0xF`.
+
+The result is exactly:
+
+```text
+min(15, old_missed + count)
+```
+
+and therefore preserves the C5 saturating diagnostic contract.
+
+The loop executes at most `15 - old_missed <= 15` iterations, regardless of
+the delayed-release count.
+
+# R6y packed missed-release add/clamp
+
+The trusted compact minimum profile may compute the four-bit missed-release
+counter as an add-then-clamp operation:
+
+```text
+total = old_missed + count
+new_missed = min(total, 15)
+```
+
+The packed low nibble containing task state/wake information is preserved by the
+existing missed-count setter.
+
+For every admitted delayed-release update, `count` is derived from the
+wrap-safe due interval and is at most `0x80000000`. Since
+`old_missed <= 15`, the 32-bit addition cannot overflow.
+
+This representation is exactly equivalent to the existing room/subtraction
+saturator and retains the same C5 diagnostic semantics.
+
+# R6z trusted selected-port crash payload
+
+When C4 proves the selected crash filler always returns
+`1 <= port_words <= 10`, the generated crash-record image may preseed:
+
+```text
+flags |= ARGHTOS_CRASH_F_PORT_STATE_VALID
+```
+
+The portable fatal path may then omit the post-fill clamp and zero-payload test.
+Task attribution ORs TASK_VALID into the preseeded flags rather than replacing
+them.
+
+R6z composes with the R6m commit-word recursion guard. The record remains
+invalid while capture is in progress and is committed valid only after the port
+payload has been written and the release fence executes.
+
+Generic/debug and unproven ports retain the clamp, zero-payload handling, and
+runtime PORT_STATE_VALID derivation.
+
+# R6ac preseeded port-format field
+
+When C4 proves one immutable selected-port crash format, the generated C5 record
+may preseed `port_format` alongside its existing invariant header and
+PORT_STATE_VALID flag.
+
+Crash capture still writes the dynamic payload words/count, reason, timestamp,
+task attribution, and final commit marker. Only the invariant format write is
+removed.
+
+The record remains invalid until the R6m commit-last transaction completes.
+
+# R6af unconditional crash task-ID materialization
+
+The trusted generated minimum profile may consume the R5n/P1 invariant that
+`kernel.current_task` is always either:
+
+* `ARGHTOS_TASK_ID_INVALID`; or
+* the ID of one configured task.
+
+Crash capture may therefore always copy `kernel.current_task` into the
+record's `task_id` field.
+
+If the value is INVALID, this materializes the required invalid sentinel and
+TASK_VALID remains clear. If the value is configured, TASK_VALID is set exactly
+as before.
+
+This removes the need to condition the task-ID store itself. The TASK_VALID
+flag remains authoritative for whether consumers may interpret the task ID as a
+live task attribution.
+
+# R6an reason-owned recursive-fatal guard
+
+The trusted selected minimum profile may use the crash record's \`reason\` field
+as the recursive-fatal capture guard.
+
+This specialization requires all of the following:
+
+* generated startup materializes \`reason = ARGHTOS_FAULT_NONE = 0\`;
+* every admitted call to \`arghtos_fatal()\` in the selected kernel/port build
+  uses one of the defined nonzero fault reasons;
+* fatal handling remains terminal and does not return to normal scheduling;
+* \`commit_magic\` remains zero until the final commit-last write.
+
+The first fatal entry therefore performs:
+
+~~~text
+if crash.reason != ARGHTOS_FAULT_NONE:
+    terminal immediately
+
+crash.reason = actual nonzero reason
+write remaining dynamic crash fields
+fill port payload
+release fence
+crash.commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC
+terminal
+~~~
+
+A recursive fatal during capture sees the first nonzero reason and terminates
+without recapture. A later fatal after commit also sees the nonzero reason and
+terminates.
+
+The record remains invalid throughout in-progress capture because
+\`commit_magic == 0\`; validity still depends only on the ordinary commit-last
+marker.
+
+Generic/debug and unproven port profiles retain the R6m commit-word in-progress
+marker.

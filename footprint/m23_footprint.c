@@ -46,13 +46,19 @@ static void task_stub(void)
 #define ARGHTOS_META_SLOT_INIT .age_credit = 0u, .status = 0u,
 #endif
 #if ARGHTOS_R5L_PREBUILT_CONTEXT
-#define ARGHTOS_TIME_ENTRY_INIT .entry_or_next.next_time = 0u,
+#if ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS
+#define ARGHTOS_TIME_ENTRY_INIT(i, p) \
+    .entry_or_next.next_time = \
+        (((i) < ARGHTOS_R5P_PERIODIC_COUNT) ? (p) : 0u),
+#else
+#define ARGHTOS_TIME_ENTRY_INIT(i, p) .entry_or_next.next_time = 0u,
+#endif
 #define ARGHTOS_ENTRY_FIELD_INIT
 #elif ARGHTOS_ENTRY_NEXT_OVERLAY
-#define ARGHTOS_TIME_ENTRY_INIT .entry_or_next.entry = task_stub,
+#define ARGHTOS_TIME_ENTRY_INIT(i, p) .entry_or_next.entry = task_stub,
 #define ARGHTOS_ENTRY_FIELD_INIT
 #else
-#define ARGHTOS_TIME_ENTRY_INIT .next_time = 0u,
+#define ARGHTOS_TIME_ENTRY_INIT(i, p) .next_time = 0u,
 #define ARGHTOS_ENTRY_FIELD_INIT .entry = task_stub,
 #endif
 #if ARGHTOS_R5F_COMPRESSED_SCHEDULE || ARGHTOS_R5G_SCHEDULE16 || ARGHTOS_R5I_SCHEDULE8
@@ -69,7 +75,7 @@ static void task_stub(void)
 #endif
 #define SLOT(i, p) { \
     .context = ARGHTOS_INITIAL_CONTEXT(i), \
-    ARGHTOS_TIME_ENTRY_INIT \
+    ARGHTOS_TIME_ENTRY_INIT(i, p) \
     ARGHTOS_PROFILE_SLOT_INIT \
     ARGHTOS_META_SLOT_INIT \
     ARGHTOS_ENTRY_FIELD_INIT \
@@ -103,6 +109,37 @@ uint16_t arghtos_static_schedule16[ARGHTOS_MAX_TASKS] = {
 #endif
 #if ARGHTOS_R5I_SCHEDULE8
 __attribute__((section(".arghtos_cfg")))
+#if ARGHTOS_R6AS_TWO_BIT_PERIOD_DELTAS
+uint8_t arghtos_static_schedule8[(ARGHTOS_R5P_PERIODIC_COUNT - 1u + 3u) / 4u] = {
+    0x55u, 0x55u, 0x55u, 0x55u, 0x55u, 0x05u
+};
+_Static_assert(sizeof(arghtos_static_schedule8) == 6u,
+               "R6as physical schedule8 must contain 22 packed two-bit deltas");
+#elif ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
+uint8_t arghtos_static_schedule8[(ARGHTOS_R5P_PERIODIC_COUNT - 1u + 1u) / 2u] = {
+    0x11u, 0x11u, 0x11u, 0x11u, 0x11u, 0x11u,
+    0x11u, 0x11u, 0x11u, 0x11u, 0x11u
+};
+_Static_assert(sizeof(arghtos_static_schedule8) == 11u,
+               "R6ar physical schedule8 must contain 22 packed unit deltas");
+#elif ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
+uint8_t arghtos_static_schedule8[ARGHTOS_R5P_PERIODIC_COUNT - 1u] = {
+    2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u,
+    10u, 11u, 12u, 13u, 14u, 15u, 16u, 17u,
+    18u, 19u, 20u, 21u, 22u, 23u
+};
+_Static_assert(sizeof(arghtos_static_schedule8) ==
+                   (ARGHTOS_R5P_PERIODIC_COUNT - 1u),
+               "R6ap physical schedule8 must omit only task0 period");
+#elif ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8
+uint8_t arghtos_static_schedule8[ARGHTOS_R5P_PERIODIC_COUNT] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
+    9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u, 20u, 21u, 22u, 23u
+};
+_Static_assert(sizeof(arghtos_static_schedule8) == ARGHTOS_R5P_PERIODIC_COUNT,
+               "R6ao physical schedule8 must contain only periodic entries");
+#else
 uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
     1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
     9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
@@ -114,9 +151,27 @@ uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
 #endif
 };
 #endif
+#endif
 #if ARGHTOS_SPLIT_META
 __attribute__((section(".arghtos_cfg")))
+#if ARGHTOS_R6K_PRESEEDED_PERIODIC_READY
+arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS] = {
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }, { .status = ARGHTOS_TASK_READY },
+    { .status = ARGHTOS_TASK_READY }
+};
+#else
 arghtos_task_meta_t arghtos_static_meta[ARGHTOS_MAX_TASKS];
+#endif
 #endif
 #elif ARGHTOS_COMPACT_DESCRIPTOR
 #define CDESC(i, p) \
@@ -150,8 +205,11 @@ arghtos_crash_record_t arghtos_static_crash_record = {
     .version = ARGHTOS_CRASH_VERSION,
     .size = (uint16_t)sizeof(arghtos_crash_record_t),
     .task_id = ARGHTOS_TASK_ID_INVALID
-#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT || ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
     ,.flags = ARGHTOS_CRASH_F_PORT_STATE_VALID
+#endif
+#if ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
+    ,.port_format = (uint16_t)ARGHTOS_R6AC_PORT_FORMAT_VALUE
 #endif
 };
 #else

@@ -198,6 +198,361 @@
 #define ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE 0
 #endif
 
+#ifndef ARGHTOS_R6G_PROVEN_CURRENT_DOMAIN
+#define ARGHTOS_R6G_PROVEN_CURRENT_DOMAIN 0
+#endif
+
+#ifndef ARGHTOS_R6H_SINGLE_ASYNC_TIME
+#define ARGHTOS_R6H_SINGLE_ASYNC_TIME 0
+#endif
+
+#ifndef ARGHTOS_R6J_PROVEN_WAKE_DOMAIN
+#define ARGHTOS_R6J_PROVEN_WAKE_DOMAIN 0
+#endif
+
+#ifndef ARGHTOS_R6K_PRESEEDED_PERIODIC_READY
+#define ARGHTOS_R6K_PRESEEDED_PERIODIC_READY 0
+#endif
+
+#ifndef ARGHTOS_R6L_PREMASKED_START
+#define ARGHTOS_R6L_PREMASKED_START 0
+#endif
+
+#ifndef ARGHTOS_R6M_COMMIT_RECURSION_GUARD
+#define ARGHTOS_R6M_COMMIT_RECURSION_GUARD 0
+#endif
+
+#ifndef ARGHTOS_R6AN_REASON_RECURSION_GUARD
+#define ARGHTOS_R6AN_REASON_RECURSION_GUARD 0
+#endif
+
+#ifndef ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8
+#define ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8 0
+#endif
+
+#ifndef ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
+#define ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE 0
+#endif
+
+#ifndef ARGHTOS_R6AQ_TASK0_ALWAYS_DUE
+#define ARGHTOS_R6AQ_TASK0_ALWAYS_DUE 0
+#endif
+
+#ifndef ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
+#define ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS 0
+#endif
+
+#ifndef ARGHTOS_R6AS_TWO_BIT_PERIOD_DELTAS
+#define ARGHTOS_R6AS_TWO_BIT_PERIOD_DELTAS 0
+#endif
+
+#ifndef ARGHTOS_R6AT_CACHED_NIBBLE_PERIODS
+#define ARGHTOS_R6AT_CACHED_NIBBLE_PERIODS 0
+#endif
+
+#if ARGHTOS_R6AT_CACHED_NIBBLE_PERIODS && \
+    (!ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS || ARGHTOS_R6AS_TWO_BIT_PERIOD_DELTAS)
+#error "R6at cached nibble decoder requires the accepted R6ar nibble format"
+#endif
+
+#if ARGHTOS_R6AS_TWO_BIT_PERIOD_DELTAS && !ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
+#error "R6as two-bit period deltas require the accepted R6ar sequential decoder"
+#endif
+
+#if ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS && \
+    (!ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE || !ARGHTOS_R5P_GENERATED_ORDER || \
+     !ARGHTOS_R5Q_PARTITIONED_TIME || !ARGHTOS_R5V_UNIT_PERIOD_TIMER || \
+     ARGHTOS_R5P_PERIODIC_COUNT < 1u)
+#error "R6ar nibble period deltas require sequential generated unit-period scan"
+#endif
+
+#if ARGHTOS_R6AQ_TASK0_ALWAYS_DUE && \
+    (!ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE || !ARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE || \
+     !ARGHTOS_R6B_TRUSTED_TIMER_ENTRY || !ARGHTOS_R5V_UNIT_PERIOD_TIMER)
+#error "R6aq task0-always-due requires trusted timer-owned unit-period profile"
+#endif
+
+#if ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE && \
+    (!ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8 || !ARGHTOS_R5V_UNIT_PERIOD_TIMER || \
+     !ARGHTOS_R5P_GENERATED_ORDER || ARGHTOS_R5P_PERIODIC_COUNT < 1u)
+#error "R6ap omitted unit-period byte requires periodic-only unit-tick generated schedule"
+#endif
+
+#if ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8 && \
+    (!ARGHTOS_R5I_SCHEDULE8 || ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT != 0u || \
+     !ARGHTOS_R5Z_RAW_CLASS_SCHEDULE || !ARGHTOS_R5P_GENERATED_ORDER || \
+     !ARGHTOS_R5AB_SINGLE_ASYNC || !ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY || \
+     (ARGHTOS_R5P_PERIODIC_COUNT + 1u) != ARGHTOS_STATIC_TASK_COUNT)
+#error "R6ao periodic-only schedule8 requires generated raw single-async profile"
+#endif
+
+#if ARGHTOS_R6AN_REASON_RECURSION_GUARD && \
+    (!ARGHTOS_R6M_COMMIT_RECURSION_GUARD || !ARGHTOS_R5S_PRESEEDED_CRASH || \
+     !ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE || !ARGHTOS_STATIC_CONFIG)
+#error "R6an reason recursion guard requires preseeded terminal R6m profile"
+#endif
+
+#ifndef ARGHTOS_R6N_OK_ONLY_SERVICES
+#define ARGHTOS_R6N_OK_ONLY_SERVICES 0
+#endif
+
+#ifndef ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID
+#define ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID 0
+#endif
+
+#ifndef ARGHTOS_R6P_INFALLIBLE_PORT_INIT
+#define ARGHTOS_R6P_INFALLIBLE_PORT_INIT 0
+#endif
+
+#ifndef ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS
+#define ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS 0
+#endif
+
+#ifndef ARGHTOS_R6R_FLAGLESS_KERNEL_STATE
+#define ARGHTOS_R6R_FLAGLESS_KERNEL_STATE 0
+#endif
+
+#ifndef ARGHTOS_R6V_ALWAYS_DISPATCH_TICK
+#define ARGHTOS_R6V_ALWAYS_DISPATCH_TICK 0
+#endif
+
+#ifndef ARGHTOS_R6W_PERIODIC_READY_NORMALIZE
+#define ARGHTOS_R6W_PERIODIC_READY_NORMALIZE 0
+#endif
+
+#ifndef ARGHTOS_R6X_BOUNDED_MISSED_LOOP
+#define ARGHTOS_R6X_BOUNDED_MISSED_LOOP 0
+#endif
+
+#ifndef ARGHTOS_R6Y_PACKED_MISSED_ADD
+#define ARGHTOS_R6Y_PACKED_MISSED_ADD 0
+#endif
+
+#ifndef ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
+#define ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD 0
+#endif
+
+#ifndef ARGHTOS_R6AB_SINGLE_WAKE_TARGET
+#define ARGHTOS_R6AB_SINGLE_WAKE_TARGET 0
+#endif
+
+#ifndef ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
+#define ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT 0
+#endif
+
+#ifndef ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+#define ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE 0
+#endif
+
+#ifndef ARGHTOS_R6AE_DISPATCH_OWNS_YIELD_READY
+#define ARGHTOS_R6AE_DISPATCH_OWNS_YIELD_READY 0
+#endif
+
+#ifndef ARGHTOS_R6AF_UNCONDITIONAL_CRASH_TASK_ID
+#define ARGHTOS_R6AF_UNCONDITIONAL_CRASH_TASK_ID 0
+#endif
+
+#ifndef ARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE
+#define ARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE 0
+#endif
+
+#ifndef ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+#define ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES 0
+#endif
+
+#ifndef ARGHTOS_R6AI_GENERATED_TRAMPOLINE_CLASS
+#define ARGHTOS_R6AI_GENERATED_TRAMPOLINE_CLASS 0
+#endif
+
+#ifndef ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY
+#define ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY 0
+#endif
+
+#ifndef ARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE
+#define ARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE 0
+#endif
+
+#ifndef ARGHTOS_R6AL_DIRECT_UNIT_TIMER_ARM
+#define ARGHTOS_R6AL_DIRECT_UNIT_TIMER_ARM 0
+#endif
+
+#if ARGHTOS_R6AL_DIRECT_UNIT_TIMER_ARM && \
+    (!ARGHTOS_R5V_UNIT_PERIOD_TIMER || !ARGHTOS_R5P_GENERATED_ORDER || \
+     ARGHTOS_R5P_PERIODIC_COUNT < 1u || ARGHTOS_R5O_MIN_PERIOD != 1u)
+#error "R6al direct timer arm requires generated period-1 task 0"
+#endif
+
+#if ARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE && \
+    (!ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY || !ARGHTOS_R5L_PREBUILT_CONTEXT || \
+     !ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_ENTRY_NEXT_OVERLAY)
+#error "R6ak assembly trampoline requires the accepted R6aj generated context"
+#endif
+
+#if ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY && \
+    (!ARGHTOS_R5L_PREBUILT_CONTEXT || !ARGHTOS_R5P_GENERATED_ORDER || \
+     !ARGHTOS_R5AB_SINGLE_ASYNC || !ARGHTOS_R5Z_RAW_CLASS_SCHEDULE || \
+     !ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_ENTRY_NEXT_OVERLAY || \
+     (ARGHTOS_R5P_PERIODIC_COUNT + 1u) != ARGHTOS_STATIC_TASK_COUNT)
+#error "R6aj direct async entry requires generated prebuilt single-async ordering"
+#endif
+
+#if ARGHTOS_R6AI_GENERATED_TRAMPOLINE_CLASS && \
+    (!ARGHTOS_R5P_GENERATED_ORDER || !ARGHTOS_R5N_PROVEN_DISPATCH || \
+     ARGHTOS_R5P_PERIODIC_COUNT < 1u || \
+     ARGHTOS_R5P_PERIODIC_COUNT >= ARGHTOS_STATIC_TASK_COUNT)
+#error "R6ai generated trampoline class requires generated periodic-prefix ordering"
+#endif
+
+#if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES && \
+    (!ARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE || !ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE || \
+     !ARGHTOS_R6AE_DISPATCH_OWNS_YIELD_READY || !ARGHTOS_R6N_OK_ONLY_SERVICES || \
+     !ARGHTOS_R6F_TRUSTED_SERVICE_IDS || !ARGHTOS_R6E_SERIAL_SVC_MUTATION)
+#error "R6ah default-dispatch services require the trusted closed service profile"
+#endif
+
+#if ARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE && \
+    (!ARGHTOS_R6AE_DISPATCH_OWNS_YIELD_READY || !ARGHTOS_R5V_UNIT_PERIOD_TIMER || \
+     !ARGHTOS_R6H_SINGLE_ASYNC_TIME || !ARGHTOS_R6V_ALWAYS_DISPATCH_TICK || \
+     !ARGHTOS_R6E_SERIAL_SVC_MUTATION)
+#error "R6ag timer-owned sleep release requires the trusted unit-tick single-async profile"
+#endif
+
+#if ARGHTOS_R6AF_UNCONDITIONAL_CRASH_TASK_ID && \
+    (!ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_R5S_PRESEEDED_CRASH || \
+     !ARGHTOS_MINIMAL_VALIDATION || !ARGHTOS_STATIC_CONFIG)
+#error "R6af unconditional crash task ID requires trusted generated current-task domain"
+#endif
+
+#if ARGHTOS_R6AE_DISPATCH_OWNS_YIELD_READY && \
+    (!ARGHTOS_R6N_OK_ONLY_SERVICES || !ARGHTOS_R5N_PROVEN_DISPATCH || \
+     !ARGHTOS_PRODUCTION_PROFILE || !ARGHTOS_MINIMAL_VALIDATION)
+#error "R6ae deferred YIELD requires trusted dispatch-owned service profile"
+#endif
+
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE && \
+    (!ARGHTOS_R6AB_SINGLE_WAKE_TARGET || !ARGHTOS_R6N_OK_ONLY_SERVICES || \
+     !ARGHTOS_R6J_PROVEN_WAKE_DOMAIN || !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION)
+#error "R6ad unconditional wake dispatch requires trusted singleton wake profile"
+#endif
+
+#ifndef ARGHTOS_R6AC_PORT_FORMAT_VALUE
+#define ARGHTOS_R6AC_PORT_FORMAT_VALUE 0u
+#endif
+
+#if ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT && \
+    (!ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD || !ARGHTOS_R5S_PRESEEDED_CRASH || \
+     ARGHTOS_R6AC_PORT_FORMAT_VALUE == 0u || \
+     ARGHTOS_R6AC_PORT_FORMAT_VALUE > 0xFFFFu)
+#error "R6ac preseeded port format requires a valid trusted selected-port format"
+#endif
+
+#if ARGHTOS_R6AB_SINGLE_WAKE_TARGET && \
+    (!ARGHTOS_R5AB_SINGLE_ASYNC || !ARGHTOS_R5P_GENERATED_ORDER || \
+     !ARGHTOS_R6N_OK_ONLY_SERVICES || !ARGHTOS_R6J_PROVEN_WAKE_DOMAIN || \
+     (ARGHTOS_STATIC_TASK_COUNT - ARGHTOS_R5P_PERIODIC_COUNT) != 1)
+#error "R6ab singleton wake target requires exactly one trusted generated async task"
+#endif
+
+#if ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD && \
+    (!ARGHTOS_R6M_COMMIT_RECURSION_GUARD || !ARGHTOS_R5S_PRESEEDED_CRASH || \
+     !ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_STATIC_CONFIG)
+#error "R6z trusted crash payload requires the preseeded generated R6m profile"
+#endif
+
+#if ARGHTOS_R6Y_PACKED_MISSED_ADD && \
+    (!ARGHTOS_R6V_ALWAYS_DISPATCH_TICK || !ARGHTOS_COMPACT_RUNTIME)
+#error "R6y packed missed add requires the compact trusted R6v profile"
+#endif
+
+#if ARGHTOS_R6X_BOUNDED_MISSED_LOOP && \
+    (!ARGHTOS_R6V_ALWAYS_DISPATCH_TICK || !ARGHTOS_COMPACT_RUNTIME)
+#error "R6x bounded missed loop requires the compact trusted R6v profile"
+#endif
+
+#if ARGHTOS_R6W_PERIODIC_READY_NORMALIZE && \
+    (!ARGHTOS_R6V_ALWAYS_DISPATCH_TICK || !ARGHTOS_R5Y_PROVEN_PERIODIC_STATE)
+#error "R6w periodic READY normalization requires R6v and proven periodic states"
+#endif
+
+#if ARGHTOS_R6V_ALWAYS_DISPATCH_TICK && \
+    (!ARGHTOS_R5V_UNIT_PERIOD_TIMER || !ARGHTOS_R5R_ELIDE_AGE_RESETS || \
+     !ARGHTOS_R5N_PROVEN_DISPATCH || ARGHTOS_RUNTIME_PROFILING)
+#error "R6v unconditional timer dispatch requires unit-tick no-profile trusted profile"
+#endif
+
+#if ARGHTOS_R6R_FLAGLESS_KERNEL_STATE && \
+    (!ARGHTOS_R6P_INFALLIBLE_PORT_INIT || !ARGHTOS_R5N_PROVEN_DISPATCH || \
+     !ARGHTOS_R6B_TRUSTED_TIMER_ENTRY || !ARGHTOS_R6M_COMMIT_RECURSION_GUARD || \
+     !ARGHTOS_MINIMAL_VALIDATION || !ARGHTOS_STATIC_CONFIG)
+#error "R6r flagless kernel state requires fully discharged trusted minimum profile"
+#endif
+
+#if ARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS && \
+    (!ARGHTOS_R6K_PRESEEDED_PERIODIC_READY || !ARGHTOS_R5L_PREBUILT_CONTEXT || \
+     !ARGHTOS_R5P_GENERATED_ORDER || !ARGHTOS_R5E_AGE_NEXT_OVERLAY)
+#error "R6q period offsets require generated prebuilt periodic startup"
+#endif
+
+#if ARGHTOS_R6P_INFALLIBLE_PORT_INIT && \
+    (!ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID || !ARGHTOS_R5M_PRISTINE_INIT || \
+     !ARGHTOS_STATIC_CONFIG || !ARGHTOS_PRODUCTION_PROFILE)
+#error "R6p infallible port init requires preseeded generated minimum profile"
+#endif
+
+#if ARGHTOS_R6O_PRESEEDED_CURRENT_INVALID && \
+    (!ARGHTOS_R5M_PRISTINE_INIT || !ARGHTOS_STATIC_CONFIG || \
+     !ARGHTOS_SIZE_FIRST_NO_START_TIME)
+#error "R6o preseeded current task requires pristine static minimum profile"
+#endif
+
+#if ARGHTOS_R6N_OK_ONLY_SERVICES && \
+    (!ARGHTOS_R6F_TRUSTED_SERVICE_IDS || !ARGHTOS_R6J_PROVEN_WAKE_DOMAIN || \
+     !ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME || !ARGHTOS_MINIMAL_VALIDATION || \
+     !ARGHTOS_SPECIALIZED_SERVICES)
+#error "R6n OK-only services require trusted closed minimum service domain"
+#endif
+
+#if ARGHTOS_R6M_COMMIT_RECURSION_GUARD && \
+    (!ARGHTOS_R5S_PRESEEDED_CRASH || !ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE || \
+     ARGHTOS_R5W_TRUSTED_CRASH_PORT || !ARGHTOS_STATIC_CONFIG)
+#error "R6m commit recursion guard requires preseeded terminal static crash profile"
+#endif
+
+#define ARGHTOS_R6M_CAPTURE_IN_PROGRESS 1u
+
+#if ARGHTOS_R6L_PREMASKED_START && \
+    (!ARGHTOS_R6K_PRESEEDED_PERIODIC_READY || !ARGHTOS_R5N_PROVEN_DISPATCH || \
+     !ARGHTOS_R6B_TRUSTED_TIMER_ENTRY || !ARGHTOS_PRODUCTION_PROFILE)
+#error "R6l pre-masked start requires trusted generated startup profile"
+#endif
+
+#if ARGHTOS_R6K_PRESEEDED_PERIODIC_READY && \
+    (!ARGHTOS_R5M_PRISTINE_INIT || !ARGHTOS_R5N_PROVEN_DISPATCH || \
+     !ARGHTOS_R5P_GENERATED_ORDER || !ARGHTOS_R5E_AGE_NEXT_OVERLAY || \
+     !ARGHTOS_MINIMAL_VALIDATION)
+#error "R6k preseeded periodic READY requires trusted generated pristine profile"
+#endif
+
+#if ARGHTOS_R6J_PROVEN_WAKE_DOMAIN && \
+    (!ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE || !ARGHTOS_R5N_PROVEN_DISPATCH || \
+     !ARGHTOS_MINIMAL_VALIDATION || !ARGHTOS_SPECIALIZED_SERVICES)
+#error "R6j proven wake domain requires terminal trusted generated profile"
+#endif
+
+#if ARGHTOS_R6H_SINGLE_ASYNC_TIME && \
+    (!ARGHTOS_R5AB_SINGLE_ASYNC || !ARGHTOS_R5Q_PARTITIONED_TIME || \
+     !ARGHTOS_R5P_GENERATED_ORDER || \
+     (ARGHTOS_STATIC_TASK_COUNT - ARGHTOS_R5P_PERIODIC_COUNT) != 1)
+#error "R6h singleton async time scan requires exactly one generated async task"
+#endif
+
+#if ARGHTOS_R6G_PROVEN_CURRENT_DOMAIN && \
+    (!ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_MINIMAL_VALIDATION || \
+     !ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE || !ARGHTOS_R5S_PRESEEDED_CRASH || \
+     !ARGHTOS_SPECIALIZED_SERVICES || ARGHTOS_RUNTIME_PROFILING)
+#error "R6g proven current-task domain requires the trusted generated minimum profile"
+#endif
+
 #if ARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE && \
     (!ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_MINIMAL_VALIDATION)
 #error "R5ac terminal fault-state elision requires trusted generated minimum profile"
@@ -541,6 +896,7 @@ typedef struct {
     arghtos_time_t               run_start;
 #endif
     arghtos_task_id_t            current_task;
+#if !ARGHTOS_R6R_FLAGLESS_KERNEL_STATE
 #if !ARGHTOS_STATIC_CONFIG
     uint8_t                      task_count;
 #endif
@@ -549,6 +905,7 @@ typedef struct {
     uint8_t                      reserved[2];
 #else
     uint8_t                      reserved;
+#endif
 #endif
 } arghtos_kernel_state_t;
 
@@ -593,7 +950,11 @@ _Static_assert(sizeof(arghtos_task_control_t) == 20u, "32-bit task control ABI c
 #if ARGHTOS_RUNTIME_PROFILING
 _Static_assert(sizeof(arghtos_kernel_state_t) == 12u, "32-bit static-profile kernel state ABI changed");
 #elif ARGHTOS_SIZE_FIRST_NO_START_TIME
+#if ARGHTOS_R6R_FLAGLESS_KERNEL_STATE
+_Static_assert(sizeof(arghtos_kernel_state_t) == 1u, "32-bit flagless minimum kernel state ABI changed");
+#else
 _Static_assert(sizeof(arghtos_kernel_state_t) == 4u, "32-bit minimum-size kernel state ABI changed");
+#endif
 #else
 _Static_assert(sizeof(arghtos_kernel_state_t) == 8u, "32-bit no-profile static kernel state ABI changed");
 #endif

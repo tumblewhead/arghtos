@@ -13,6 +13,47 @@ arghtos_port_service_call:
     bx lr
 .size arghtos_port_service_call, .-arghtos_port_service_call
 
+#if ARGHTOS_R6AM_ALIGNED_FIRST_DISPATCH_MSP
+/*
+ * R6am selected startup path.
+ *
+ * Entry is a C ABI boundary, so MSP is 8-byte aligned. This routine does not
+ * touch SP/MSP before the first pending exception becomes eligible.
+ */
+.global arghtos_port_start
+.type arghtos_port_start, %function
+.thumb_func
+arghtos_port_start:
+    ldr r0, =0xE000ED04
+    movs r1, #1
+    lsls r1, r1, #28
+    str r1, [r0]
+    cpsie i
+    isb
+1:
+    wfi
+    b.n 1b
+.size arghtos_port_start, .-arghtos_port_start
+
+#endif
+
+#if ARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE
+/*
+ * Generated periodic entry pointer lives in task R4.
+ * TASK_RETURN ignores arg0/R1 in the trusted service domain.
+ */
+.global arghtos_task_start_trampoline
+.type arghtos_task_start_trampoline, %function
+.thumb_func
+arghtos_task_start_trampoline:
+1:
+    blx r4
+    movs r0, #4
+    svc #0
+    b.n 1b
+.size arghtos_task_start_trampoline, .-arghtos_task_start_trampoline
+
+#endif
 #if ARGHTOS_R5AD_COMPACT_API_VENEERS
 /*
  * Public task-context service veneers for the trusted minimum-size target.
@@ -47,7 +88,9 @@ arghtos_sleep_until:
 .type arghtos_wake, %function
 .thumb_func
 arghtos_wake:
+#if !ARGHTOS_R6AB_SINGLE_WAKE_TARGET
     mov r1, r0
+#endif
     movs r0, #3
     b.n arghtos_port_service_call
 .size arghtos_wake, .-arghtos_wake
@@ -120,11 +163,14 @@ PendSV_Handler:
 1:
     /*
      * First dispatch entered from Thread mode using MSP.
-     * Reclaim the hardware exception frame before switching Thread mode to
-     * PSP. xPSR[9] records whether hardware inserted one 4-byte alignment
-     * word above the basic frame.
+     * Generic profiles inspect stacked xPSR[9] for optional alignment padding.
+     * R6am proves the selected startup MSP is already 8-byte aligned and that
+     * arghtos_port_start() consumes zero stack, so the frame is exactly 32 B.
      */
     mrs r5, msp
+#if ARGHTOS_R6AM_ALIGNED_FIRST_DISPATCH_MSP
+    adds r5, #32
+#else
     ldr r1, [r5, #28]
 #if ARGHTOS_R5AD_COMPACT_API_VENEERS
     adds r5, #32
@@ -146,12 +192,17 @@ PendSV_Handler:
     adds r5, #32
     adds r5, r5, r1
 #endif
+#endif
     msr msp, r5
     movs r0, #0
 
 2:
+#if ARGHTOS_R6I_KNOWN_UNMASKED_PENDSV
+    cpsid i
+#else
     mrs r4, primask
     cpsid i
+#endif
 
 3:
     bl arghtos_kernel_dispatch
@@ -162,7 +213,9 @@ PendSV_Handler:
     b 3b
 
 4:
+#if !ARGHTOS_R6I_KNOWN_UNMASKED_PENDSV
     mov r1, r4
+#endif
 #if ARGHTOS_COMPACT_PENDSV
     ldmia r0!, {r4-r7}
     ldmia r0!, {r2-r3}
@@ -172,7 +225,11 @@ PendSV_Handler:
     mov r10, r2
     mov r11, r3
     msr psp, r0
+#if ARGHTOS_R6I_KNOWN_UNMASKED_PENDSV
+    cpsie i
+#else
     msr primask, r1
+#endif
     movs r2, #2
     mvns r2, r2
 #else
@@ -190,7 +247,11 @@ PendSV_Handler:
     mov r11, r2
     adds r0, #32
     msr psp, r0
+#if ARGHTOS_R6I_KNOWN_UNMASKED_PENDSV
+    cpsie i
+#else
     msr primask, r1
+#endif
     ldr r2, =0xFFFFFFFD
 #endif
 #if ARGHTOS_R5A_COMPACT_PENDSV_TAIL

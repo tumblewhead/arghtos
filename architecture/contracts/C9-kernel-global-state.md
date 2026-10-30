@@ -221,3 +221,61 @@ option.
 
 R4a linker evidence records a complete resident-footprint reduction from
 3072 B to 2845 B at the 24-task default.
+
+# R6o preseeded INVALID current task
+
+The trusted generated minimum-size profile may materialize C9
+`current_task = ARGHTOS_TASK_ID_INVALID` in the initial kernel-state image.
+
+This moves only an invariant initial value from runtime initialization to the
+generated image. It does not preseed `ARGHTOS_KF_INITIALIZED`.
+
+`arghtos_init()` must still call `arghtos_port_init()` and may set
+INITIALIZED only after that port initialization succeeds. Therefore failure and
+retry semantics for the initialization flag are unchanged.
+
+The resident size of C9 state is unchanged. Generic/debug profiles retain the
+runtime current-task initialization store.
+
+# R6p preseeded initialized kernel state
+
+When C4 proves the selected generated port initializer is infallible, the
+minimum image may extend R6o and materialize:
+
+```text
+current_task = ARGHTOS_TASK_ID_INVALID
+flags        = ARGHTOS_KF_INITIALIZED
+```
+
+before the public `arghtos_init()` call.
+
+The public init entry still executes the required selected-port initialization
+exactly once and returns its result. Since that result is proved to be
+`ARGHTOS_OK`, pre-materializing INITIALIZED is equivalent for every execution
+admitted by this generated profile.
+
+Generic profiles and fallible ports retain the runtime INITIALIZED commit.
+
+# R6r flagless generated minimum kernel state
+
+The trusted generated minimum-size profile may remove the C9 `flags` field
+entirely when every runtime use has been discharged by prior accepted
+specializations:
+
+* R6p materializes successful initialization by construction;
+* minimal-validation production rules remove runtime INITIALIZED/STARTED API
+  misuse checks;
+* R5n proves dispatch is entered only after start;
+* R6b proves timer entry is reachable only after start;
+* R6m moves recursive-fatal state into the crash commit word.
+
+Under this composition, no admitted execution reads INITIALIZED, STARTED, or
+FAULT_ACTIVE from C9. The remaining STARTED write in `arghtos_start()` is
+therefore observationally dead.
+
+The minimum C9 state may contain only `current_task`. No replacement flag
+storage is introduced. Generic/debug and less-specialized profiles retain the
+ordinary flags field and reserved padding.
+
+This specialization is valid only as the conjunction of the listed proofs and
+generated-profile preconditions; it is not a new generic scheduler rule.

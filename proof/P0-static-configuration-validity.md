@@ -191,3 +191,92 @@ The generic formula based on separate C0/C8 structures remains valid for the
 compatibility profile. The generated R2c profile is a specialized
 implementation of the same static-resource principle and has its own linked
 measurement above.
+
+# R6p generated initialization refinement
+
+For the selected generated Cortex-M23 profile, C4 establishes that
+`arghtos_port_init()` is bounded and infallible.
+
+R6p therefore moves the invariant post-init C9 values
+`current_task=INVALID` and `flags=INITIALIZED` into the generated image.
+The public init call still executes the port initialization exactly once.
+
+Because the selected port cannot fail, the state observed after the call and
+the returned result are identical to the ordinary successful initialization
+path. No storage cardinality changes and no new runtime resource is introduced.
+
+# R6r minimum C9 storage refinement
+
+Under the R6r trusted generated profile, the minimum static C9 object contains
+only the one-byte `current_task` value. The former flags byte and reserved
+padding are absent.
+
+This reduces rather than expands the finite resident state established by P0.
+Generic ABI/storage claims remain unchanged for profiles that retain the
+ordinary C9 representation.
+
+# R6ao periodic-only schedule-table refinement
+
+Under R5p/R5ab, the generated task set is a periodic prefix plus exactly one
+async task.
+
+R6ao removes only the async task's raw priority byte from the generated
+schedule8 object.
+
+Every surviving schedule8 index is statically confined to the periodic prefix.
+The single-async selector does not require priority ordering, and R6aj/R6ak
+remove the former trampoline class read that exposed the R5z defect.
+
+Therefore the generated table length may be:
+
+~~~text
+sizeof(schedule8) = ARGHTOS_R5P_PERIODIC_COUNT
+~~~
+
+without removing any value observed by admitted execution.
+
+Task IDs, task count, control slots, task metadata, and public scheduling
+semantics remain unchanged.
+
+# R6ar packed-period generator obligations
+
+A generated image selecting R6ar must prove for the periodic prefix:
+
+1. P >= 1;
+2. period[0] = 1;
+3. period[i] >= period[i-1] for every i in [1,P);
+4. period[i] - period[i-1] <= 15;
+5. exactly P-1 deltas are serialized, two per byte, low nibble first;
+6. an unused final high nibble, when P-1 is odd, is zero.
+
+The packed table length is:
+
+~~~text
+ceil((P - 1) / 2)
+~~~
+
+bytes.
+
+These checks belong to generated configuration evidence. Generic profiles do
+not use the packed representation.
+
+# R6as two-bit generator obligations
+
+R6as strengthens R6ar's generator constraint:
+
+~~~text
+0 <= period[i] - period[i-1] <= 3
+~~~
+
+for every periodic i >= 1.
+
+The generator serializes exactly P-1 deltas, four per byte. Unused high
+two-bit fields in the final byte SHALL be zero.
+
+The physical table length is:
+
+~~~text
+ceil((P - 1) / 4)
+~~~
+
+bytes.

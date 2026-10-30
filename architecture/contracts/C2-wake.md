@@ -159,3 +159,90 @@ The R3 production profile assumes:
 The FAULTED-state check and wake/wait handshake remain active.
 
 These assumptions are intended for generated driver integration where wake targets are compile-time constants.
+
+# R6d serialized interrupt-wake refinement
+
+For the trusted serialized-handler profile defined by C4, the atomic wake
+state/latch update remains linearizable without a handler-local PRIMASK pair
+because no other scheduler-mutating handler may preempt the active wake
+handler. Task/SVC mutation remains protected by the ordinary C4 critical
+section and therefore masks the wake handler while the wait transition is
+being committed.
+
+The public wake semantics and the one-bit pending-wake handshake are unchanged.
+The generic profile retains the explicit handler-side critical section.
+
+# R6j generated wake-state refinement
+
+R6j consumes C1/P1 plus the terminal-only R5ac fault profile.
+
+For supported generated-profile execution, interrupt wake can observe only
+DORMANT, READY, RUNNING, WAITING, or SLEEPING. The FAULTED error case and
+unknown-state diagnostic remain required in the generic/debug profile but are
+unreachable in the generated minimum profile.
+
+All reachable wake state/latch effects and dispatch-request behavior are
+unchanged.
+
+# R6n OK-only generated wake result
+
+Under the R6j non-faulted wake domain and generated valid-async target
+preconditions, every reachable task-context or interrupt-context wake returns
+`ARGHTOS_OK`.
+
+The internal wake helper therefore needs to communicate only whether wake
+changed eligibility and requires dispatch. The generated profile may represent
+that internal result as a boolean dispatch decision.
+
+The generic/debug profile continues to return BAD_TASK_ID, BAD_TASK_CLASS,
+BAD_STATE, and BAD_CONTEXT where applicable.
+
+# R6ab singleton generated wake target
+
+The trusted generated minimum profile may specialize wake target selection when
+the generated task set contains exactly one asynchronous task and generated
+class ordering places it immediately after the periodic prefix.
+
+Define:
+
+```text
+WAKE_ID = ARGHTOS_R5P_PERIODIC_COUNT
+```
+
+Under the R5ab/R5p configuration:
+
+* `WAKE_ID` is the only asynchronous task ID;
+* every supported task-context WAKE service names `WAKE_ID`;
+* every supported `arghtos_wake_from_interrupt()` call names `WAKE_ID`.
+
+Therefore the minimum-profile wake state machine may use `WAKE_ID` directly
+and omit runtime propagation of the target ID through the C helper and SVC
+argument path.
+
+Passing any other wake target is outside this trusted generated profile.
+Generic/debug and multi-async profiles retain the runtime target ID and normal
+validation semantics.
+
+# R6ad unconditional generated wake dispatch
+
+The trusted generated single-async minimum profile may request one scheduler
+dispatch after every accepted wake, even when the wake does not change target
+eligibility.
+
+The target-state and latch semantics remain exactly:
+
+* DORMANT -> READY;
+* WAITING -> READY;
+* READY unchanged;
+* RUNNING unchanged with `wake_pending=1`;
+* SLEEPING unchanged with `wake_pending=1`.
+
+R6ad changes only dispatch-request policy. DORMANT/WAITING already require a
+dispatch. READY/RUNNING/SLEEPING gain one bounded scheduler reevaluation.
+
+The additional dispatch never makes a task READY and never clears or consumes
+the pending-wake latch. The ordinary selector remains the sole authority for
+which task executes next.
+
+This is an intentional size-for-cycles specialization. Generic/debug profiles
+retain conditional wake dispatch.

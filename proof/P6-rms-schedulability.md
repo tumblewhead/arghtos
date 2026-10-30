@@ -122,3 +122,47 @@ equivalent to the `hp(i)` ordering used by this proof.
 This representation refinement does not change any `T_i`, `C_i`, deadline,
 release, jitter, or interference term. It only removes runtime reconstruction
 of an ordering already proved by the generator.
+
+# R6v unit-tick dispatch overhead
+
+R6v may execute one redundant PendSV/dispatcher pass on a unit timer tick that
+does not create new READY work, for example while a period-1 job is already
+active.
+
+This is a bounded runtime-cost trade, not a free timing transformation.
+Build-time response-time analysis selecting R6v SHALL include at most one
+additional bounded PendSV/dispatch cost per scheduler timer tick in `K_i(R)`.
+
+No application execution priority changes; the additional work is scheduler
+overhead already represented by the P6 kernel-overhead term.
+
+# R6ad unconditional wake-dispatch overhead
+
+R6ad may execute one redundant PendSV/dispatcher pass for a wake that did not
+change target eligibility, for example a repeated wake while the sole async
+worker is READY, RUNNING, or SLEEPING.
+
+This does not alter fixed-priority selection or allow async application work to
+run ahead of READY periodic work. It adds only bounded kernel overhead.
+
+Any schedulability analysis selecting R6ad SHALL include the maximum rate and
+cost of these additional wake-triggered PendSV/dispatch passes in the
+appropriate `K_i(R)` / interrupt-overhead bound.
+
+No application WCET or priority relation changes.
+
+# R6ag timer-owned release jitter
+
+R6ag removes one opportunistic source of early periodic-release processing from
+SLEEP_UNTIL SVC handling.
+
+A periodic release that becomes ideally due before the scheduler timer handler
+runs may now wait for that handler instead of being noticed by SVC. This does
+not create a new unbounded delay. The release jitter remains bounded by the C3
+timer-delivery jitter plus modeled higher-priority interference already
+required in \`J_i\`.
+
+Schedulability analysis selecting R6ag SHALL therefore use the timer-service
+release-jitter bound and SHALL NOT assume SVC opportunistically reduces it.
+
+No task priority or application WCET relation changes.

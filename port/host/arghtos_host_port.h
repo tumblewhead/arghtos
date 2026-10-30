@@ -27,6 +27,8 @@ bool arghtos_host_interrupts_masked(void);
 uint32_t arghtos_host_idle_count(void);
 void arghtos_host_set_start_jmp(jmp_buf *env);
 void arghtos_host_set_fault_jmp(jmp_buf *env);
+void arghtos_host_set_recursive_fault_on_crash_fill(bool enable);
+uint32_t arghtos_host_crash_fill_count(void);
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
 uintptr_t arghtos_host_initial_arg(void);
 #endif

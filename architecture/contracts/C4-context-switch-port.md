@@ -458,3 +458,326 @@ operations.
 
 The generic/debug and non-specialized builds retain the portable C veneers.
 The portable scheduler core remains target-independent C11.
+
+# R6d serialized scheduler-handler profile
+
+A trusted generated Cortex-M23 profile may elide handler-local
+`arghtos_port_critical_enter/exit()` around scheduler mutation in
+`arghtos_timer_interrupt()` and `arghtos_wake_from_interrupt()` only when
+the board integration guarantees all of the following:
+
+1. every maskable handler that may call a scheduler-mutating ArghtOS handler
+   entry executes at one non-preempting scheduler-handler priority class;
+2. no member of that class can preempt another member while it is active;
+3. PendSV remains strictly less urgent than that class;
+4. NMI and fatal-fault handlers never call normal scheduler APIs; and
+5. task-context scheduler mutation still enters the ordinary C4 critical
+   section, so a scheduler-mutating handler cannot interleave with an SVC
+   mutation.
+
+Under those conditions Handler-mode execution itself is the serialization
+mechanism between timer/wake callbacks. The generic profile retains PRIMASK
+enter/exit in each handler-facing API.
+
+This specialization is an integration property, not a portable-kernel
+assumption. A generated build must not enable it unless the exception-priority
+configuration is fixed and verified.
+
+# R6e unified scheduler-exception serialization
+
+The trusted generated Cortex-M23 profile may extend the R6d non-preempting
+scheduler-handler class to SVC.
+
+When enabled, all normal scheduler-state mutation performed from Handler mode
+uses one generated non-preempting exception-priority class:
+
+* SVC task-service handling;
+* scheduler timer handling;
+* device handlers permitted to call `arghtos_wake_from_interrupt()`.
+
+The profile is valid only when:
+
+1. SVC and every scheduler-mutating maskable device/timer handler execute at
+   one priority level or otherwise at priorities that cannot preempt one
+   another;
+2. PendSV is strictly less urgent than every member of that class;
+3. NMI and fatal-fault handlers never call normal scheduler APIs;
+4. no scheduler-state mutation is performed from any other preempting handler
+   class; and
+5. the generated exception-priority configuration is fixed before
+   `arghtos_start()` and is not modified by application tasks.
+
+Under these conditions, Handler-mode exception execution itself serializes
+`arghtos_kernel_service()`, `arghtos_timer_interrupt()`, and interrupt wake.
+The minimum profile may therefore omit the PRIMASK enter/exit pair inside
+`arghtos_kernel_service()`.
+
+The generic profile retains the explicit critical section. This is a
+Cortex-M23 integration specialization, not a portable scheduler assumption.
+
+# R6f trusted service-ID domain
+
+The trusted generated minimum-size Cortex-M23 profile may additionally treat the
+private service-ID domain entering `arghtos_kernel_service()` as closed.
+
+This refinement is valid only when:
+
+1. task code reaches scheduler lifecycle services only through the public
+   ArghtOS task APIs and the generated task-return trampoline;
+2. the selected Cortex-M23 service veneers emit only the five defined private
+   IDs: YIELD, WAIT, SLEEP_UNTIL, WAKE, and TASK_RETURN;
+3. application code does not call the private port service gateway directly;
+4. no generated veneer accepts a runtime-selected service ID; and
+5. the SVC handler forwards the veneer-supplied ID unchanged.
+
+Under those conditions an unknown service ID is unreachable in the generated
+profile, so the minimum `arghtos_kernel_service()` implementation need not
+carry a runtime BAD_SERVICE default branch. The generic/debug profile retains
+the fatal unknown-service check.
+
+This specialization does not use an unreachable compiler intrinsic and does
+not introduce undefined C behavior. If the generated-profile precondition is
+violated, behavior is outside that profile contract rather than relying on
+undefined execution.
+
+# R6i known-unmasked PendSV entry
+
+The trusted generated Cortex-M23 minimum profile may treat the normal mask state
+at every supported PendSV entry as known:
+
+```text
+PRIMASK = 0
+```
+
+This refinement is valid only when:
+
+1. trusted application tasks never modify PRIMASK;
+2. scheduler startup restores/enables normal mask state before the first
+   PendSV dispatch;
+3. R6d/R6e scheduler-mutating SVC, timer, and device handlers do not leave
+   PRIMASK set when they pend or tail-chain to PendSV;
+4. any other handler permitted to request scheduler dispatch also preserves
+   the normal unmasked state on exception return; and
+5. the PendSV idle loop itself keeps PRIMASK masked only internally and restores
+   the known normal unmasked state immediately before returning to Thread mode.
+
+Under those conditions PendSV need not read and save the incoming PRIMASK
+value. It may execute `cpsid i` before scheduler dispatch/idle and restore the
+known normal state with `cpsie i` before exception return.
+
+The generic Cortex-M23 profile retains exact prior-PRIMASK save/restore.
+
+# R6l pre-serialized scheduler start entry
+
+The trusted generated Cortex-M23 minimum profile may enter
+`arghtos_start()` with scheduler mutation already serialized by integration.
+
+For the Cortex-M23 realization, R6l requires:
+
+```text
+Thread mode on MSP
+PRIMASK = 1
+scheduler timer disarmed
+no PendSV dispatch active
+```
+
+and the caller must not restore PRIMASK after transferring control to
+`arghtos_start()`.
+
+Under this profile, `arghtos_start()` need not call
+`arghtos_port_critical_enter/exit()`. It performs the same start transaction
+while the inherited mask remains active. The terminal call to
+`arghtos_port_start()` then takes ownership and restores normal interrupt
+eligibility as already required by C4.
+
+This specialization is valid only when the generated startup path establishes
+the masked entry condition before calling ArghtOS. Generic integration retains
+the ordinary nested critical-section pair.
+
+# R6p infallible generated Cortex-M23 port initialization
+
+The trusted generated minimum-size Cortex-M23 profile may strengthen the
+selected-port initialization contract to:
+
+```text
+arghtos_port_init() always returns ARGHTOS_OK
+```
+
+for the fixed reference integration.
+
+The selected implementation performs only bounded register configuration,
+clears stale PendSV state, disarms the scheduler timer, and returns OK. There is
+no runtime allocation, device discovery, or fallible resource acquisition.
+
+This is a selected-port specialization only. The generic port ABI continues to
+permit `ARGHTOS_ERR_BAD_CONFIG` for other integrations.
+
+# R6z selected crash-payload range
+
+The trusted generated Cortex-M23 minimum profile may strengthen the crash-fill
+contract for the selected reference port:
+
+```text
+1 <= port_words <= 10
+```
+
+The current Cortex-M23 implementation emits exactly:
+
+* 2 words when no fault context is supplied;
+* 3 words when a fault context exists without a basic frame;
+* 10 words when a basic frame is present.
+
+The host verification port emits exactly 1 word.
+
+Therefore, for these selected ports, a successful
+`arghtos_port_crash_fill()` invocation never produces zero words and never
+exceeds the ten-word public crash-record payload.
+
+Generic ports retain the ordinary defensive range checks.
+
+# R6ac fixed selected-port crash format
+
+The selected trusted minimum-profile port has one compile-time crash payload
+format identifier for the lifetime of the generated image.
+
+For Cortex-M23:
+
+```text
+port_format = ARGHTOS_M23_CRASH_FORMAT = 0x4D23
+```
+
+For the host verification port:
+
+```text
+port_format = 0x484F
+```
+
+The generated crash record may therefore contain the selected port format
+before runtime begins, and `arghtos_port_crash_fill()` need not rewrite that
+field on each capture.
+
+Generic ports and profiles that do not prove one fixed format retain the
+runtime write.
+
+# R6ae YIELD SVC-to-PendSV ownership
+
+For the trusted Cortex-M23 service path, SVC calls
+`arghtos_kernel_service()`. YIELD pends PendSV before SVC exception return.
+
+PendSV is less urgent than SVC but remains pending at the exception-return
+boundary. Thread mode cannot resume through the YIELD call before the pending
+PendSV scheduling exception executes.
+
+Therefore R6ae may leave the current task physically RUNNING inside the SVC
+service body and let `arghtos_kernel_dispatch(outgoing_context)` perform its
+ordinary RUNNING -> READY outgoing-task transition.
+
+No application instruction executes between the logical YIELD operation and
+that transition. Generic ports without this exception-order guarantee retain
+the service-side transition.
+
+# R6aj class-specialized prebuilt Cortex-M23 frame
+
+For the trusted generated single-async prebuilt profile, C4 permits two
+equivalent initial hardware-frame shapes.
+
+Periodic task:
+
+~~~text
+stacked R0 = application entry
+stacked LR = return guard
+stacked PC = periodic task-start trampoline
+~~~
+
+Async task:
+
+~~~text
+stacked R0 = 0 / unused
+stacked LR = async-return guard
+stacked PC = application async entry
+~~~
+
+Both use the same software-saved R4-R11 area, basic hardware-frame layout,
+8-byte initial alignment, xPSR Thumb bit, and saved-context token.
+
+The async direct-entry frame is valid because its \`void(void)\` application
+entry consumes no argument and its return destination is explicitly
+non-returning fatal code.
+
+# R6ak Cortex-M23 assembly periodic trampoline
+
+R6ak may provide \`arghtos_task_start_trampoline\` in Cortex-M23 assembly for
+the trusted generated R6aj profile.
+
+The generated periodic initial context places:
+
+~~~text
+saved R4  = application entry pointer
+stacked LR = return guard
+stacked PC = assembly periodic trampoline
+~~~
+
+R4 is part of the ordinary software-saved R4-R11 task context and therefore
+survives every PendSV context switch.
+
+The assembly trampoline is:
+
+~~~asm
+1:
+    blx r4
+    movs r0, #4      /* ARGHTOS_SERVICE_TASK_RETURN */
+    svc #0
+    b.n 1b
+~~~
+
+TASK_RETURN ignores arg0, so R1 need not be initialized. The SVC ABI and SVC
+handler are otherwise unchanged.
+
+The service ID value 4 is tied to the private kernel-port service enum and is
+statically asserted by the matching C profile.
+
+Generic/debug profiles retain the portable C trampoline.
+
+# R6am aligned first-dispatch MSP specialization
+
+The trusted generated Cortex-M23 minimum profile may strengthen the first
+PendSV entry contract when all of the following are build/integration evidence:
+
+1. portable C calls the selected externally linked \`arghtos_port_start()\`
+   using the Cortex-M23 AAPCS public-interface rule \`SP mod 8 = 0\`;
+2. the selected \`arghtos_port_start()\` has zero static stack usage;
+3. it does not modify MSP in inline assembly before enabling the first pending
+   scheduler exception; and
+4. any higher-priority handler that runs before PendSV returns or tail-chains
+   with the original Thread-mode exception frame still resident on MSP.
+
+Under those conditions the first exception from startup Thread mode is stacked
+from an 8-byte-aligned MSP. The 32-byte basic frame preserves that alignment, so
+hardware does not insert the optional four-byte alignment word and stacked
+xPSR[9] is known clear.
+
+The R6am PendSV first-dispatch path may therefore reclaim exactly 32 bytes from
+the observed frame base without loading or testing stacked xPSR.
+
+Generic/debug profiles retain xPSR[9] decoding and support both 32-byte and
+36-byte startup-frame occupancy.
+
+## R6am final construction
+
+The measured R6am challenger satisfies the zero-stack premise structurally
+rather than through compiler stack-usage metadata.
+
+For R6am, the selected C definition of \`arghtos_port_start()\` is omitted and
+the Cortex-M23 assembly port provides the symbol directly. Its startup sequence:
+
+~~~text
+pend PendSV
+enable interrupts
+ISB
+WFI loop
+~~~
+
+contains no instruction that writes SP or MSP.
+
+The public C-to-assembly call boundary supplies the 8-byte-aligned entry MSP.
+Thus the final R6am profile does not depend on an LTO \`.su\` artifact.

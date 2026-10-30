@@ -105,3 +105,50 @@ Depends on [P1](P1-task-state-invariants.md) and the C1/C2/C4 concrete handshake
 The abstract race argument is discharged by the one-bit handshake design.
 
 Implementation discharge still requires host interleaving tests and target validation of the C4 serialization primitive.
+
+# R6d non-preempting handler serialization refinement
+
+P3 requires one total order between the wait transaction and the interrupt
+wake transaction. In the R6d generated Cortex-M23 profile that order is still
+well defined:
+
+* while SVC performs the wait transaction, its ordinary C4 critical section
+  masks scheduler-mutating device handlers;
+* while a wake handler performs its transaction, no peer scheduler-mutating
+  handler can preempt it by generated exception-priority construction;
+* PendSV is less urgent and cannot preempt either transaction.
+
+Therefore the wake transaction remains indivisible with respect to every other
+scheduler-state mutation even when the wake handler omits its own redundant
+PRIMASK enter/exit pair. The two P3 linearization cases are unchanged.
+
+# R6e SVC serialization refinement
+
+R6e extends R6d by placing SVC in the same non-preempting scheduler-exception
+class as timer and interrupt-wake handlers.
+
+The wait transaction is therefore atomic with respect to wake without a local
+PRIMASK pair inside `arghtos_kernel_service()`:
+
+* while SVC executes WAIT, no scheduler-mutating wake handler can preempt it;
+* while a wake handler executes, SVC cannot exist concurrently because SVC is
+  entered synchronously from Thread mode, not from that active handler;
+* PendSV is less urgent and cannot preempt either transaction.
+
+Thus the two P3 linearization cases remain complete and unchanged.
+
+# R6ad unconditional wake-dispatch refinement
+
+R6ad does not change the linearized wake transaction.
+
+For every wake state, the same state/latch mutation completes before the
+dispatch request. The extra request for READY/RUNNING/SLEEPING states occurs
+only after that transaction and does not mutate `wake_pending`.
+
+Therefore the two P3 race orderings remain unchanged:
+
+* wake-before-wait still leaves/sets the pending latch for wait to consume;
+* wait-before-wake still performs WAITING -> READY.
+
+A redundant PendSV cannot erase the scheduling indication because only the C1
+wait transaction consumes the latch.

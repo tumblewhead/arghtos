@@ -34,6 +34,99 @@ jobs:
       - name: Host frozen R5ag semantic profile
         run: make host-test-r5ag
 
+      - name: Host R6b trusted timer-entry control
+        run: make host-test-r6b
+
+      - name: Host R6c zero-sleep control
+        run: make host-test-r6c
+
+      - name: Host R6d serialized-handler control
+        run: make host-test-r6d
+
+      - name: Host R6e serialized-SVC control
+        run: make host-test-r6e
+
+      - name: Host R6f trusted-service-domain control
+        run: make host-test-r6f
+
+      - name: Host R6j proven-wake-domain control
+        run: make host-test-r6j
+
+      - name: Host R6k preseeded-periodic-ready control
+        run: make host-test-r6k
+
+      - name: Host R6l pre-masked-start control
+        run: make host-test-r6l
+
+      - name: Host R6m commit-recursion control
+        run: make host-test-r6m
+
+      - name: Host R6n dispatch-only-service control
+        run: make host-test-r6n
+
+      - name: Host R6o preseeded-current control
+        run: make host-test-r6o
+
+      - name: Host R6p preinitialized-kernel control
+        run: make host-test-r6p
+
+      - name: Host R6q preseeded-deadline control
+        run: make host-test-r6q
+
+      - name: Host R6r flagless-kernel control
+        run: make host-test-r6r
+
+      - name: Host R6s delta-only-timer control
+        run: make host-test-r6s
+
+      - name: Host R6t unit-period-timer control
+        run: make host-test-r6t
+
+      - name: Host R6u singleton-async-unit-timer control
+        run: make host-test-r6u
+
+      - name: Host R6v always-dispatch-tick control
+        run: make host-test-r6v
+
+      - name: Host R6z trusted-crash-payload challenger
+        run: make host-test-r6z
+
+      - name: Host R6aa inlined-crash-payload control
+        run: make host-test-r6aa
+
+      - name: Host R6ab singleton-wake-target control
+        run: make host-test-r6ab
+
+      - name: Host R6ac preseeded-port-format control
+        run: make host-test-r6ac
+
+      - name: Host R6ad unconditional-wake-dispatch control
+        run: make host-test-r6ad
+
+      - name: Host R6ae dispatch-owned-YIELD control
+        run: make host-test-r6ae
+
+      - name: Host R6ag timer-owned-sleep-release control
+        run: make host-test-r6ag
+
+      - name: Host R6ai generated-trampoline-class correctness control
+        run: make host-test-r6ai
+
+      - name: Host R6aj direct-async-prebuilt-entry control
+        run: make host-test-r6aj
+
+      - name: Host R6an reason-recursion challenger
+        run: make host-test-r6an
+
+      - name: Host R6ao periodic-only-schedule challenger
+        run: make host-test-r6ao
+
+      - name: Host R6ap omit-unit-period-byte challenger
+        run: make host-test-r6ap
+
+      - name: Host R6ar nibble-period-delta challenger
+        run: make host-test-r6ar
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -49,6 +142,111 @@ jobs:
       - name: Cortex-M23 frozen target-crossing R5ag
         run: make m23-footprint-r5ag
 
+      - name: Cortex-M23 R6b trusted timer-entry control
+        run: make m23-footprint-r6b
+
+      - name: Cortex-M23 R6c zero-sleep control
+        run: make m23-footprint-r6c
+
+      - name: Cortex-M23 R6d serialized-handler control
+        run: make m23-footprint-r6d
+
+      - name: Cortex-M23 R6e serialized-SVC control
+        run: make m23-footprint-r6e
+
+      - name: Cortex-M23 R6f trusted-service-domain control
+        run: make m23-footprint-r6f
+
+      - name: Cortex-M23 R6i known-unmasked PendSV control
+        run: make m23-footprint-r6i
+
+      - name: Cortex-M23 R6j proven-wake-domain control
+        run: make m23-footprint-r6j
+
+      - name: Cortex-M23 R6k preseeded-periodic-ready control
+        run: make m23-footprint-r6k
+
+      - name: Cortex-M23 R6l pre-masked-start control
+        run: make m23-footprint-r6l
+
+      - name: Cortex-M23 R6m commit-recursion control
+        run: make m23-footprint-r6m
+
+      - name: Cortex-M23 R6n dispatch-only-service control
+        run: make m23-footprint-r6n
+
+      - name: Cortex-M23 R6o preseeded-current control
+        run: make m23-footprint-r6o
+
+      - name: Cortex-M23 R6p preinitialized-kernel control
+        run: make m23-footprint-r6p
+
+      - name: Cortex-M23 R6q historical legacy-harness control
+        run: make m23-footprint-r6q
+
+      - name: Cortex-M23 R6q physical-board control
+        run: make m23-footprint-r6q-physical
+
+      - name: Cortex-M23 R6r flagless-kernel physical control
+        run: make m23-footprint-r6r
+
+      - name: Cortex-M23 R6s delta-only-timer physical control
+        run: make m23-footprint-r6s
+
+      - name: Cortex-M23 R6t unit-period-timer physical control
+        run: make m23-footprint-r6t
+
+      - name: Cortex-M23 R6u singleton-async-unit-timer physical control
+        run: make m23-footprint-r6u
+
+      - name: Cortex-M23 R6v always-dispatch-tick physical control
+        run: make m23-footprint-r6v
+
+      - name: Cortex-M23 R6z trusted-crash-payload physical challenger
+        run: make m23-footprint-r6z
+
+      - name: Cortex-M23 R6aa inlined-crash-payload physical control
+        run: make m23-footprint-r6aa
+
+      - name: Cortex-M23 R6ab singleton-wake-target physical control
+        run: make m23-footprint-r6ab
+
+      - name: Cortex-M23 R6ac preseeded-port-format physical control
+        run: make m23-footprint-r6ac
+
+      - name: Cortex-M23 R6ad unconditional-wake-dispatch physical control
+        run: make m23-footprint-r6ad
+
+      - name: Cortex-M23 R6ae dispatch-owned-YIELD physical control
+        run: make m23-footprint-r6ae
+
+      - name: Cortex-M23 R6ag timer-owned-sleep-release physical control
+        run: make m23-footprint-r6ag
+
+      - name: Cortex-M23 R6ai generated-trampoline-class physical correctness control
+        run: make m23-footprint-r6ai
+
+      - name: Cortex-M23 R6aj direct-async-prebuilt-entry physical control
+        run: make m23-footprint-r6aj
+
+      - name: Cortex-M23 R6ak R4 assembly-trampoline physical control
+        run: make m23-footprint-r6ak
+
+      - name: Cortex-M23 R6am aligned-first-dispatch physical control
+        run: make m23-footprint-r6am
+
+      - name: Cortex-M23 R6an reason-recursion physical challenger
+        run: make m23-footprint-r6an
+
+      - name: Cortex-M23 R6ao periodic-only-schedule physical challenger
+        run: make m23-footprint-r6ao
+
+      - name: Cortex-M23 R6ap omit-unit-period-byte physical challenger
+        run: make m23-footprint-r6ap
+
+      - name: Cortex-M23 R6ar nibble-period-delta physical challenger
+        run: make m23-footprint-r6ar
+
       - name: Enforce R5ag 1536-byte resident target
         run: |
           python3 - <<'PY'
@@ -56,14 +254,306 @@ jobs:
           with open("build/footprint-r5ag.json", "r", encoding="utf-8") as f:
               report = json.load(f)
           resident = report["arghtos_resident_total"]
-          assert resident <= 1536, f"R5ag resident footprint regressed: {resident} B > 1536 B"
+          assert resident == 1534, f"R5ag legacy-harness reproduction changed: {resident} B != 1534 B"
           assert report["target_met"] is True
-          print(f"R5ag resident footprint: {resident} B")
+          print(f"R5ag historical legacy-harness footprint reproduced: {resident} B")
+          PY
+
+      - name: Enforce physical R6 target and accepted R6r improvement
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6q-physical.json", "r", encoding="utf-8") as f:
+              q = json.load(f)
+          with open("build/footprint-r6r.json", "r", encoding="utf-8") as f:
+              r = json.load(f)
+          qv = q["arghtos_resident_total"]
+          rv = r["arghtos_resident_total"]
+          assert qv <= 1536, f"physical R6q control misses target: {qv} B > 1536 B"
+          assert rv <= 1536, f"physical R6r control misses target: {rv} B > 1536 B"
+          assert rv < qv, f"R6r does not improve physical R6q: {rv} B >= {qv} B"
+          print(f"physical R6q: {qv} B; R6r: {rv} B; delta: {rv-qv} B")
+          PY
+
+      - name: Evaluate R6s physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6r.json", "r", encoding="utf-8") as f:
+              r = json.load(f)
+          with open("build/footprint-r6s.json", "r", encoding="utf-8") as f:
+              s = json.load(f)
+          rv = r["arghtos_resident_total"]
+          sv = s["arghtos_resident_total"]
+          assert sv <= 1536, f"physical R6s challenger misses target: {sv} B > 1536 B"
+          print(f"physical R6r control: {rv} B; R6s challenger: {sv} B; delta: {sv-rv} B")
+          PY
+
+      - name: Evaluate R6t physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6s.json", "r", encoding="utf-8") as f:
+              s = json.load(f)
+          with open("build/footprint-r6t.json", "r", encoding="utf-8") as f:
+              t = json.load(f)
+          sv = s["arghtos_resident_total"]
+          tv = t["arghtos_resident_total"]
+          assert tv <= 1536, f"physical R6t challenger misses target: {tv} B > 1536 B"
+          print(f"physical R6s control: {sv} B; R6t challenger: {tv} B; delta: {tv-sv} B")
+          PY
+
+      - name: Evaluate R6u physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6t.json", "r", encoding="utf-8") as f:
+              t = json.load(f)
+          with open("build/footprint-r6u.json", "r", encoding="utf-8") as f:
+              u = json.load(f)
+          tv = t["arghtos_resident_total"]
+          uv = u["arghtos_resident_total"]
+          assert uv <= 1536, f"physical R6u challenger misses target: {uv} B > 1536 B"
+          print(f"physical R6t control: {tv} B; R6u challenger: {uv} B; delta: {uv-tv} B")
+          PY
+
+      - name: Evaluate R6v physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6u.json", "r", encoding="utf-8") as f:
+              u = json.load(f)
+          with open("build/footprint-r6v.json", "r", encoding="utf-8") as f:
+              v = json.load(f)
+          uv = u["arghtos_resident_total"]
+          vv = v["arghtos_resident_total"]
+          assert vv <= 1536, f"physical R6v challenger misses target: {vv} B > 1536 B"
+          print(f"physical R6u control: {uv} B; R6v challenger: {vv} B; delta: {vv-uv} B")
+          PY
+
+      - name: Evaluate R6z physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6v.json", "r", encoding="utf-8") as f:
+              v = json.load(f)
+          with open("build/footprint-r6z.json", "r", encoding="utf-8") as f:
+              z = json.load(f)
+          vv = v["arghtos_resident_total"]
+          zv = z["arghtos_resident_total"]
+          assert zv <= 1536, f"physical R6z challenger misses target: {zv} B > 1536 B"
+          print(f"physical R6v control: {vv} B; R6z challenger: {zv} B; delta: {zv-vv} B")
+          PY
+
+      - name: Evaluate R6aa physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6v.json", "r", encoding="utf-8") as f:
+              v = json.load(f)
+          with open("build/footprint-r6aa.json", "r", encoding="utf-8") as f:
+              aa = json.load(f)
+          vv = v["arghtos_resident_total"]
+          aav = aa["arghtos_resident_total"]
+          assert aav <= 1536, f"physical R6aa challenger misses target: {aav} B > 1536 B"
+          print(f"physical R6v control: {vv} B; R6aa challenger: {aav} B; delta: {aav-vv} B")
+          PY
+
+      - name: Evaluate R6ab physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6aa.json", "r", encoding="utf-8") as f:
+              aa = json.load(f)
+          with open("build/footprint-r6ab.json", "r", encoding="utf-8") as f:
+              ab = json.load(f)
+          aav = aa["arghtos_resident_total"]
+          abv = ab["arghtos_resident_total"]
+          assert abv <= 1536, f"physical R6ab challenger misses target: {abv} B > 1536 B"
+          print(f"physical R6aa control: {aav} B; R6ab challenger: {abv} B; delta: {abv-aav} B")
+          PY
+
+      - name: Evaluate R6ac physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6ab.json", "r", encoding="utf-8") as f:
+              ab = json.load(f)
+          with open("build/footprint-r6ac.json", "r", encoding="utf-8") as f:
+              ac = json.load(f)
+          abv = ab["arghtos_resident_total"]
+          acv = ac["arghtos_resident_total"]
+          assert acv <= 1536, f"physical R6ac challenger misses target: {acv} B > 1536 B"
+          print(f"physical R6ab control: {abv} B; R6ac challenger: {acv} B; delta: {acv-abv} B")
+          PY
+
+      - name: Evaluate R6ad physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6ac.json", "r", encoding="utf-8") as f:
+              ac = json.load(f)
+          with open("build/footprint-r6ad.json", "r", encoding="utf-8") as f:
+              ad = json.load(f)
+          acv = ac["arghtos_resident_total"]
+          adv = ad["arghtos_resident_total"]
+          assert adv <= 1536, f"physical R6ad challenger misses target: {adv} B > 1536 B"
+          print(f"physical R6ac control: {acv} B; R6ad challenger: {adv} B; delta: {adv-acv} B")
+          PY
+
+      - name: Evaluate R6ae physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6ad.json", "r", encoding="utf-8") as f:
+              ad = json.load(f)
+          with open("build/footprint-r6ae.json", "r", encoding="utf-8") as f:
+              ae = json.load(f)
+          adv = ad["arghtos_resident_total"]
+          aev = ae["arghtos_resident_total"]
+          assert aev <= 1536, f"physical R6ae challenger misses target: {aev} B > 1536 B"
+          print(f"physical R6ad control: {adv} B; R6ae challenger: {aev} B; delta: {aev-adv} B")
+          PY
+
+      - name: Evaluate R6ag physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6ae.json", "r", encoding="utf-8") as f:
+              ae = json.load(f)
+          with open("build/footprint-r6ag.json", "r", encoding="utf-8") as f:
+              ag = json.load(f)
+          aev = ae["arghtos_resident_total"]
+          agv = ag["arghtos_resident_total"]
+          assert agv <= 1536, f"physical R6ag challenger misses target: {agv} B > 1536 B"
+          print(f"physical R6ae control: {aev} B; R6ag challenger: {agv} B; delta: {agv-aev} B")
+          PY
+
+      - name: Evaluate R6ai physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6ag.json", "r", encoding="utf-8") as f:
+              ag = json.load(f)
+          with open("build/footprint-r6ai.json", "r", encoding="utf-8") as f:
+              ai = json.load(f)
+          agv = ag["arghtos_resident_total"]
+          aiv = ai["arghtos_resident_total"]
+          assert aiv <= 1536, f"physical R6ai challenger misses target: {aiv} B > 1536 B"
+          print(f"physical R6ag control: {agv} B; R6ai challenger: {aiv} B; delta: {aiv-agv} B")
+          PY
+
+      - name: Evaluate R6aj correctness repair
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6ag.json", "r", encoding="utf-8") as f:
+              ag = json.load(f)
+          with open("build/footprint-r6ai.json", "r", encoding="utf-8") as f:
+              ai = json.load(f)
+          with open("build/footprint-r6aj.json", "r", encoding="utf-8") as f:
+              aj = json.load(f)
+          agv = ag["arghtos_resident_total"]
+          aiv = ai["arghtos_resident_total"]
+          ajv = aj["arghtos_resident_total"]
+          assert ajv <= 1536, f"physical R6aj misses target: {ajv} B > 1536 B"
+          assert ajv < aiv, f"R6aj does not improve correctness control: {ajv} B >= {aiv} B"
+          print(
+              f"historical R6ag size-only: {agv} B; "
+              f"R6ai correctness control: {aiv} B; "
+              f"R6aj: {ajv} B; "
+              f"delta vs R6ai: {ajv-aiv} B; "
+              f"delta vs R6ag: {ajv-agv} B"
+          )
+          PY
+
+      - name: Evaluate R6ak physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6aj.json", "r", encoding="utf-8") as f:
+              aj = json.load(f)
+          with open("build/footprint-r6ak.json", "r", encoding="utf-8") as f:
+              ak = json.load(f)
+          ajv = aj["arghtos_resident_total"]
+          akv = ak["arghtos_resident_total"]
+          assert akv <= 1536, f"physical R6ak misses target: {akv} B > 1536 B"
+          print(f"physical R6aj semantic control: {ajv} B; R6ak: {akv} B; delta: {akv-ajv} B")
+          PY
+
+      - name: Evaluate R6am physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6ak.json", "r", encoding="utf-8") as f:
+              ak = json.load(f)
+          with open("build/footprint-r6am.json", "r", encoding="utf-8") as f:
+              am = json.load(f)
+          akv = ak["arghtos_resident_total"]
+          amv = am["arghtos_resident_total"]
+          assert amv <= 1536, f"physical R6am misses target: {amv} B > 1536 B"
+          print(f"physical R6ak control: {akv} B; R6am: {amv} B; delta: {amv-akv} B")
+          PY
+
+      - name: Evaluate R6an physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6am.json", "r", encoding="utf-8") as f:
+              am = json.load(f)
+          with open("build/footprint-r6an.json", "r", encoding="utf-8") as f:
+              an = json.load(f)
+          amv = am["arghtos_resident_total"]
+          anv = an["arghtos_resident_total"]
+          assert anv <= 1536, f"physical R6an misses target: {anv} B > 1536 B"
+          print(f"physical R6am control: {amv} B; R6an: {anv} B; delta: {anv-amv} B")
+          PY
+
+      - name: Evaluate R6ao physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6am.json", "r", encoding="utf-8") as f:
+              am = json.load(f)
+          with open("build/footprint-r6ao.json", "r", encoding="utf-8") as f:
+              ao = json.load(f)
+          amv = am["arghtos_resident_total"]
+          aov = ao["arghtos_resident_total"]
+          assert aov <= 1536, f"physical R6ao misses target: {aov} B > 1536 B"
+          print(f"physical R6am control: {amv} B; R6ao: {aov} B; delta: {aov-amv} B")
+          PY
+
+      - name: Evaluate R6ap physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6ao.json", "r", encoding="utf-8") as f:
+              ao = json.load(f)
+          with open("build/footprint-r6ap.json", "r", encoding="utf-8") as f:
+              ap = json.load(f)
+          aov = ao["arghtos_resident_total"]
+          apv = ap["arghtos_resident_total"]
+          assert apv <= 1536, f"physical R6ap misses target: {apv} B > 1536 B"
+          print(f"physical R6ao control: {aov} B; R6ap: {apv} B; delta: {apv-aov} B")
+          PY
+
+      - name: Evaluate R6ar physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6ap.json", "r", encoding="utf-8") as f:
+              ap = json.load(f)
+          with open("build/footprint-r6ar.json", "r", encoding="utf-8") as f:
+              ar = json.load(f)
+          apv = ap["arghtos_resident_total"]
+          arv = ar["arghtos_resident_total"]
+          assert arv <= 1536, f"physical R6ar misses target: {arv} B > 1536 B"
+          print(f"physical R6ap control: {apv} B; R6ar: {arv} B; delta: {arv-apv} B")
           PY
 
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5ag; do
+          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v r6z r6aa r6ab r6ac r6ad r6ae r6ag r6ai r6aj r6ak r6am r6an r6ao r6ap r6ar; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -79,12 +569,152 @@ jobs:
             build/footprint-r3c.json
             build/footprint-r4y.json
             build/footprint-r5ag.json
+            build/footprint-r6b.json
+            build/footprint-r6c.json
+            build/footprint-r6d.json
+            build/footprint-r6e.json
+            build/footprint-r6f.json
+            build/footprint-r6i.json
+            build/footprint-r6j.json
+            build/footprint-r6k.json
+            build/footprint-r6l.json
+            build/footprint-r6m.json
+            build/footprint-r6n.json
+            build/footprint-r6o.json
+            build/footprint-r6p.json
+            build/footprint-r6q.json
+            build/footprint-r6q-physical.json
+            build/footprint-r6r.json
+            build/footprint-r6s.json
+            build/footprint-r6t.json
+            build/footprint-r6u.json
+            build/footprint-r6v.json
+            build/footprint-r6z.json
+            build/footprint-r6aa.json
+            build/footprint-r6ab.json
+            build/footprint-r6ac.json
+            build/footprint-r6ad.json
+            build/footprint-r6ae.json
+            build/footprint-r6ag.json
+            build/footprint-r6ai.json
+            build/footprint-r6aj.json
+            build/footprint-r6ak.json
+            build/footprint-r6am.json
+            build/footprint-r6an.json
+            build/footprint-r6ao.json
+            build/footprint-r6ap.json
+            build/footprint-r6ar.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5ag.map
+            build/m23-r6b.map
+            build/m23-r6c.map
+            build/m23-r6d.map
+            build/m23-r6e.map
+            build/m23-r6f.map
+            build/m23-r6i.map
+            build/m23-r6j.map
+            build/m23-r6k.map
+            build/m23-r6l.map
+            build/m23-r6m.map
+            build/m23-r6n.map
+            build/m23-r6o.map
+            build/m23-r6p.map
+            build/m23-r6q.map
+            build/m23-r6q-physical.map
+            build/m23-r6r.map
+            build/m23-r6s.map
+            build/m23-r6t.map
+            build/m23-r6u.map
+            build/m23-r6v.map
+            build/m23-r6z.map
+            build/m23-r6aa.map
+            build/m23-r6ab.map
+            build/m23-r6ac.map
+            build/m23-r6ad.map
+            build/m23-r6ae.map
+            build/m23-r6ag.map
+            build/m23-r6ai.map
+            build/m23-r6aj.map
+            build/m23-r6ak.map
+            build/m23-r6am.map
+            build/m23-r6an.map
+            build/m23-r6ao.map
+            build/m23-r6ap.map
+            build/m23-r6ar.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5ag-symbols.txt
+            build/m23-r6b-symbols.txt
+            build/m23-r6c-symbols.txt
+            build/m23-r6d-symbols.txt
+            build/m23-r6e-symbols.txt
+            build/m23-r6f-symbols.txt
+            build/m23-r6i-symbols.txt
+            build/m23-r6j-symbols.txt
+            build/m23-r6k-symbols.txt
+            build/m23-r6l-symbols.txt
+            build/m23-r6m-symbols.txt
+            build/m23-r6n-symbols.txt
+            build/m23-r6o-symbols.txt
+            build/m23-r6p-symbols.txt
+            build/m23-r6q-symbols.txt
+            build/m23-r6q-physical-symbols.txt
+            build/m23-r6r-symbols.txt
+            build/m23-r6s-symbols.txt
+            build/m23-r6t-symbols.txt
+            build/m23-r6u-symbols.txt
+            build/m23-r6v-symbols.txt
+            build/m23-r6z-symbols.txt
+            build/m23-r6aa-symbols.txt
+            build/m23-r6ab-symbols.txt
+            build/m23-r6ac-symbols.txt
+            build/m23-r6ad-symbols.txt
+            build/m23-r6ae-symbols.txt
+            build/m23-r6ag-symbols.txt
+            build/m23-r6ai-symbols.txt
+            build/m23-r6aj-symbols.txt
+            build/m23-r6ak-symbols.txt
+            build/m23-r6am-symbols.txt
+            build/m23-r6an-symbols.txt
+            build/m23-r6ao-symbols.txt
+            build/m23-r6ap-symbols.txt
+            build/m23-r6ar-symbols.txt
             build/m23-r4y.elf
             build/m23-r5ag.elf
+            build/m23-r6b.elf
+            build/m23-r6c.elf
+            build/m23-r6d.elf
+            build/m23-r6e.elf
+            build/m23-r6f.elf
+            build/m23-r6i.elf
+            build/m23-r6j.elf
+            build/m23-r6k.elf
+            build/m23-r6l.elf
+            build/m23-r6m.elf
+            build/m23-r6n.elf
+            build/m23-r6o.elf
+            build/m23-r6p.elf
+            build/m23-r6q.elf
+            build/m23-r6q-physical.elf
+            build/m23-r6r.elf
+            build/m23-r6s.elf
+            build/m23-r6t.elf
+            build/m23-r6u.elf
+            build/m23-r6v.elf
+            build/m23-r6z.elf
+            build/m23-r6aa.elf
+            build/m23-r6ab.elf
+            build/m23-r6ac.elf
+            build/m23-r6ad.elf
+            build/m23-r6ae.elf
+            build/m23-r6ag.elf
+            build/m23-r6ai.elf
+            build/m23-r6aj.elf
+            build/m23-r6ak.elf
+            build/m23-r6am.elf
+            build/m23-r6an.elf
+            build/m23-r6ao.elf
+            build/m23-r6ap.elf
+            build/m23-r6ar.elf
             build/*.su

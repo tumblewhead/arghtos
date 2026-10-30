@@ -148,3 +148,340 @@ without a runtime READY/RUNNING membership check.
 This refinement is valid only for the trusted generated profile that already
 adopts the R5n proof-discharged scheduler invariants. Generic/debug profiles
 retain the explicit impossible-state fault check.
+
+# R6e serialized SVC transaction refinement
+
+For the trusted R6e Cortex-M23 profile, C4 guarantees that SVC, scheduler timer,
+and scheduler-mutating device handlers form one non-preempting exception class.
+
+Consequently the lifecycle mutations performed by
+`arghtos_kernel_service()` remain serialized with every competing
+scheduler-state mutation even when the local PRIMASK enter/exit pair is
+elided. No additional transition becomes reachable, and the existing P1 task
+state invariants are unchanged.
+
+# R6f closed service-domain refinement
+
+Under C4/C1's trusted generated service-domain preconditions, every reachable
+call to `arghtos_kernel_service()` carries one of the five defined private
+service IDs. The removed BAD_SERVICE default branch is therefore unreachable
+on every execution admitted by the generated profile.
+
+All reachable state transitions remain exactly those already covered by P1.
+The generic/debug profile continues to retain the BAD_SERVICE fatal path for
+invalid service-ID injection.
+
+# R6g fatal current-task domain refinement
+
+R5n already establishes that, on supported generated-profile execution,
+`kernel.current_task` is either INVALID or names a configured task selected by
+the dispatcher.
+
+R6g reuses that invariant in fatal capture. Replacing the repeated range test
+with an INVALID test does not create a new task-state transition and cannot
+attribute a supported fatal event to an unconfigured task. Generic/debug builds
+continue to validate the full ID range at runtime.
+
+# R6j non-faulted wake-domain refinement
+
+R5ac removes the FAULTED state mutation only in a profile where every fatal
+path is terminal. Normal scheduler execution therefore cannot resume after a
+fault that would otherwise create RUNNING -> FAULTED.
+
+Starting from pristine generated DORMANT state, the remaining nonfatal P1
+transition relation closes over:
+
+```text
+DORMANT, READY, RUNNING, WAITING, SLEEPING
+```
+
+for any task that can be passed to wake.
+
+Thus, on every execution admitted by the trusted minimum profile,
+`wake_locked_compact()` cannot observe FAULTED or an unknown state encoding.
+Eliding those two diagnostic branches does not change any reachable transition,
+wake result, pending-wake effect, or dispatch decision. Generic/debug builds
+retain both diagnostics.
+
+# R6k preseeded periodic READY refinement
+
+For the trusted generated R6k profile, a periodic task's physical packed state
+may contain READY before STARTED, but R5n/R6b and the production API
+preconditions make that state unobservable to scheduler execution until
+`arghtos_start()` commits STARTED.
+
+The logical transition remains the synchronous release-zero transition:
+
+```text
+pre-start inactive -> release at common start epoch -> READY
+```
+
+R6k moves only the READY bit materialization from runtime start code to the
+generated initial image. `next_time` is still formed from the runtime start
+epoch, and no task can dispatch before STARTED.
+
+Therefore the first dispatch sees the same set of READY periodic tasks and all
+subsequent P1 transitions are unchanged.
+
+# R6n dispatch-only service-outcome refinement
+
+For the trusted generated profile, the legal C1/C2 service domain contains no
+reachable error-return transition:
+
+* YIELD is issued from the current generated task;
+* WAIT and SLEEP_UNTIL are issued only by the generated async worker;
+* WAKE names the generated async worker and R6j excludes FAULTED/unknown state;
+* TASK_RETURN is issued only by the generated periodic trampoline;
+* R6f excludes unknown private service IDs;
+* invalid relative/absolute timing inputs are outside the minimum production
+  contract.
+
+Thus the public result for every admitted service execution is exactly
+`ARGHTOS_OK`. Replacing the encoded result-plus-dispatch byte with a
+dispatch-only internal value preserves every reachable P1 state transition and
+every public result.
+
+# R6o current-task seed refinement
+
+R6o moves the initial INVALID value of `kernel.current_task` from a runtime
+store to the generated image.
+
+No task-state transition depends on the physical time of that write.
+INITIALIZED remains clear until successful port initialization, and dispatch is
+already proved unreachable before STARTED in the trusted profile.
+
+Therefore the dispatcher begins from the same INVALID current-task state and
+all P1 transitions are unchanged.
+
+# R6r flagless kernel-state refinement
+
+R6r removes no state that participates in the admitted task-state transition
+relation.
+
+For the trusted generated profile:
+
+* initialization success is a generated/selected-port invariant;
+* dispatch and timer entry-before-start are already excluded by R5n/R6b;
+* public lifecycle misuse checks are outside the minimal-production contract;
+* recursive fatal detection is carried by the C5 commit word under R6m.
+
+Therefore C9 INITIALIZED/STARTED/FAULT_ACTIVE bits have no remaining observer on
+supported execution. Removing their storage and the final STARTED write cannot
+enable or suppress any P1 transition.
+
+The only surviving minimum C9 runtime value is `current_task`, whose
+dispatcher ownership is unchanged.
+
+# R6v redundant unit-tick dispatch refinement
+
+Consider a unit-timer interrupt for which the time engine performs no
+DORMANT/SLEEPING -> READY transition.
+
+If no independent scheduling indication is pending, the currently RUNNING task
+was the highest-priority eligible winner at the preceding dispatch boundary.
+PendSV saves it, applies the ordinary legal RUNNING -> READY preemption
+transition, and re-runs the unchanged selector over an unchanged eligibility
+set. That task remains the winner and returns READY -> RUNNING with the same
+saved continuation.
+
+If another scheduling indication is pending, a dispatch was already required
+and R6v only collapses another request into the same PendSV mechanism.
+
+Because the selected minimum profile has runtime profiling disabled and elides
+async age-reset side effects, this redundant preemption adds no persistent
+scheduler state change beyond ordinary context save/restore.
+
+Therefore unconditional timer-side dispatch preserves P1 state invariants and
+observable scheduler selection.
+
+# R6w early periodic preemption refinement
+
+For each due periodic task, let `s` be its state before R6w normalization.
+
+R5y limits `s` to DORMANT, READY, or RUNNING. Missed-release accounting is
+computed from `s` before mutation:
+
+```text
+missed = releases - (s == DORMANT ? 1 : 0)
+```
+
+R6w then writes READY.
+
+* DORMANT -> READY is the ordinary release transition.
+* READY -> READY is idempotent.
+* RUNNING -> READY is the ordinary preemption transition moved earlier into the
+  timer handler.
+
+R6v guarantees a PendSV request on that timer exit. The interrupted RUNNING
+task's continuation is still saved by PendSV, and the unchanged selector then
+performs READY -> RUNNING for the winning task.
+
+Thus R6w does not add a new state edge. It only moves an already-legal
+preemption edge earlier within one handler-to-PendSV scheduling transaction.
+
+# R6ab singleton wake-target refinement
+
+R5p partitions generated IDs into a periodic prefix followed by the async
+suffix. R5ab proves that suffix has cardinality one.
+
+Hence the async set is:
+
+```text
+A = { ARGHTOS_R5P_PERIODIC_COUNT }
+```
+
+C1/C2 permit wake only for an asynchronous task in the trusted generated
+profile. Therefore every admitted wake target is the unique member of `A`.
+
+Replacing a runtime wake ID with that compile-time ID selects the same control
+record for every supported execution. No P1 state transition or wake result is
+changed.
+
+# R6ae deferred YIELD transition refinement
+
+R6ae moves one already-legal P1 edge:
+
+```text
+RUNNING -> READY
+```
+
+from the YIELD service body to the immediately following PendSV dispatcher.
+
+C4 proves no Thread-mode application instruction can execute in the interval.
+When PendSV saves the outgoing context, `arghtos_kernel_dispatch()` observes
+the current task still RUNNING and performs the same RUNNING -> READY transition
+before calling the selector.
+
+Thus the selector sees the same READY set as the ordinary implementation and
+the public YIELD call can resume only after a READY -> RUNNING selection.
+
+No P1 edge is added or removed; only the owner of the existing preemption edge
+changes within one SVC-to-PendSV transaction.
+
+# R6af crash task-ID materialization refinement
+
+R5n establishes the generated-profile current-task domain:
+
+```text
+current_task in { INVALID } union configured_task_ids
+```
+
+R6af always copies that value to the crash record.
+
+For INVALID, the resulting record remains unattributed because TASK_VALID is
+clear. For a configured ID, R6af sets TASK_VALID and records exactly the same ID
+as the ordinary conditional path.
+
+No scheduler state is mutated and no P1 transition changes. The refinement
+only changes the branch structure used to serialize already-proved current-task
+state into C5 diagnostics.
+
+# R6ah default-dispatch service proof
+
+Under R6n every admitted generated service returns \`ARGHTOS_OK\`. Under the
+accepted R6ad/R6ae/R6ag refinements, dispatch behavior partitions the legal
+service outcomes as follows:
+
+~~~text
+YIELD                         -> dispatch
+WAIT, wake_pending = 0        -> WAITING, dispatch
+WAIT, wake_pending = 1        -> clear latch, no dispatch
+SLEEP_UNTIL, future deadline  -> SLEEPING, dispatch
+SLEEP_UNTIL, due deadline     -> no state change, no dispatch
+WAKE                          -> dispatch
+TASK_RETURN                   -> DORMANT, dispatch
+~~~
+
+R6ah changes the implementation from:
+
+~~~text
+dispatch = false
+...
+set dispatch = true on dispatching outcomes
+...
+if dispatch: request_dispatch
+return OK
+~~~
+
+to:
+
+~~~text
+return OK immediately on the two no-dispatch outcomes
+...
+request_dispatch
+return OK
+~~~
+
+Each row of the partition therefore has identical state/latch effects,
+identical dispatch-request cardinality, and the same public result.
+
+R6e serialization guarantees the early returns do not bypass a required local
+critical-section exit. No P1 state transition is added, removed, or reordered
+relative to an application-visible boundary.
+
+# R6ai trampoline class-boundary refinement
+
+R5p establishes a bijection between generated class and ID range:
+
+~~~text
+periodic IDs = [0, P)
+async IDs    = [P, N)
+~~~
+
+The ordinary trampoline classifies with \`ARGHTOS_TASK_PERIOD(id) != 0\`.
+For every admitted R5p generated configuration, that predicate and
+\`id < P\` identify the same task class.
+
+Replacing the schedule lookup with the ID-boundary predicate therefore selects
+the same trampoline lifecycle for every configured task:
+
+* periodic entry returns through TASK_RETURN and repeats on later release;
+* async entry return remains fatal.
+
+No P1 state transition, return rule, or scheduler-visible task class changes.
+
+# R6aj generated async-entry lifecycle proof
+
+R5p/R5ab prove there is exactly one async task and its ID is the first slot
+after the periodic prefix.
+
+R6aj moves the class choice from runtime trampoline code into the generated
+initial PC/LR pair.
+
+For every periodic task, execution is unchanged.
+
+For the sole async task:
+
+~~~text
+initial dispatch -> application async entry
+application return -> async-return guard
+async-return guard -> fatal(ASYNC_RETURNED)
+~~~
+
+The ordinary class-aware trampoline produces the same externally observable
+lifecycle. No scheduler state edge is added or removed, and async return is
+again terminal as required.
+
+# R6ak periodic trampoline equivalence
+
+R6ak changes only how the periodic application entry is invoked and how the
+private TASK_RETURN service is reached.
+
+For each periodic activation:
+
+~~~text
+READY -> RUNNING
+application entry returns
+TASK_RETURN -> DORMANT + dispatch
+later release -> READY -> RUNNING
+resume after SVC
+repeat
+~~~
+
+This is exactly the lifecycle of the accepted C trampoline.
+
+Because R4 contains the generated immutable entry pointer and is preserved by
+the normal task context, no new scheduler state or class decision is introduced.
+
+The async task remains on R6aj's direct-entry/async-fatal path. Therefore the
+R6ak change adds or removes no P1 state transition.
