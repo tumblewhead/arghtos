@@ -132,7 +132,7 @@ physical-board harness
   R6ae accepted                = 1348 B
   R6af rejected neutral        = 1348 B
   R6ag accepted current control= 1340 B
-  phase: R6ah default-dispatch service control flow
+  phase: R6ah default-dispatch service control flow (wired)
 ```
 
 R6ae is preserved in
@@ -199,14 +199,13 @@ return value.
 
 ## Exact next action
 
-1. Add the R6ah service-control-flow contract and P1 proof refinement.
-2. Add a profile gate requiring the trusted R6ad/R6ae/R6ag OK-only service
-   domain.
-3. Change the service dispatcher to early-return for the two no-dispatch cases
-   and dispatch unconditionally otherwise.
-4. Strengthen host regressions for WAIT-with-pending and already-due sleep to
-   assert zero dispatch; retain one-dispatch checks for all other service paths.
-5. Build physical R6ag and R6ah side by side and compare resident bytes plus
-   `arghtos_kernel_service`.
-6. Accept R6ah only for a strict physical reduction below 1340 B.
+1. PR #5 now builds physical R6ag and R6ah in the same revision.
+2. Require host proof that pending-wake WAIT and already-due sleep issue zero
+   dispatches, while YIELD, normal WAIT, future sleep, WAKE, and TASK_RETURN
+   retain their dispatch behavior.
+3. Require sanitizer, portability, historical reproduction, and all physical
+   controls green.
+4. Compare complete resident bytes and `arghtos_kernel_service`.
+5. Accept R6ah only for a strict physical reduction below 1340 B.
+6. If neutral/regressive, preserve the result and keep R6ag as control.
 7. Do not merge PR #5 without explicit user permission.
