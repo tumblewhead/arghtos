@@ -19,7 +19,9 @@
 extern arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS];
 #define ARGHTOS_TASK_ENTRY(id)    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[(id)])
 #if ARGHTOS_R5I_SCHEDULE8
-#if ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8
+#if ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
+extern uint8_t arghtos_static_schedule8[];
+#elif ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8
 extern uint8_t arghtos_static_schedule8[ARGHTOS_R5P_PERIODIC_COUNT];
 #else
 extern uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS];
@@ -30,7 +32,12 @@ extern uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_
 
 #if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT == 0u
 #if ARGHTOS_R5Z_RAW_CLASS_SCHEDULE
+#if ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
+#define ARGHTOS_TASK_PERIOD(id) \
+    (((id) == 0u) ? 1u : (uint32_t)arghtos_static_schedule8[(id) - 1u])
+#else
 #define ARGHTOS_TASK_PERIOD(id)   ((uint32_t)arghtos_static_schedule8[(id)])
+#endif
 #define ARGHTOS_TASK_PRIORITY(id) ((uint8_t)arghtos_static_schedule8[(id)])
 #else
 #define ARGHTOS_TASK_PERIOD(id) \
