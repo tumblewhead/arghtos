@@ -1082,7 +1082,9 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 #if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     arghtos_irq_key_t key;
 #endif
-#if ARGHTOS_R6N_OK_ONLY_SERVICES && !ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+    /* Dispatch is unconditional; no wake-result temporary is needed. */
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
     bool dispatch;
 #elif ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     uint8_t wake_result;
