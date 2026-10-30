@@ -737,3 +737,27 @@ The service ID value 4 is tied to the private kernel-port service enum and is
 statically asserted by the matching C profile.
 
 Generic/debug profiles retain the portable C trampoline.
+
+# R6am aligned first-dispatch MSP specialization
+
+The trusted generated Cortex-M23 minimum profile may strengthen the first
+PendSV entry contract when all of the following are build/integration evidence:
+
+1. portable C calls the selected externally linked \`arghtos_port_start()\`
+   using the Cortex-M23 AAPCS public-interface rule \`SP mod 8 = 0\`;
+2. the selected \`arghtos_port_start()\` has zero static stack usage;
+3. it does not modify MSP in inline assembly before enabling the first pending
+   scheduler exception; and
+4. any higher-priority handler that runs before PendSV returns or tail-chains
+   with the original Thread-mode exception frame still resident on MSP.
+
+Under those conditions the first exception from startup Thread mode is stacked
+from an 8-byte-aligned MSP. The 32-byte basic frame preserves that alignment, so
+hardware does not insert the optional four-byte alignment word and stacked
+xPSR[9] is known clear.
+
+The R6am PendSV first-dispatch path may therefore reclaim exactly 32 bytes from
+the observed frame base without loading or testing stacked xPSR.
+
+Generic/debug profiles retain xPSR[9] decoding and support both 32-byte and
+36-byte startup-frame occupancy.
