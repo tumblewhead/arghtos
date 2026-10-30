@@ -138,7 +138,8 @@ physical-board harness
   R6ak accepted                = 1328 B
   R6al rejected neutral        = 1328 B
   R6am accepted current ctl    = 1320 B
-  phase: R6an reason-owned recursive-fatal guard (wired)
+  R6an rejected neutral        = 1320 B
+  phase: R6ao periodic-only schedule8 table (wired)
 ```
 
 Correctness repair chain:
@@ -211,34 +212,47 @@ selected startup: assembly, no SP/MSP write
 
 R6am is now the accepted semantic and physical control.
 
-R6an targets the fatal recursion guard. In the trusted selected kernel/port
-profile every admitted call to `arghtos_fatal()` uses a nonzero reason.
-The generated crash record begins with `reason = ARGHTOS_FAULT_NONE = 0`.
+R6an is preserved in
+[implementation/R6an-reason-recursion-guard.md](implementation/R6an-reason-recursion-guard.md).
 
-R6an will use the reason field itself as the in-progress/recursive guard:
+R6an authoritative CI:
 
 ```text
-if reason field != NONE:
-    terminal
-reason field = actual nonzero fault reason
-...
-release fence
-commit_magic = CRASH_COMMIT_MAGIC
-terminal
+run:        40998859284
+conclusion: success
+R6am:      1320 B
+R6an:      1320 B
+delta:        0 B
+arghtos_fatal:
+  both       136 B
 ```
 
-This removes the separate CAPTURE_IN_PROGRESS write to `commit_magic` while
-preserving commit-last validity. Recursive capture remains terminal because the
-real reason is written before any port crash-fill call.
+R6ao removes the sole async task's raw schedule8 priority byte.
+
+Under R5p/R5ab/R6aj:
+
+```text
+periodic IDs = [0, P)
+async IDs    = {P}
+N            = P + 1
+```
+
+The sole async priority has no runtime consumer:
+
+* the single-async selector never compares async priorities;
+* R6aj/R6ak discharge class in the generated context;
+* start/time processing indexes schedule8 only in the periodic prefix.
+
+The physical generated table is therefore 23 bytes instead of 24. The host
+proof fixture similarly uses one periodic byte instead of two total task bytes.
+Static assertions pin both generated lengths.
 
 ## Exact next action
 
-1. PR #5 now builds host R6an plus physical R6am/R6an in the same revision.
-2. Require recursive-fatal regression to prove exactly one crash-fill call,
-   nonzero first reason, and `commit_magic == 0` while capture is interrupted.
-3. Require generated-frame audits, async-return-fatal repair, sanitizers,
-   portability, historical controls, and physical controls green.
-4. Compare complete resident bytes and `arghtos_fatal`.
-5. Accept R6an only for a strict physical reduction below 1320 B.
-6. If neutral/regressive, preserve the result and keep R6am as control.
-7. Do not merge PR #5 without explicit user permission.
+1. PR #5 now builds host R6ao and physical R6am/R6ao in the same revision.
+2. Require host semantics, generated-frame audits, async-return-fatal repair,
+   sanitizer, portability, historical controls, and physical controls green.
+3. Compare complete resident bytes and `arghtos_static_schedule8` symbol size.
+4. Accept R6ao only for a strict physical reduction below 1320 B.
+5. If neutral/regressive, preserve the result and keep R6am as control.
+6. Do not merge PR #5 without explicit user permission.
