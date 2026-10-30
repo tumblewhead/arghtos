@@ -569,6 +569,75 @@ static void test_deferred_yield_ready_owned_by_dispatch(void)
 }
 #endif
 
+#if ARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE
+static void test_sleep_time_processing_owned_by_timer(void)
+{
+    const arghtos_task_control_t *ctrl;
+    arghtos_context_t periodic_ctx;
+    arghtos_context_t async_ctx;
+    arghtos_time_t old_periodic_next;
+    uint32_t old_arm_count;
+
+    reset_all();
+    arghtos_host_set_time(0u);
+    assert(arghtos_init(NULL) == ARGHTOS_OK);
+    start_and_escape();
+
+    ctrl = arghtos_test_controls();
+    periodic_ctx = arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE);
+    assert(periodic_ctx == ctrl[0].context);
+    assert(ARGHTOS_CTRL_STATE(&ctrl[0]) == ARGHTOS_TASK_RUNNING);
+
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
+    assert(ARGHTOS_CTRL_STATE(&ctrl[1]) == ARGHTOS_TASK_READY);
+
+    arghtos_host_set_mode(ARGHTOS_HOST_TASK);
+    assert(arghtos_port_service_call(
+        ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
+    assert(ARGHTOS_CTRL_STATE(&ctrl[0]) == ARGHTOS_TASK_DORMANT);
+
+    async_ctx = arghtos_kernel_dispatch(periodic_ctx);
+    assert(async_ctx == ctrl[1].context);
+    assert(arghtos_test_kernel()->current_task == 1u);
+    assert(ARGHTOS_CTRL_STATE(&ctrl[1]) == ARGHTOS_TASK_RUNNING);
+
+    old_periodic_next = ARGHTOS_CTRL_NEXT(&ctrl[0]);
+    old_arm_count = arghtos_host_timer_arm_count();
+
+    /*
+     * Simulate scheduler-timer delivery lateness. R6ag must not opportunistically
+     * process the overdue periodic release from SVC.
+     */
+    arghtos_host_set_time(10u);
+    arghtos_host_clear_dispatch_requests();
+    assert(arghtos_sleep_until(20u) == ARGHTOS_OK);
+    assert(ARGHTOS_CTRL_STATE(&ctrl[1]) == ARGHTOS_TASK_SLEEPING);
+    assert(ARGHTOS_CTRL_NEXT(&ctrl[1]) == 20u);
+    assert(ARGHTOS_CTRL_STATE(&ctrl[0]) == ARGHTOS_TASK_DORMANT);
+    assert(ARGHTOS_CTRL_NEXT(&ctrl[0]) == old_periodic_next);
+    assert(arghtos_host_timer_arm_count() == old_arm_count);
+    assert(arghtos_host_dispatch_request_count() == 1u);
+
+    /* The timer interrupt now owns delayed periodic catch-up. */
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    arghtos_host_clear_dispatch_requests();
+    arghtos_timer_interrupt();
+    assert(ARGHTOS_CTRL_STATE(&ctrl[0]) == ARGHTOS_TASK_READY);
+    assert(ARGHTOS_CTRL_NEXT(&ctrl[0]) == 11u);
+    assert(ARGHTOS_CTRL_STATE(&ctrl[1]) == ARGHTOS_TASK_SLEEPING);
+    assert(arghtos_host_timer_deadline() == 11u);
+    assert(arghtos_host_dispatch_request_count() == 1u);
+
+    /* A delayed later timer service still expires the absolute sleep deadline. */
+    arghtos_host_set_time(20u);
+    arghtos_host_clear_dispatch_requests();
+    arghtos_timer_interrupt();
+    assert(ARGHTOS_CTRL_STATE(&ctrl[1]) == ARGHTOS_TASK_READY);
+    assert(arghtos_host_dispatch_request_count() == 1u);
+}
+#endif
+
 #if ARGHTOS_R6M_COMMIT_RECURSION_GUARD
 static void test_recursive_fatal_uses_commit_guard(void)
 {
@@ -620,6 +689,9 @@ int main(void)
 #endif
 #if ARGHTOS_R6AE_DISPATCH_OWNS_YIELD_READY
     test_deferred_yield_ready_owned_by_dispatch();
+#endif
+#if ARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE
+    test_sleep_time_processing_owned_by_timer();
 #endif
 #if ARGHTOS_R6M_COMMIT_RECURSION_GUARD
     test_recursive_fatal_uses_commit_guard();
