@@ -258,6 +258,16 @@
 #define ARGHTOS_R6Y_PACKED_MISSED_ADD 0
 #endif
 
+#ifndef ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
+#define ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD 0
+#endif
+
+#if ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD && \
+    (!ARGHTOS_R6M_COMMIT_RECURSION_GUARD || !ARGHTOS_R5S_PRESEEDED_CRASH || \
+     !ARGHTOS_R5N_PROVEN_DISPATCH || !ARGHTOS_STATIC_CONFIG)
+#error "R6z trusted crash payload requires the preseeded generated R6m profile"
+#endif
+
 #if ARGHTOS_R6Y_PACKED_MISSED_ADD && \
     (!ARGHTOS_R6V_ALWAYS_DISPATCH_TICK || !ARGHTOS_COMPACT_RUNTIME)
 #error "R6y packed missed add requires the compact trusted R6v profile"
