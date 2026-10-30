@@ -141,7 +141,8 @@ physical-board harness
   R6an rejected neutral        = 1320 B
   R6ao accepted                = 1319 B
   R6ap accepted current ctl    = 1318 B
-  phase: R6aq timer-entry task0-due specialization (wired)
+  R6aq rejected regressive     = 1358 B
+  phase: R6ar nibble-packed periodic deltas
 ```
 
 Correctness repair chain:
@@ -266,26 +267,56 @@ arghtos_timer_interrupt:
   both       184 B
 ```
 
-R6aq targets task 0 inside the timer-owned time engine. The accepted contracts
-already establish:
+R6aq is preserved in
+[implementation/R6aq-task0-always-due.md](implementation/R6aq-task0-always-due.md).
 
-* the generated task 0 period is exactly one tick;
-* task 0 is the timer-dominant deadline source;
-* `process_time_locked()` is called only from the scheduler timer entry;
-* an armed timer is serviced at or after its absolute deadline.
+R6aq authoritative CI:
 
-Therefore task 0 is due on every admitted time-engine entry. R6aq will process
-task 0 as an unconditional due release, then scan periodic IDs 1..P-1 with the
-ordinary due predicate.
+```text
+run:        41015067566
+conclusion: success
+R6ap:      1318 B
+R6aq:      1358 B
+delta:      +40 B
+
+arghtos_timer_interrupt:
+  both       184 B
+
+R6aq additionally outlined:
+  missed_release_add            40 B
+```
+
+R6ar targets the generated period table instead of timer control flow. The
+accepted min profile consumes periods only in the sequential periodic time
+scan. The generator therefore stores successive nondecreasing period deltas in
+4-bit nibbles.
+
+For the canonical 23-periodic fixture:
+
+```text
+R6ap: 22 period bytes
+R6ar: 22 deltas packed into 11 bytes
+```
+
+Task 0 remains implicit period 1. The scan accumulates one decoded delta before
+processing each later periodic ID. Generator proof requires every adjacent
+period delta to fit in 0..15; zero supports equal-period peers.
+
+Owning refinements:
+
+* [architecture/contracts/C0-static-task-configuration.md](architecture/contracts/C0-static-task-configuration.md)
+* [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
+* [proof/P0-static-configuration-validity.md](proof/P0-static-configuration-validity.md)
+* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
 
 ## Exact next action
 
-1. PR #5 now builds host R6aq and physical R6ap/R6aq in the same revision.
-2. Require the late-timer regression to prove task0 next_time=now+1 and exactly
-   nine missed releases at now=10 from the dormant state.
-3. Require generated-frame audits, async-return-fatal repair, sanitizer,
-   portability, historical controls, and physical controls green.
-4. Compare complete resident bytes and `arghtos_timer_interrupt`.
-5. Accept R6aq only for a strict physical reduction below 1318 B.
-6. If neutral/regressive, preserve the result and keep R6ap as control.
-7. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI build host R6ar and physical R6ap/R6ar in the same revision.
+2. Require generated-frame audits, async-return-fatal repair, host semantics,
+   sanitizer, portability, historical controls, and physical controls green.
+3. Compare complete resident bytes, packed schedule size, and
+   `arghtos_timer_interrupt`.
+4. Accept R6ar only for a strict physical reduction below 1318 B.
+5. If decoder code outweighs the 11-byte data saving, preserve the result and
+   keep R6ap as control.
+6. Do not merge PR #5 without explicit user permission.
