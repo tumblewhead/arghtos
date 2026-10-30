@@ -109,6 +109,15 @@ uint16_t arghtos_static_schedule16[ARGHTOS_MAX_TASKS] = {
 #endif
 #if ARGHTOS_R5I_SCHEDULE8
 __attribute__((section(".arghtos_cfg")))
+#if ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8
+uint8_t arghtos_static_schedule8[ARGHTOS_R5P_PERIODIC_COUNT] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
+    9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u, 20u, 21u, 22u, 23u
+};
+_Static_assert(sizeof(arghtos_static_schedule8) == ARGHTOS_R5P_PERIODIC_COUNT,
+               "R6ao physical schedule8 must contain only periodic entries");
+#else
 uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
     1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u,
     9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
@@ -119,6 +128,7 @@ uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
     ARGHTOS_R5I_ASYNC_BASE | 3u
 #endif
 };
+#endif
 #endif
 #if ARGHTOS_SPLIT_META
 __attribute__((section(".arghtos_cfg")))
