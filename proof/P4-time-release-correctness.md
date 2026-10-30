@@ -307,3 +307,25 @@ service. Its lateness is still bounded by C3's timer-delivery contract.
 Once that interrupt executes, the unchanged arithmetic catch-up computes the
 same ideal next-release epoch from the sampled timer-service time. No period is
 skipped and no drift is introduced.
+
+# R6al direct-arm equivalence
+
+R6t already proves that the post-processing deadline of generated period-1 task
+0 is exactly:
+
+~~~text
+next_time[0] = now + 1 modulo 2^32
+~~~
+
+R6al substitutes the right-hand side directly into the final timer-arm call.
+
+Thus:
+
+~~~text
+arm(next_time[0]) == arm(now + 1)
+~~~
+
+for every admitted execution.
+
+The substitution changes neither due testing nor the stored ideal release
+epoch. Arithmetic catch-up and wrap-safe time behavior are unchanged.
