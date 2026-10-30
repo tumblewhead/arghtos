@@ -130,7 +130,7 @@ physical-board harness
   R6ac accepted                = 1372 B
   R6ad accepted                = 1360 B
   R6ae accepted current control= 1348 B
-  phase: R6af unconditional crash task-id materialization
+  phase: R6af unconditional crash task-id materialization (wired)
 ```
 
 R6ae is preserved in
@@ -167,9 +167,11 @@ Writing INVALID when no task is current is idempotent.
 
 ## Exact next action
 
-1. Add the R6af crash-attribution contract/proof refinement.
-2. Add a host regression for both INVALID and valid-current task attribution.
-3. Build physical R6ae and R6af in the same revision.
-4. Compare complete resident bytes and `arghtos_fatal`.
-5. Accept R6af only for a strict physical reduction below 1348 B.
+1. PR #5 now builds physical R6ae and R6af in the same revision.
+2. Require host regressions for both INVALID and valid-current crash task
+   attribution, plus recursive-fatal, sanitizer, portability, historical
+   reproduction, and physical controls green.
+3. Compare complete resident bytes and `arghtos_fatal`.
+4. Accept R6af only for a strict physical reduction below 1348 B.
+5. If neutral/regressive, preserve the result and keep R6ae as control.
 6. Do not merge PR #5 without explicit user permission.
