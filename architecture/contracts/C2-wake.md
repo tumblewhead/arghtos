@@ -196,3 +196,29 @@ that internal result as a boolean dispatch decision.
 
 The generic/debug profile continues to return BAD_TASK_ID, BAD_TASK_CLASS,
 BAD_STATE, and BAD_CONTEXT where applicable.
+
+# R6ab singleton generated wake target
+
+The trusted generated minimum profile may specialize wake target selection when
+the generated task set contains exactly one asynchronous task and generated
+class ordering places it immediately after the periodic prefix.
+
+Define:
+
+```text
+WAKE_ID = ARGHTOS_R5P_PERIODIC_COUNT
+```
+
+Under the R5ab/R5p configuration:
+
+* `WAKE_ID` is the only asynchronous task ID;
+* every supported task-context WAKE service names `WAKE_ID`;
+* every supported `arghtos_wake_from_interrupt()` call names `WAKE_ID`.
+
+Therefore the minimum-profile wake state machine may use `WAKE_ID` directly
+and omit runtime propagation of the target ID through the C helper and SVC
+argument path.
+
+Passing any other wake target is outside this trusted generated profile.
+Generic/debug and multi-async profiles retain the runtime target ID and normal
+validation semantics.
