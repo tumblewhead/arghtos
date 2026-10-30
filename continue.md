@@ -139,8 +139,9 @@ physical-board harness
   R6al rejected neutral        = 1328 B
   R6am accepted                = 1320 B
   R6an rejected neutral        = 1320 B
-  R6ao accepted current ctl    = 1319 B
-  phase: R6ap omit task0 unit-period schedule byte
+  R6ao accepted                = 1319 B
+  R6ap accepted current ctl    = 1318 B
+  phase: R6aq timer-entry task0-due specialization
 ```
 
 Correctness repair chain:
@@ -245,34 +246,46 @@ arghtos_static_schedule8:
   R6ao        23 B
 ```
 
-R6ap removes the remaining redundant schedule byte for generated task 0.
-R6t already proves that task 0 has period exactly one scheduler tick.
+R6ap is preserved in
+[implementation/R6ap-omit-unit-period-byte.md](implementation/R6ap-omit-unit-period-byte.md).
 
-The target schedule table therefore stores only periods for periodic IDs 1..22,
-for a physical length of 22 bytes. The time engine reconstructs:
+R6ap authoritative CI:
 
 ```text
-id == 0  -> period 1
-id > 0   -> schedule8[id - 1]
+run:        41014470378
+conclusion: success
+R6ao:      1319 B
+R6ap:      1318 B
+delta:       -1 B
+
+arghtos_static_schedule8:
+  R6ao        23 B
+  R6ap        22 B
+
+arghtos_timer_interrupt:
+  both       184 B
 ```
 
-The host proof fixture has only one periodic task, so it uses one dummy C byte
-because ISO C has no zero-length object; the R6ap kernel path must never read
-that dummy entry. The physical target carries the actual 22-byte object.
+R6aq targets task 0 inside the timer-owned time engine. The accepted contracts
+already establish:
 
-Owning refinements:
+* the generated task 0 period is exactly one tick;
+* task 0 is the timer-dominant deadline source;
+* `process_time_locked()` is called only from the scheduler timer entry;
+* an armed timer is serviced at or after its absolute deadline.
 
-* [architecture/contracts/C0-static-task-configuration.md](architecture/contracts/C0-static-task-configuration.md)
-* [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
-* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
+Therefore task 0 is due on every admitted time-engine entry. R6aq will process
+task 0 as an unconditional due release, then scan periodic IDs 1..P-1 with the
+ordinary due predicate.
 
 ## Exact next action
 
-1. Let PR #5 CI build host R6ap and physical R6ao/R6ap in the same revision.
-2. Require generated-frame audits, async-return-fatal repair, host semantics,
-   sanitizer, portability, historical controls, and physical controls green.
-3. Compare complete resident bytes, `arghtos_static_schedule8`, and
-   `arghtos_timer_interrupt`.
-4. Accept R6ap only for a strict physical reduction below 1319 B.
-5. If neutral/regressive, preserve the result and keep R6ao as control.
-6. Do not merge PR #5 without explicit user permission.
+1. Add the R6aq timer-entry/task0-due contract and P4 proof refinement.
+2. Add a profile gate requiring R6ag timer ownership, R6t unit-period dominance,
+   R6ap schedule reconstruction, and trusted timer-entry semantics.
+3. Specialize task 0 catch-up before the remaining periodic scan.
+4. Add host regression with deliberately late timer service to verify task0
+   catch-up, missed-release count, and next_time = now+1.
+5. Build physical R6ap and R6aq side by side.
+6. Accept R6aq only for a strict physical reduction below 1318 B.
+7. Do not merge PR #5 without explicit user permission.
