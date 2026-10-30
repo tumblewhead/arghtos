@@ -470,3 +470,22 @@ accepted minimum profile.
 
 Due testing, arithmetic delayed-release catch-up, missed-release accounting,
 and timer ownership are otherwise unchanged.
+
+# R6as branchless two-bit period decoding
+
+R6as retains R6ar's sequential accumulated-period model but decodes four
+generated deltas per byte.
+
+For delta index k:
+
+~~~text
+packed = table[k >> 2]
+shift  = (k & 3) * 2
+delta  = (packed >> shift) & 3
+period += delta
+~~~
+
+The decoder is bounded, branchless with respect to nibble position, and runs
+once for each periodic ID after task 0.
+
+All scheduler timing semantics remain those proved for R6ar.
