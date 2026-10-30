@@ -19,7 +19,9 @@
 extern arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS];
 #define ARGHTOS_TASK_ENTRY(id)    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[(id)])
 #if ARGHTOS_R5I_SCHEDULE8
-#if ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
+#if ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
+extern uint8_t arghtos_static_schedule8[];
+#elif ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
 extern uint8_t arghtos_static_schedule8[];
 #elif ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8
 extern uint8_t arghtos_static_schedule8[ARGHTOS_R5P_PERIODIC_COUNT];
@@ -32,7 +34,10 @@ extern uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_
 
 #if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT == 0u
 #if ARGHTOS_R5Z_RAW_CLASS_SCHEDULE
-#if ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
+#if ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
+#define ARGHTOS_TASK_PERIOD(id) \
+    arghtos_r6ar_random_period_lookup_is_not_available((id))
+#elif ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
 #define ARGHTOS_TASK_PERIOD(id) \
     (((id) == 0u) ? 1u : (uint32_t)arghtos_static_schedule8[(id) - 1u])
 #else
@@ -465,6 +470,9 @@ static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
     bool changed = false;
 #endif
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+#if ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
+    uint32_t r6ar_period = 1u;
+#endif
     uint8_t id;
 #elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
     uint32_t best_delta = UINT32_MAX;
@@ -504,7 +512,19 @@ static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
 #else
     for (id = 0u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
 #endif
+#if ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
+        if (id != 0u) {
+            const uint8_t delta_index = (uint8_t)(id - 1u);
+            const uint8_t packed =
+                arghtos_static_schedule8[delta_index >> 1u];
+            const uint8_t delta = (uint8_t)(
+                ((delta_index & 1u) != 0u) ? (packed >> 4u) : (packed & 0x0Fu));
+            r6ar_period += delta;
+        }
+        const uint32_t period = r6ar_period;
+#else
         const uint32_t period = ARGHTOS_TASK_PERIOD(id);
+#endif
         arghtos_task_control_t *c = &controls[id];
 
         if (time_due(now, ARGHTOS_CTRL_NEXT(c))) {
