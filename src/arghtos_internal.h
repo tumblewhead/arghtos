@@ -254,6 +254,15 @@
 #define ARGHTOS_R6X_BOUNDED_MISSED_LOOP 0
 #endif
 
+#ifndef ARGHTOS_R6Y_PACKED_MISSED_ADD
+#define ARGHTOS_R6Y_PACKED_MISSED_ADD 0
+#endif
+
+#if ARGHTOS_R6Y_PACKED_MISSED_ADD && \
+    (!ARGHTOS_R6V_ALWAYS_DISPATCH_TICK || !ARGHTOS_COMPACT_RUNTIME)
+#error "R6y packed missed add requires the compact trusted R6v profile"
+#endif
+
 #if ARGHTOS_R6X_BOUNDED_MISSED_LOOP && \
     (!ARGHTOS_R6V_ALWAYS_DISPATCH_TICK || !ARGHTOS_COMPACT_RUNTIME)
 #error "R6x bounded missed loop requires the compact trusted R6v profile"
