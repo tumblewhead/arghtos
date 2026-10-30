@@ -375,3 +375,46 @@ as the ordinary conditional path.
 No scheduler state is mutated and no P1 transition changes. The refinement
 only changes the branch structure used to serialize already-proved current-task
 state into C5 diagnostics.
+
+# R6ah default-dispatch service proof
+
+Under R6n every admitted generated service returns \`ARGHTOS_OK\`. Under the
+accepted R6ad/R6ae/R6ag refinements, dispatch behavior partitions the legal
+service outcomes as follows:
+
+~~~text
+YIELD                         -> dispatch
+WAIT, wake_pending = 0        -> WAITING, dispatch
+WAIT, wake_pending = 1        -> clear latch, no dispatch
+SLEEP_UNTIL, future deadline  -> SLEEPING, dispatch
+SLEEP_UNTIL, due deadline     -> no state change, no dispatch
+WAKE                          -> dispatch
+TASK_RETURN                   -> DORMANT, dispatch
+~~~
+
+R6ah changes the implementation from:
+
+~~~text
+dispatch = false
+...
+set dispatch = true on dispatching outcomes
+...
+if dispatch: request_dispatch
+return OK
+~~~
+
+to:
+
+~~~text
+return OK immediately on the two no-dispatch outcomes
+...
+request_dispatch
+return OK
+~~~
+
+Each row of the partition therefore has identical state/latch effects,
+identical dispatch-request cardinality, and the same public result.
+
+R6e serialization guarantees the early returns do not bypass a required local
+critical-section exit. No P1 state transition is added, removed, or reordered
+relative to an application-visible boundary.
