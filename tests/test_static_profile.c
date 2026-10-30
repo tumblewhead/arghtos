@@ -129,7 +129,11 @@ uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT] 
     ARGHTOS_STATIC_PERIOD(10u)
 };
 #else
-#if ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
+#if ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
+_Static_assert(ARGHTOS_R5P_PERIODIC_COUNT == 1u,
+               "R6ar host fixture expects no stored period deltas");
+uint8_t arghtos_static_schedule8[1] = { 0u };
+#elif ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
 _Static_assert(ARGHTOS_R5P_PERIODIC_COUNT == 1u,
                "R6ap host fixture expects one periodic task");
 uint8_t arghtos_static_schedule8[1] = { 0u };
