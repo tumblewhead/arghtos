@@ -249,3 +249,51 @@ The target frame audit SHALL verify:
 
 Thus the new initial frame remains structurally compatible with ordinary
 PendSV save/restore.
+
+# R6am fixed first-dispatch MSP reclamation proof
+
+Let \`S\` be MSP at entry to the selected \`arghtos_port_start()\`.
+
+The selected call is an external Cortex-M23 C ABI boundary, so:
+
+~~~text
+S mod 8 = 0
+~~~
+
+R6am additionally requires machine-checked compiler evidence that
+\`arghtos_port_start()\` has zero static stack usage and source inspection shows
+no MSP-changing inline assembly before the pending scheduler exception becomes
+eligible. Hence MSP is still \`S\` when the first Thread-mode exception stacks.
+
+A Cortex-M23 basic frame occupies 32 bytes. Because \`S\` is already 8-byte
+aligned:
+
+~~~text
+(S - 32) mod 8 = 0
+~~~
+
+so no alignment padding word is required and xPSR[9] is clear.
+
+If a higher-priority handler executes before PendSV, it uses/restores MSP in
+the ordinary nested-exception mechanism. If PendSV is tail-chained, the same
+original Thread hardware frame remains the frame to be reclaimed. Therefore
+the first-dispatch reclaim remains exactly 32 bytes.
+
+Replacing:
+
+~~~text
+read xPSR[9]
+reclaim 32 or 36
+~~~
+
+with:
+
+~~~text
+reclaim 32
+~~~
+
+restores the same pre-exception startup MSP on every admitted R6am execution.
+
+R6am does not change task PSP frames, R4-R11 save/restore, EXC_RETURN, idle
+masking, or the ArghtOS-only MSP accounting. The generic profile retains
+alignment-padding support.
