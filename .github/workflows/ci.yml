@@ -214,8 +214,11 @@ jobs:
       - name: Cortex-M23 R6ai generated-trampoline-class physical correctness control
         run: make m23-footprint-r6ai
 
-      - name: Cortex-M23 R6aj direct-async-prebuilt-entry physical challenger
+      - name: Cortex-M23 R6aj direct-async-prebuilt-entry physical control
         run: make m23-footprint-r6aj
+
+      - name: Cortex-M23 R6ak R4 assembly-trampoline physical challenger
+        run: make m23-footprint-r6ak
 
       - name: Enforce R5ag 1536-byte resident target
         run: |
@@ -437,9 +440,23 @@ jobs:
           )
           PY
 
+      - name: Evaluate R6ak physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6aj.json", "r", encoding="utf-8") as f:
+              aj = json.load(f)
+          with open("build/footprint-r6ak.json", "r", encoding="utf-8") as f:
+              ak = json.load(f)
+          ajv = aj["arghtos_resident_total"]
+          akv = ak["arghtos_resident_total"]
+          assert akv <= 1536, f"physical R6ak misses target: {akv} B > 1536 B"
+          print(f"physical R6aj semantic control: {ajv} B; R6ak: {akv} B; delta: {akv-ajv} B")
+          PY
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v r6z r6aa r6ab r6ac r6ad r6ae r6ag r6ai r6aj; do
+          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v r6z r6aa r6ab r6ac r6ad r6ae r6ag r6ai r6aj r6ak; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -484,6 +501,7 @@ jobs:
             build/footprint-r6ag.json
             build/footprint-r6ai.json
             build/footprint-r6aj.json
+            build/footprint-r6ak.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5ag.map
@@ -516,6 +534,7 @@ jobs:
             build/m23-r6ag.map
             build/m23-r6ai.map
             build/m23-r6aj.map
+            build/m23-r6ak.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5ag-symbols.txt
@@ -548,6 +567,7 @@ jobs:
             build/m23-r6ag-symbols.txt
             build/m23-r6ai-symbols.txt
             build/m23-r6aj-symbols.txt
+            build/m23-r6ak-symbols.txt
             build/m23-r4y.elf
             build/m23-r5ag.elf
             build/m23-r6b.elf
@@ -579,4 +599,5 @@ jobs:
             build/m23-r6ag.elf
             build/m23-r6ai.elf
             build/m23-r6aj.elf
+            build/m23-r6ak.elf
             build/*.su
