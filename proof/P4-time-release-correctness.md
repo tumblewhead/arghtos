@@ -283,3 +283,27 @@ if async[P] is SLEEPING and due:
 Thus direct execution at ID `P` and a one-iteration loop over `[P,P+1)`
 have identical state effects. R6t's timer deadline is supplied independently by
 period-1 task 0, so no timer-selection dependency is introduced.
+
+# R6ag timer-owned sleep-release processing
+
+For a successful SLEEP_UNTIL request at sampled time \`now\`, C1 first proves:
+
+~~~text
+deadline is strictly future
+~~~
+
+R6t proves that the already-armed unit-period timer target is no later than
+\`now + 1\`, hence no later than the requested sleep deadline.
+
+Therefore removing the SVC-side time-engine call cannot make the async sleep
+expire late because the timer interrupt will occur at or before its deadline
+subject to the same C3 jitter bound.
+
+Consider a periodic release that is already ideally due at the SVC sample but
+whose timer service has not yet executed. The ordinary path may process it
+opportunistically in SVC. R6ag instead waits for the already-required timer
+service. Its lateness is still bounded by C3's timer-delivery contract.
+
+Once that interrupt executes, the unchanged arithmetic catch-up computes the
+same ideal next-release epoch from the sampled timer-service time. No period is
+skipped and no drift is introduced.
