@@ -167,6 +167,9 @@ arghtos_crash_record_t arghtos_static_crash_record = {
 #if ARGHTOS_R5W_TRUSTED_CRASH_PORT || ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
     ,.flags = ARGHTOS_CRASH_F_PORT_STATE_VALID
 #endif
+#if ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
+    ,.port_format = (uint16_t)ARGHTOS_R6AC_PORT_FORMAT_VALUE
+#endif
 };
 #else
 arghtos_crash_record_t arghtos_static_crash_record;
@@ -225,6 +228,10 @@ static void reset_all(void)
     arghtos_static_crash_record.task_id = ARGHTOS_TASK_ID_INVALID;
 #if ARGHTOS_R5W_TRUSTED_CRASH_PORT || ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
     arghtos_static_crash_record.flags = ARGHTOS_CRASH_F_PORT_STATE_VALID;
+#endif
+#if ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
+    arghtos_static_crash_record.port_format =
+        (uint16_t)ARGHTOS_R6AC_PORT_FORMAT_VALUE;
 #endif
 #else
     memset(&arghtos_static_crash_record, 0, sizeof(arghtos_static_crash_record));
@@ -350,6 +357,10 @@ static void test_static_crash_record_symbol_is_used(void)
 #else
     assert(arghtos_static_crash_record.flags == 0u);
 #endif
+#if ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
+    assert(arghtos_static_crash_record.port_format ==
+           (uint16_t)ARGHTOS_R6AC_PORT_FORMAT_VALUE);
+#endif
     assert(arghtos_static_crash_record.port_words == 0u);
     assert(arghtos_static_crash_record.commit_magic == 0u);
 #endif
@@ -368,6 +379,10 @@ static void test_static_crash_record_symbol_is_used(void)
            ARGHTOS_FAULT_KERNEL_INVARIANT);
     assert(arghtos_static_crash_record.commit_magic ==
            ARGHTOS_CRASH_COMMIT_MAGIC);
+#if ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
+    assert(arghtos_static_crash_record.port_format ==
+           (uint16_t)ARGHTOS_R6AC_PORT_FORMAT_VALUE);
+#endif
 #if ARGHTOS_R5W_TRUSTED_CRASH_PORT || ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
     assert(arghtos_static_crash_record.port_words >= 1u);
     assert(arghtos_static_crash_record.port_words <= 10u);
