@@ -656,7 +656,9 @@ static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
 _Static_assert(ARGHTOS_ERR_BAD_CONFIG <= ARGHTOS_WAKE_RESULT_MASK,
                "R5c wake encoding must cover all public result codes");
 
-#if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+static void wake_locked_compact(void)
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
 #if ARGHTOS_R6AB_SINGLE_WAKE_TARGET
 static bool wake_locked_compact(void)
 #else
@@ -679,7 +681,9 @@ static uint8_t wake_locked_compact(arghtos_task_id_t id)
         ARGHTOS_CTRL_AGE_ID(id) = 0u;
 #endif
         ARGHTOS_CTRL_CLEAR_WAKE_ID(id);
-#if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+        return;
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
         return true;
 #else
         return ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
@@ -689,7 +693,9 @@ static uint8_t wake_locked_compact(arghtos_task_id_t id)
     if ((state == ARGHTOS_TASK_RUNNING) || (state == ARGHTOS_TASK_SLEEPING)) {
         ARGHTOS_CTRL_SET_WAKE_ID(id);
     }
-#if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+    return;
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
     return false;
 #else
     return ARGHTOS_OK;
@@ -1076,7 +1082,7 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 #if !ARGHTOS_R6D_SERIAL_HANDLER_MUTATION
     arghtos_irq_key_t key;
 #endif
-#if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6N_OK_ONLY_SERVICES && !ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
     bool dispatch;
 #elif ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     uint8_t wake_result;
@@ -1102,7 +1108,10 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     }
 #endif
 
-#if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+    (void)task_id;
+    wake_locked_compact();
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
 #if ARGHTOS_R6AB_SINGLE_WAKE_TARGET
     (void)task_id;
     dispatch = wake_locked_compact();
@@ -1118,7 +1127,10 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
     arghtos_port_critical_exit(key);
 #endif
 
-#if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+    arghtos_port_request_dispatch();
+    return ARGHTOS_OK;
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
     if (dispatch) {
         arghtos_port_request_dispatch();
     }
@@ -1252,7 +1264,10 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
         break;
 
     case ARGHTOS_SERVICE_WAKE:
-#if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+        wake_locked_compact();
+        dispatch = true;
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
 #if ARGHTOS_R6AB_SINGLE_WAKE_TARGET
         dispatch = wake_locked_compact();
 #else
