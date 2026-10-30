@@ -611,3 +611,26 @@ no runtime allocation, device discovery, or fallible resource acquisition.
 
 This is a selected-port specialization only. The generic port ABI continues to
 permit `ARGHTOS_ERR_BAD_CONFIG` for other integrations.
+
+# R6z selected crash-payload range
+
+The trusted generated Cortex-M23 minimum profile may strengthen the crash-fill
+contract for the selected reference port:
+
+```text
+1 <= port_words <= 10
+```
+
+The current Cortex-M23 implementation emits exactly:
+
+* 2 words when no fault context is supplied;
+* 3 words when a fault context exists without a basic frame;
+* 10 words when a basic frame is present.
+
+The host verification port emits exactly 1 word.
+
+Therefore, for these selected ports, a successful
+`arghtos_port_crash_fill()` invocation never produces zero words and never
+exceeds the ten-word public crash-record payload.
+
+Generic ports retain the ordinary defensive range checks.
