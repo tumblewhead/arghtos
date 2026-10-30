@@ -384,3 +384,28 @@ materializes the release, the dispatcher can only select already-READY periodic
 work or idle.
 
 Generic profiles retain SVC-side time processing.
+
+# R6al direct unit-tick timer arm
+
+R6al consumes the existing R6t unit-period proof after the time engine has
+processed all due transitions.
+
+R6t establishes:
+
+~~~text
+next_time[0] = now + 1
+~~~
+
+for generated task 0, whose period is exactly one scheduler tick.
+
+Therefore the trusted unit-period profile may call:
+
+~~~c
+arghtos_port_timer_arm(now + 1u);
+~~~
+
+instead of reloading \`next_time[0]\` and arming that value.
+
+The absolute 32-bit deadline bit pattern is identical, including across
+scheduler-time wrap. No release, catch-up, sleep, or timer-jitter semantics
+change.
