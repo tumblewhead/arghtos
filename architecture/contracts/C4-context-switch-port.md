@@ -658,3 +658,20 @@ field on each capture.
 
 Generic ports and profiles that do not prove one fixed format retain the
 runtime write.
+
+# R6ae YIELD SVC-to-PendSV ownership
+
+For the trusted Cortex-M23 service path, SVC calls
+`arghtos_kernel_service()`. YIELD pends PendSV before SVC exception return.
+
+PendSV is less urgent than SVC but remains pending at the exception-return
+boundary. Thread mode cannot resume through the YIELD call before the pending
+PendSV scheduling exception executes.
+
+Therefore R6ae may leave the current task physically RUNNING inside the SVC
+service body and let `arghtos_kernel_dispatch(outgoing_context)` perform its
+ordinary RUNNING -> READY outgoing-task transition.
+
+No application instruction executes between the logical YIELD operation and
+that transition. Generic ports without this exception-order guarantee retain
+the service-side transition.
