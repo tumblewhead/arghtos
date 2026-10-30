@@ -237,3 +237,27 @@ work <= periodic_scan_work + 15 * periodic_task_count + fixed_async_work
 The bound is independent of the number of releases actually missed. R6x
 therefore preserves P7's prohibition on catch-up work that grows without bound
 with delayed-release history.
+
+# R6y packed missed-release arithmetic refinement
+
+R6y replaces the compact room/subtraction saturator with one bounded arithmetic
+expression and one clamp branch.
+
+For each due periodic task:
+
+```text
+total = old_missed + count
+new   = min(total, 15)
+```
+
+No loop or history-dependent work is introduced. The work remains constant per
+due task.
+
+The addition is overflow-safe under C3/P4 timing bounds because
+`count <= 0x80000000` and `old_missed <= 15`, hence:
+
+```text
+total <= 0x8000000F < UINT32_MAX
+```
+
+Therefore R6y preserves P7 bounded work and C5 saturation semantics exactly.
