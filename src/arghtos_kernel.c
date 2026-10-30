@@ -1742,12 +1742,16 @@ ARGHTOS_NORETURN void arghtos_fatal(
     if (task_id_valid(kernel.current_task)) {
 #endif
         r->task_id = kernel.current_task;
+#if ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
+        r->flags |= ARGHTOS_CRASH_F_TASK_VALID;
+#else
         r->flags = ARGHTOS_CRASH_F_TASK_VALID;
+#endif
     }
 #endif
 
     arghtos_port_crash_fill(r, port_fault_context);
-#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT
+#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT && !ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
     if (r->port_words > 10u) {
         r->port_words = 10u;
     }
