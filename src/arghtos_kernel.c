@@ -472,6 +472,9 @@ static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
 #if ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
     uint32_t r6ar_period = 1u;
+#if ARGHTOS_R6AT_CACHED_NIBBLE_PERIODS
+    uint8_t r6at_packed = 0u;
+#endif
 #endif
     uint8_t id;
 #elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
@@ -521,6 +524,14 @@ static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
             const uint8_t shift = (uint8_t)((delta_index & 3u) << 1u);
             const uint8_t delta =
                 (uint8_t)((packed >> shift) & 0x03u);
+#elif ARGHTOS_R6AT_CACHED_NIBBLE_PERIODS
+            uint8_t delta;
+            if ((id & 1u) != 0u) {
+                r6at_packed = arghtos_static_schedule8[id >> 1u];
+                delta = (uint8_t)(r6at_packed & 0x0Fu);
+            } else {
+                delta = (uint8_t)(r6at_packed >> 4u);
+            }
 #else
             const uint8_t packed =
                 arghtos_static_schedule8[delta_index >> 1u];
