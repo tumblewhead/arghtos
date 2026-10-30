@@ -210,3 +210,15 @@ meet the 1536-byte complete resident-footprint soft target.
 The 2-byte margin is real but small. Any cleanup, linker-script change,
 toolchain update, or source reorganization must re-link R5ag and re-check the
 physical footprint before claiming the target remains met.
+
+# Post-freeze semantic erratum
+
+R6ai later discovered that R5z raw schedule encoding made the shared task-start
+trampoline misclassify the raw async-priority byte as a nonzero period.
+
+Accordingly, the historical R5ag 1534 B result remains authoritative footprint
+evidence, but the merged minimum profile does **not** by itself establish the
+claimed async-return-fatal behavior. A generated-context repair is required
+before this size lineage can again be described as preserving that invariant.
+
+See [R5z raw schedule erratum](R5z-raw-class-schedule.md).
