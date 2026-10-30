@@ -129,6 +129,13 @@ uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT] 
     ARGHTOS_STATIC_PERIOD(10u)
 };
 #else
+#if ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8
+uint8_t arghtos_static_schedule8[ARGHTOS_R5P_PERIODIC_COUNT] = {
+    ARGHTOS_TEST_PERIOD
+};
+_Static_assert(sizeof(arghtos_static_schedule8) == ARGHTOS_R5P_PERIODIC_COUNT,
+               "R6ao host schedule8 must contain only periodic entries");
+#else
 uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
     ARGHTOS_TEST_PERIOD,
 #if ARGHTOS_R5Z_RAW_CLASS_SCHEDULE
@@ -137,6 +144,7 @@ uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS] = {
     ARGHTOS_R5I_ASYNC_BASE | 3u
 #endif
 };
+#endif
 #endif
 #endif
 #if ARGHTOS_SPLIT_META
