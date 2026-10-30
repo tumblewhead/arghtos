@@ -426,3 +426,18 @@ because the generator proves d_i <= 3 and stores that exact two-bit value.
 The same R6ar induction therefore gives reconstructed period R_i = T_i for all
 periodic IDs. Catch-up, release phase, missed-release arithmetic, and timer
 behavior are unchanged.
+
+# R6at cached nibble decoder equivalence
+
+R6at consumes the same R6ar table bytes in the same delta order.
+
+For each byte b:
+
+~~~text
+first delta  = b & 0x0f
+second delta = b >> 4
+~~~
+
+Caching b across the two consecutive periodic IDs changes neither decoded
+values nor their order. Therefore the R6ar reconstructed-period induction and
+all downstream release/catch-up proofs remain unchanged.
