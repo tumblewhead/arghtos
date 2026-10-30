@@ -297,3 +297,17 @@ restores the same pre-exception startup MSP on every admitted R6am execution.
 R6am does not change task PSP frames, R4-R11 save/restore, EXC_RETURN, idle
 masking, or the ArghtOS-only MSP accounting. The generic profile retains
 alignment-padding support.
+
+## R6am final evidence form
+
+An initial experiment attempted to consume Clang \`-fstack-usage\` output for
+the LTO port object. Clang emitted no \`.su\` file for that LTO object, so that
+route provided no evidence and the build failed closed.
+
+The final challenger instead replaces only the selected
+\`arghtos_port_start()\` with assembly that has no SP/MSP write at all.
+Consequently the proof premise "startup routine preserves entry MSP" is
+established from the actual linked target implementation rather than inferred
+from unavailable compiler metadata.
+
+The generic C startup path remains unchanged.
