@@ -1887,7 +1887,11 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
 #endif
 #endif
 
+#if ARGHTOS_R6AI_GENERATED_TRAMPOLINE_CLASS
+    if (task_is_periodic(id)) {
+#else
     if (ARGHTOS_TASK_PERIOD(id) != 0u) {
+#endif
         for (;;) {
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
             entry();
