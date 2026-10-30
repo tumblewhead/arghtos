@@ -16,6 +16,10 @@
 #define ARGHTOS_R5X_FORCE_CRASH_INLINE 0
 #endif
 
+#ifndef ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
+#define ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT 0
+#endif
+
 #if ARGHTOS_R5X_FORCE_CRASH_INLINE
 #define ARGHTOS_R5X_ALWAYS_INLINE __attribute__((always_inline))
 #else
@@ -262,7 +266,9 @@ ARGHTOS_R5X_ALWAYS_INLINE void arghtos_port_crash_fill(
     const arghtos_m23_fault_context_t *ctx =
         (const arghtos_m23_fault_context_t *)port_fault_context;
 
+#if !ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
     record->port_format = ARGHTOS_M23_CRASH_FORMAT;
+#endif
 
     if (ctx == NULL) {
         record->port_words = 2u;
