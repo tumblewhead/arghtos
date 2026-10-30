@@ -761,3 +761,23 @@ the observed frame base without loading or testing stacked xPSR.
 
 Generic/debug profiles retain xPSR[9] decoding and support both 32-byte and
 36-byte startup-frame occupancy.
+
+## R6am final construction
+
+The measured R6am challenger satisfies the zero-stack premise structurally
+rather than through compiler stack-usage metadata.
+
+For R6am, the selected C definition of \`arghtos_port_start()\` is omitted and
+the Cortex-M23 assembly port provides the symbol directly. Its startup sequence:
+
+~~~text
+pend PendSV
+enable interrupts
+ISB
+WFI loop
+~~~
+
+contains no instruction that writes SP or MSP.
+
+The public C-to-assembly call boundary supplies the 8-byte-aligned entry MSP.
+Thus the final R6am profile does not depend on an LTO \`.su\` artifact.
