@@ -222,3 +222,27 @@ argument path.
 Passing any other wake target is outside this trusted generated profile.
 Generic/debug and multi-async profiles retain the runtime target ID and normal
 validation semantics.
+
+# R6ad unconditional generated wake dispatch
+
+The trusted generated single-async minimum profile may request one scheduler
+dispatch after every accepted wake, even when the wake does not change target
+eligibility.
+
+The target-state and latch semantics remain exactly:
+
+* DORMANT -> READY;
+* WAITING -> READY;
+* READY unchanged;
+* RUNNING unchanged with `wake_pending=1`;
+* SLEEPING unchanged with `wake_pending=1`.
+
+R6ad changes only dispatch-request policy. DORMANT/WAITING already require a
+dispatch. READY/RUNNING/SLEEPING gain one bounded scheduler reevaluation.
+
+The additional dispatch never makes a task READY and never clears or consumes
+the pending-wake latch. The ordinary selector remains the sole authority for
+which task executes next.
+
+This is an intentional size-for-cycles specialization. Generic/debug profiles
+retain conditional wake dispatch.
