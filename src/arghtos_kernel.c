@@ -1205,7 +1205,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 
     switch (service_id) {
     case ARGHTOS_SERVICE_YIELD:
+#if !ARGHTOS_R6AE_DISPATCH_OWNS_YIELD_READY
         ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_READY);
+#endif
 #if !ARGHTOS_R5R_ELIDE_AGE_RESETS
         if (task_is_async(self)) {
             ARGHTOS_CTRL_AGE_ID(self) = 0u;
