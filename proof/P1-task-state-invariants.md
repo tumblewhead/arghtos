@@ -461,3 +461,27 @@ async-return guard -> fatal(ASYNC_RETURNED)
 The ordinary class-aware trampoline produces the same externally observable
 lifecycle. No scheduler state edge is added or removed, and async return is
 again terminal as required.
+
+# R6ak periodic trampoline equivalence
+
+R6ak changes only how the periodic application entry is invoked and how the
+private TASK_RETURN service is reached.
+
+For each periodic activation:
+
+~~~text
+READY -> RUNNING
+application entry returns
+TASK_RETURN -> DORMANT + dispatch
+later release -> READY -> RUNNING
+resume after SVC
+repeat
+~~~
+
+This is exactly the lifecycle of the accepted C trampoline.
+
+Because R4 contains the generated immutable entry pointer and is preserved by
+the normal task context, no new scheduler state or class decision is introduced.
+
+The async task remains on R6aj's direct-entry/async-fatal path. Therefore the
+R6ak change adds or removes no P1 state transition.
