@@ -430,3 +430,18 @@ id > 0   -> arghtos_static_schedule8[id - 1]
 This reconstructs exactly the same period sequence as the accepted R6ao table.
 All due tests, arithmetic catch-up, missed-release accounting, and timer-arm
 semantics are unchanged.
+
+# R6aq timer-entry task0 due specialization
+
+In the trusted generated profile, all of the following hold together:
+
+* R6t makes task 0 the period-1 timer-dominant task;
+* R6ag makes the scheduler timer interrupt the only caller of the time engine;
+* C3 guarantees an armed timer is serviced at or after its programmed deadline;
+* R6b excludes spurious/disarmed timer entry.
+
+Therefore task 0 is due on every admitted call to the time engine.
+
+R6aq may process task 0 without evaluating \`time_due()\`, set its next ideal
+release directly to \`now + 1\`, and then scan periodic IDs 1..P-1 with the
+ordinary due/catch-up logic.
