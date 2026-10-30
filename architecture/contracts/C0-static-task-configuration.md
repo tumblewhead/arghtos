@@ -427,3 +427,33 @@ R5z schedule byte at runtime.
 
 The generated frame still has exactly the same Cortex-M23 saved-context size,
 alignment, stack ownership, and saved PSP token.
+
+# R6ao periodic-only raw schedule table
+
+The trusted generated R5z/R5ab/R6aj minimum profile may omit the raw schedule
+byte for the sole asynchronous task.
+
+R5p and R5ab establish:
+
+~~~text
+periodic IDs = [0, P)
+async IDs    = {P}
+N            = P + 1
+~~~
+
+R5z stores raw periodic periods in the periodic prefix and raw async priority
+in the async suffix.
+
+In the accepted single-async profile, the sole async priority has no remaining
+runtime consumer:
+
+* residual-capacity selection has only one async candidate and therefore does
+  not compare async priorities;
+* R6aj/R6ak discharge task class in the generated initial context and do not
+  read the async schedule byte;
+* periodic start/time processing accesses schedule values only for IDs in
+  \`[0,P)\`.
+
+The generated schedule8 table may therefore contain exactly P bytes, one period
+for each periodic task. Generic, multi-async, and runtime-classification
+profiles retain the full N-entry schedule table.
