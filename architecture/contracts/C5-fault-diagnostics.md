@@ -486,3 +486,22 @@ task attribution, and final commit marker. Only the invariant format write is
 removed.
 
 The record remains invalid until the R6m commit-last transaction completes.
+
+# R6af unconditional crash task-ID materialization
+
+The trusted generated minimum profile may consume the R5n/P1 invariant that
+`kernel.current_task` is always either:
+
+* `ARGHTOS_TASK_ID_INVALID`; or
+* the ID of one configured task.
+
+Crash capture may therefore always copy `kernel.current_task` into the
+record's `task_id` field.
+
+If the value is INVALID, this materializes the required invalid sentinel and
+TASK_VALID remains clear. If the value is configured, TASK_VALID is set exactly
+as before.
+
+This removes the need to condition the task-ID store itself. The TASK_VALID
+flag remains authoritative for whether consumers may interpret the task ID as a
+live task attribution.
