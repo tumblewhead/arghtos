@@ -237,3 +237,25 @@ without removing any value observed by admitted execution.
 
 Task IDs, task count, control slots, task metadata, and public scheduling
 semantics remain unchanged.
+
+# R6ar packed-period generator obligations
+
+A generated image selecting R6ar must prove for the periodic prefix:
+
+1. P >= 1;
+2. period[0] = 1;
+3. period[i] >= period[i-1] for every i in [1,P);
+4. period[i] - period[i-1] <= 15;
+5. exactly P-1 deltas are serialized, two per byte, low nibble first;
+6. an unused final high nibble, when P-1 is odd, is zero.
+
+The packed table length is:
+
+~~~text
+ceil((P - 1) / 2)
+~~~
+
+bytes.
+
+These checks belong to generated configuration evidence. Generic profiles do
+not use the packed representation.
