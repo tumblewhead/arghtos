@@ -502,3 +502,23 @@ A zero delta is valid and represents equal-period RMS peers. The generated
 task-ID order remains the equal-period tie break.
 
 For P=23, the schedule object contains 22 deltas = 11 bytes.
+
+# R6as two-bit periodic deltas
+
+A generated R6ar profile may further pack adjacent periodic deltas into two bits
+when the generator proves every delta is in the range 0..3.
+
+Four deltas are stored per byte, least-significant pair first:
+
+~~~text
+byte 0:
+  bits 1:0 = delta(1)
+  bits 3:2 = delta(2)
+  bits 5:4 = delta(3)
+  bits 7:6 = delta(4)
+~~~
+
+Equal-period peers remain represented by delta zero. Generated ID order remains
+the deterministic equal-period RMS tie break.
+
+For P=23, the 22 deltas require ceil(22/4) = 6 bytes.
