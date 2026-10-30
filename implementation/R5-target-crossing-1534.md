@@ -222,3 +222,18 @@ claimed async-return-fatal behavior. A generated-context repair is required
 before this size lineage can again be described as preserving that invariant.
 
 See [R5z raw schedule erratum](R5z-raw-class-schedule.md).
+
+# Post-freeze erratum resolution
+
+R6aj demonstrates a zero-resident-byte repair for the async-return semantic
+defect discovered in the R5z lineage.
+
+The generated Cortex-M23 initial frame now discharges task class before runtime:
+periodic frames enter the periodic trampoline, while the sole async frame enters
+its application entry directly and returns only into the async-fatal guard.
+
+The historical merged R5ag 1534 B binary is unchanged and remains footprint
+provenance rather than a retroactively repaired artifact. The active R6 lineage
+restores the missing semantic invariant at 1340 B.
+
+See [R6aj direct async prebuilt entry](R6aj-direct-async-prebuilt-entry.md).
