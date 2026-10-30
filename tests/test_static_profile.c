@@ -648,6 +648,9 @@ static void test_sleep_time_processing_owned_by_timer(void)
     arghtos_timer_interrupt();
     assert(ARGHTOS_CTRL_STATE(&ctrl[0]) == ARGHTOS_TASK_READY);
     assert(ARGHTOS_CTRL_NEXT(&ctrl[0]) == 11u);
+#if ARGHTOS_R6AQ_TASK0_ALWAYS_DUE
+    assert(ARGHTOS_CTRL_MISSED(&ctrl[0]) == 9u);
+#endif
     assert(ARGHTOS_CTRL_STATE(&ctrl[1]) == ARGHTOS_TASK_SLEEPING);
     assert(arghtos_host_timer_deadline() == 11u);
     assert(arghtos_host_dispatch_request_count() == 1u);
