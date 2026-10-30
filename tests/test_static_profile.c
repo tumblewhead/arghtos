@@ -405,7 +405,7 @@ static void test_compact_runtime_saturation(void)
 #endif
 
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
-#if ARGHTOS_R6X_BOUNDED_MISSED_LOOP
+#if ARGHTOS_R6X_BOUNDED_MISSED_LOOP || ARGHTOS_R6Y_PACKED_MISSED_ADD
     arghtos_host_set_time(3u);
     arghtos_host_clear_dispatch_requests();
     arghtos_timer_interrupt();
