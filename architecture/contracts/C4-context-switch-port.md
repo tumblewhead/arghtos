@@ -703,3 +703,37 @@ Both use the same software-saved R4-R11 area, basic hardware-frame layout,
 The async direct-entry frame is valid because its \`void(void)\` application
 entry consumes no argument and its return destination is explicitly
 non-returning fatal code.
+
+# R6ak Cortex-M23 assembly periodic trampoline
+
+R6ak may provide \`arghtos_task_start_trampoline\` in Cortex-M23 assembly for
+the trusted generated R6aj profile.
+
+The generated periodic initial context places:
+
+~~~text
+saved R4  = application entry pointer
+stacked LR = return guard
+stacked PC = assembly periodic trampoline
+~~~
+
+R4 is part of the ordinary software-saved R4-R11 task context and therefore
+survives every PendSV context switch.
+
+The assembly trampoline is:
+
+~~~asm
+1:
+    blx r4
+    movs r0, #4      /* ARGHTOS_SERVICE_TASK_RETURN */
+    svc #0
+    b.n 1b
+~~~
+
+TASK_RETURN ignores arg0, so R1 need not be initialized. The SVC ABI and SVC
+handler are otherwise unchanged.
+
+The service ID value 4 is tied to the private kernel-port service enum and is
+statically asserted by the matching C profile.
+
+Generic/debug profiles retain the portable C trampoline.
