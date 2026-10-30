@@ -457,3 +457,26 @@ runtime consumer:
 The generated schedule8 table may therefore contain exactly P bytes, one period
 for each periodic task. Generic, multi-async, and runtime-classification
 profiles retain the full N-entry schedule table.
+
+# R6ap omitted unit-period schedule entry
+
+The trusted generated profile may omit task 0's schedule byte when all of the
+following already hold:
+
+* R5p generated ordering;
+* R6ao periodic-only schedule8 storage;
+* R6t proves task 0 has period exactly one scheduler tick;
+* the remaining periodic task IDs are 1 through P-1.
+
+The generated schedule object then stores only periods for periodic IDs 1..P-1:
+
+~~~text
+schedule8[0] = period(task 1)
+...
+schedule8[P-2] = period(task P-1)
+~~~
+
+Task 0's period is supplied by the R6t unit-period contract rather than stored
+again in generated data.
+
+Generic and non-unit-period profiles retain the ordinary periodic-only table.
