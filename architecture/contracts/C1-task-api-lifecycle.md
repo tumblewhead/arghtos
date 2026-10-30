@@ -396,3 +396,25 @@ bounded-job loop and the asynchronous persistent-worker path.
 
 The application entry, periodic TASK_RETURN service, async-return fatal rule,
 and all lifecycle transitions are unchanged.
+
+# R6aj generated direct async entry
+
+R6aj refines the minimum generated task-start rule.
+
+Periodic tasks still begin in the kernel periodic trampoline. The trampoline
+calls one bounded application job, performs TASK_RETURN, and resumes only on a
+later periodic release.
+
+The sole generated async task begins directly at its application entry from its
+prebuilt initial context. Its stacked LR is the kernel async-return guard. If
+the async application entry returns, control therefore enters that guard and
+calls:
+
+~~~c
+arghtos_fatal(ARGHTOS_FAULT_ASYNC_RETURNED, NULL);
+~~~
+
+No runtime task-class branch is needed in the shared trampoline.
+
+Generic/runtime-built contexts continue to begin in the ordinary class-aware
+trampoline.
