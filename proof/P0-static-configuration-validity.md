@@ -259,3 +259,24 @@ bytes.
 
 These checks belong to generated configuration evidence. Generic profiles do
 not use the packed representation.
+
+# R6as two-bit generator obligations
+
+R6as strengthens R6ar's generator constraint:
+
+~~~text
+0 <= period[i] - period[i-1] <= 3
+~~~
+
+for every periodic i >= 1.
+
+The generator serializes exactly P-1 deltas, four per byte. Unused high
+two-bit fields in the final byte SHALL be zero.
+
+The physical table length is:
+
+~~~text
+ceil((P - 1) / 4)
+~~~
+
+bytes.
