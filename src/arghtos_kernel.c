@@ -1868,6 +1868,7 @@ ARGHTOS_NORETURN void arghtos_fatal(
     arghtos_port_fault_terminal();
 }
 
+#if !ARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
 ARGHTOS_NORETURN void arghtos_task_start_trampoline(arghtos_task_fn_t entry)
 #else
@@ -1931,6 +1932,13 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
     arghtos_fatal(ARGHTOS_FAULT_ASYNC_RETURNED, NULL);
 #endif
 }
+
+#endif /* !ARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE */
+
+#if ARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE
+_Static_assert(ARGHTOS_SERVICE_TASK_RETURN == 4u,
+               "R6ak assembly TASK_RETURN service ID changed");
+#endif
 
 ARGHTOS_NORETURN void arghtos_task_return_guard(void)
 {
