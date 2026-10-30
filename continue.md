@@ -125,55 +125,50 @@ physical-board harness
   R6t accepted                 = 1424 B
   R6u accepted                 = 1420 B
   R6v accepted                 = 1396 B
-  R6aa accepted control        = 1384 B
-  R6ab active challenger
+  R6aa accepted                = 1384 B
+  R6ab accepted control        = 1380 B
+  phase: R6ac preseeded selected-port crash format
 ```
 
-R6aa is preserved in
-[implementation/R6aa-inlined-trusted-crash-payload.md](implementation/R6aa-inlined-trusted-crash-payload.md).
+R6ab is preserved in
+[implementation/R6ab-singleton-wake-target.md](implementation/R6ab-singleton-wake-target.md).
 
-R6aa authoritative CI:
+R6ab authoritative CI:
 
 ```text
-run:        40983889248
+run:        40984337290
 conclusion: success
-R6v:       1396 B
-R6z:       1400 B rejected (outlined crash fill)
-R6aa:      1384 B accepted
-delta from R6v: -12 B
+R6aa:      1384 B
+R6ab:      1380 B
+delta:       -4 B
 ```
 
-R6ab consumes the generated single-async invariant. With generated ordering and
-exactly one async task, every supported wake target is:
+R6ac consumes the selected-port invariant that the crash payload format ID is
+fixed for the entire generated image.
+
+The generated record now preseeds:
 
 ```text
-ARGHTOS_R5P_PERIODIC_COUNT
+host verification port: 0x484F
+Cortex-M23 port:         0x4D23
 ```
 
-The minimum profile therefore:
-
-* removes the runtime target parameter from `wake_locked_compact()`;
-* ignores the public interrupt-wake argument under the trusted contract;
-* omits the SVC wake target propagation;
-* removes the target move from the Cortex-M23 public wake veneer.
-
-Public API signatures remain unchanged. Generic/debug and multi-async profiles
-retain runtime wake targets.
+The selected crash fillers omit their runtime `port_format` write. Dynamic
+payload words/count, R6m recursive-fatal protection, and commit-last ordering
+remain unchanged.
 
 Owning refinements:
 
-* [architecture/contracts/C1-task-api-lifecycle.md](architecture/contracts/C1-task-api-lifecycle.md)
-* [architecture/contracts/C2-wake.md](architecture/contracts/C2-wake.md)
-* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
+* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
+* [architecture/contracts/C5-fault-diagnostics.md](architecture/contracts/C5-fault-diagnostics.md)
+* [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6aa and R6ab in the same revision.
-2. Require wake semantics, interrupt wake, sanitizer, portability, historical
-   reproduction, crash-path, and physical-control gates green.
-3. Compare complete resident bytes plus `wake_locked_compact`,
-   `arghtos_wake_from_interrupt`, `arghtos_kernel_service`, and public
-   `arghtos_wake`.
-4. Accept R6ab only for a strict physical reduction below 1384 B.
-5. If neutral/regressive, preserve the result and keep R6aa as control.
+1. Let PR #5 CI build physical R6ab and R6ac in the same revision.
+2. Require pre/post crash-format assertions, recursive-fatal, sanitizer,
+   portability, historical reproduction, and physical-control gates green.
+3. Compare complete resident bytes and `arghtos_fatal`.
+4. Accept R6ac only for a strict physical reduction below 1380 B.
+5. If neutral/regressive, preserve the result and keep R6ab as control.
 6. Do not merge PR #5 without explicit user permission.
