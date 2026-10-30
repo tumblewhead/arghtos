@@ -481,7 +481,29 @@ static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
 #endif
 
 #if ARGHTOS_R5Q_PARTITIONED_TIME
+#if ARGHTOS_R6AQ_TASK0_ALWAYS_DUE
+    {
+        arghtos_task_control_t *c = &controls[0];
+        const uint32_t late = now - ARGHTOS_CTRL_NEXT(c);
+        const uint32_t releases = 1u + late;
+        uint32_t missed;
+
+        ARGHTOS_CTRL_NEXT(c) = now + 1u;
+        if (ARGHTOS_CTRL_STATE_ID(0) == ARGHTOS_TASK_DORMANT) {
+            ARGHTOS_CTRL_SET_STATE_ID(0, ARGHTOS_TASK_READY);
+            ARGHTOS_TIME_MARK_CHANGED();
+            missed = late;
+        } else {
+            missed = releases;
+        }
+        if (missed != 0u) {
+            missed_release_add(0u, c, missed);
+        }
+    }
+    for (id = 1u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
+#else
     for (id = 0u; id < (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT; ++id) {
+#endif
         const uint32_t period = ARGHTOS_TASK_PERIOD(id);
         arghtos_task_control_t *c = &controls[id];
 
