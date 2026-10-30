@@ -88,6 +88,9 @@ jobs:
       - name: Host R6v always-dispatch-tick control
         run: make host-test-r6v
 
+      - name: Host R6y packed-missed-add challenger
+        run: make host-test-r6y
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -162,6 +165,9 @@ jobs:
 
       - name: Cortex-M23 R6v always-dispatch-tick physical control
         run: make m23-footprint-r6v
+
+      - name: Cortex-M23 R6y packed-missed-add physical challenger
+        run: make m23-footprint-r6y
 
       - name: Enforce R5ag 1536-byte resident target
         run: |
@@ -247,9 +253,23 @@ jobs:
           print(f"physical R6u control: {uv} B; R6v challenger: {vv} B; delta: {vv-uv} B")
           PY
 
+      - name: Evaluate R6y physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6v.json", "r", encoding="utf-8") as f:
+              v = json.load(f)
+          with open("build/footprint-r6y.json", "r", encoding="utf-8") as f:
+              y = json.load(f)
+          vv = v["arghtos_resident_total"]
+          yv = y["arghtos_resident_total"]
+          assert yv <= 1536, f"physical R6y challenger misses target: {yv} B > 1536 B"
+          print(f"physical R6v control: {vv} B; R6y challenger: {yv} B; delta: {yv-vv} B")
+          PY
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v; do
+          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v r6y; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -285,6 +305,7 @@ jobs:
             build/footprint-r6t.json
             build/footprint-r6u.json
             build/footprint-r6v.json
+            build/footprint-r6y.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5ag.map
@@ -308,6 +329,7 @@ jobs:
             build/m23-r6t.map
             build/m23-r6u.map
             build/m23-r6v.map
+            build/m23-r6y.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5ag-symbols.txt
@@ -331,6 +353,7 @@ jobs:
             build/m23-r6t-symbols.txt
             build/m23-r6u-symbols.txt
             build/m23-r6v-symbols.txt
+            build/m23-r6y-symbols.txt
             build/m23-r4y.elf
             build/m23-r5ag.elf
             build/m23-r6b.elf
@@ -353,4 +376,5 @@ jobs:
             build/m23-r6t.elf
             build/m23-r6u.elf
             build/m23-r6v.elf
+            build/m23-r6y.elf
             build/*.su
