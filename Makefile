@@ -3825,7 +3825,8 @@ m23-footprint-r6ak: | $(BUILD)
 		-DARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE=1 \
 		-c footprint/m23_prebuilt_stacks.S \
 		-o $(BUILD)/m23_prebuilt_stacks_r6ak.o
-	$(PYTHON) tools/check_r6ak_prebuilt_context.py \
+	$(PYTHON) tools/check_r6aj_prebuilt_context.py \
+		--periodic-entry-register r4 \
 		$(BUILD)/m23_prebuilt_stacks_r6ak.o
 	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables -DARGHTOS_TRUSTED_CONFIG=1 \
 		-DARGHTOS_STATIC_CONFIG=1 -DARGHTOS_STATIC_TASK_COUNT=24 \
