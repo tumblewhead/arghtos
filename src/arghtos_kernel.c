@@ -1746,6 +1746,19 @@ static bool task_fault_attributed(arghtos_fault_reason_t reason)
 }
 #endif
 
+#if ARGHTOS_R6AN_REASON_RECURSION_GUARD
+_Static_assert(ARGHTOS_FAULT_KERNEL_INVARIANT != ARGHTOS_FAULT_NONE,
+               "R6an requires nonzero kernel invariant reason");
+_Static_assert(ARGHTOS_FAULT_BAD_SERVICE != ARGHTOS_FAULT_NONE,
+               "R6an requires nonzero bad-service reason");
+_Static_assert(ARGHTOS_FAULT_ASYNC_RETURNED != ARGHTOS_FAULT_NONE,
+               "R6an requires nonzero async-return reason");
+_Static_assert(ARGHTOS_FAULT_BAD_DISPATCH != ARGHTOS_FAULT_NONE,
+               "R6an requires nonzero bad-dispatch reason");
+_Static_assert(ARGHTOS_FAULT_CPU_EXCEPTION != ARGHTOS_FAULT_NONE,
+               "R6an requires nonzero CPU-exception reason");
+#endif
+
 ARGHTOS_NORETURN void arghtos_fatal(
     arghtos_fault_reason_t reason,
     const void *port_fault_context)
@@ -1757,10 +1770,17 @@ ARGHTOS_NORETURN void arghtos_fatal(
 
 #if ARGHTOS_R6M_COMMIT_RECURSION_GUARD
     r = ARGHTOS_CRASH_RECORD;
+#if ARGHTOS_R6AN_REASON_RECURSION_GUARD
+    if (r->reason != ARGHTOS_FAULT_NONE) {
+        arghtos_port_fault_terminal();
+    }
+    r->reason = reason;
+#else
     if (r->commit_magic != 0u) {
         arghtos_port_fault_terminal();
     }
     r->commit_magic = ARGHTOS_R6M_CAPTURE_IN_PROGRESS;
+#endif
 #else
     if ((kernel.flags & ARGHTOS_KF_FAULT_ACTIVE) != 0u) {
         arghtos_port_fault_terminal();
@@ -1793,7 +1813,9 @@ ARGHTOS_NORETURN void arghtos_fatal(
 #if !ARGHTOS_R5W_TRUSTED_CRASH_PORT && !ARGHTOS_R6M_COMMIT_RECURSION_GUARD
     r->commit_magic = 0u;
 #endif
+#if !ARGHTOS_R6AN_REASON_RECURSION_GUARD
     r->reason = reason;
+#endif
     r->timestamp = arghtos_port_time_now();
 
 #if ARGHTOS_R6AF_UNCONDITIONAL_CRASH_TASK_ID
