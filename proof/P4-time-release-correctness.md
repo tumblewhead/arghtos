@@ -382,3 +382,30 @@ missed. Otherwise all \`late + 1\` releases are missed. This is exactly the
 ordinary period-1 catch-up result.
 
 IDs 1..P-1 retain the unchanged generic arithmetic catch-up path.
+
+# R6ar period reconstruction equivalence
+
+Let T0=1 and define generated deltas:
+
+~~~text
+d_i = T_i - T_(i-1),  i >= 1
+~~~
+
+R6ar reconstructs:
+
+~~~text
+R_0 = 1
+R_i = R_(i-1) + d_i
+~~~
+
+By induction:
+
+~~~text
+R_i = T_i
+~~~
+
+for every periodic task ID.
+
+Therefore every invocation of the unchanged catch-up recurrence receives the
+same period as the accepted R6ap profile. Release epochs, missed-release
+counts, wrap-safe due behavior, and RMS ordering are unchanged.
