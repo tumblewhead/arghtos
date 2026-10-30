@@ -224,3 +224,28 @@ Periodic initial frames remain byte-equivalent to the accepted R5l form.
 
 Target evidence must verify the generated async slot uses direct application PC
 plus the async-return guard before this profile is accepted.
+
+# R6ak generated R4 entry-pointer proof
+
+R6ak changes one word of each periodic generated software-saved frame:
+
+~~~text
+R4: 0 -> immutable periodic application entry pointer
+~~~
+
+and clears the no-longer-needed stacked R0 entry argument.
+
+R4 already belongs to the P2 software-saved register set and is restored before
+exception return. The saved-context size, PSP token, hardware frame, xPSR,
+alignment, and stack interval are unchanged.
+
+The target frame audit SHALL verify:
+
+* all 23 periodic R4 relocation words target the generated application entry;
+* periodic stacked R0 words carry no entry relocation;
+* all 23 periodic stacked PCs target the assembly trampoline;
+* the sole async stacked PC still targets the application entry directly; and
+* all 24 stacked LRs target the return guard.
+
+Thus the new initial frame remains structurally compatible with ordinary
+PendSV save/restore.
