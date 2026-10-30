@@ -131,9 +131,10 @@ physical-board harness
   R6ad accepted                = 1360 B
   R6ae accepted                = 1348 B
   R6af rejected neutral        = 1348 B
-  R6ag accepted current control= 1340 B
+  R6ag historical size-only   = 1340 B
   R6ah rejected neutral        = 1340 B
-  phase: R6ai generated trampoline class test
+  R6ai correctness control     = 1360 B
+  phase: R6aj generated direct-async prebuilt entry repair
 ```
 
 R6ae is preserved in
@@ -202,25 +203,57 @@ arghtos_kernel_service:
   both       128 B
 ```
 
-R6ai uses the R5p generated class boundary in the task-start trampoline instead
-of reloading the compact schedule byte only to test whether the task period is
-nonzero.
+R6ai exposed a semantic defect in the R5z raw-class schedule lineage.
 
-For every admitted generated configuration:
+R5z stores raw async priority in the async suffix, but the shared trampoline
+still used `ARGHTOS_TASK_PERIOD(id) != 0` as its class test. For the canonical
+async priority 3 this evaluates true, so the historical 18-byte trampoline
+treated the async task as periodic and did not preserve the required
+async-return-fatal lifecycle.
+
+Errata are now attached to:
+
+* [implementation/R5z-raw-class-schedule.md](implementation/R5z-raw-class-schedule.md)
+* [implementation/R5-target-crossing-1534.md](implementation/R5-target-crossing-1534.md)
+
+R6ai is the direct runtime correctness repair:
 
 ```text
-id < ARGHTOS_R5P_PERIODIC_COUNT  <=> periodic
-otherwise                        <=> async
+run:        40990461247
+conclusion: success
+
+R6ag historical size-only               1340 B
+R6ai generated-ID runtime class repair  1360 B
+
+trampoline:
+  R6ag                                     18 B
+  R6ai                                     40 B
 ```
 
-The periodic TASK_RETURN loop and async-return fatal behavior are otherwise
-unchanged.
+Therefore R6ag remains useful footprint provenance but is not a semantic
+control for "async return is fatal." R6ai = 1360 B is the current correctness
+control.
+
+R6aj attempts to recover the lost 20 B without a runtime class branch:
+
+* generated periodic frames keep stacked PC = periodic trampoline;
+* the sole generated async frame uses stacked PC = application async entry;
+* the async frame LR points to the existing return guard;
+* under R6aj that guard records `ARGHTOS_FAULT_ASYNC_RETURNED`;
+* periodic trampoline code is branchless/periodic-only;
+* a relocation audit proves the canonical object has 23 trampoline PCs and one
+  direct async PC before linking.
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6ag and R6ai in the same revision.
-2. Require host/sanitizer/portability/historical and physical controls green.
-3. Compare complete resident bytes and `arghtos_task_start_trampoline`.
-4. Accept R6ai only for a strict physical reduction below 1340 B.
-5. If neutral/regressive, preserve the result and keep R6ag as control.
-6. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI run R6ai and R6aj side by side.
+2. Require the R6aj host async-return-guard regression and generated-frame
+   relocation audit green.
+3. Require portability, sanitizers, historical controls, and physical controls
+   green.
+4. Compare complete resident bytes and trampoline/return-guard symbols.
+5. Accept R6aj only if it is semantically correct, stays <=1536 B, and strictly
+   improves the 1360 B R6ai correctness control.
+6. If accepted, R6aj becomes the new semantic control; compare its size to the
+   1340 B historical R6ag size-only image to quantify the true repair cost.
+7. Do not merge PR #5 without explicit user permission.
