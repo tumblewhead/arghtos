@@ -675,3 +675,31 @@ ordinary RUNNING -> READY outgoing-task transition.
 No application instruction executes between the logical YIELD operation and
 that transition. Generic ports without this exception-order guarantee retain
 the service-side transition.
+
+# R6aj class-specialized prebuilt Cortex-M23 frame
+
+For the trusted generated single-async prebuilt profile, C4 permits two
+equivalent initial hardware-frame shapes.
+
+Periodic task:
+
+~~~text
+stacked R0 = application entry
+stacked LR = return guard
+stacked PC = periodic task-start trampoline
+~~~
+
+Async task:
+
+~~~text
+stacked R0 = 0 / unused
+stacked LR = async-return guard
+stacked PC = application async entry
+~~~
+
+Both use the same software-saved R4-R11 area, basic hardware-frame layout,
+8-byte initial alignment, xPSR Thumb bit, and saved-context token.
+
+The async direct-entry frame is valid because its \`void(void)\` application
+entry consumes no argument and its return destination is explicitly
+non-returning fatal code.
