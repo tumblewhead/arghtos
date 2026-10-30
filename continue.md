@@ -202,16 +202,25 @@ either 32 or 36 bytes. R6am will use a fixed 32-byte reclaim only if CI proves:
 
 Generic/debug profiles retain xPSR alignment decoding.
 
+
+R6am evidence update:
+
+* the first attempt used Clang `.su` stack-usage metadata;
+* Clang emitted no `.su` file for the LTO port object, so that build failed
+  before linking and produced no footprint claim;
+* the final challenger replaces selected `arghtos_port_start` with explicit
+  zero-stack assembly and keeps the generic C start path unchanged.
+
 ## Exact next action
 
 1. Let PR #5 CI build physical R6ak and R6am in the same revision.
-2. R6am must first pass `tools/check_stack_usage.py` proving selected
-   `arghtos_port_start` static stack usage is exactly 0 B.
+2. R6am now supplies `arghtos_port_start` directly in Cortex-M23 assembly.
+   The selected start sequence must remain free of SP/MSP writes.
 3. Require R6ak/R6am generated-frame audits, R6aj async-return regression,
    sanitizers, portability, historical controls, and all physical controls
    green.
-4. Compare complete resident bytes and `PendSV_Handler`.
+4. Compare complete resident bytes, `PendSV_Handler`, and
+   `arghtos_port_start`.
 5. Accept R6am only for a strict physical reduction below 1328 B.
-6. If the stack-usage premise fails, reject R6am regardless of linked size.
-7. If neutral/regressive, preserve the result and keep R6ak as control.
-8. Do not merge PR #5 without explicit user permission.
+6. If neutral/regressive, preserve the result and keep R6ak as control.
+7. Do not merge PR #5 without explicit user permission.
