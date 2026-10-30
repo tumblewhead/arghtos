@@ -173,7 +173,7 @@ arghtos_crash_record_t arghtos_static_crash_record = {
     .version = ARGHTOS_CRASH_VERSION,
     .size = (uint16_t)sizeof(arghtos_crash_record_t),
     .task_id = ARGHTOS_TASK_ID_INVALID
-#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+#if ARGHTOS_R5W_TRUSTED_CRASH_PORT || ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
     ,.flags = ARGHTOS_CRASH_F_PORT_STATE_VALID
 #endif
 };
