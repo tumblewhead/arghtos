@@ -47,7 +47,9 @@ arghtos_sleep_until:
 .type arghtos_wake, %function
 .thumb_func
 arghtos_wake:
+#if !ARGHTOS_R6AB_SINGLE_WAKE_TARGET
     mov r1, r0
+#endif
     movs r0, #3
     b.n arghtos_port_service_call
 .size arghtos_wake, .-arghtos_wake
