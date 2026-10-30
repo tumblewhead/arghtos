@@ -1,18 +1,16 @@
 ---
 type: ImplementationExperiment
 title: "R6ac - preseeded selected-port crash format"
-description: "Accepted generated-record specialization moving the invariant selected-port crash format out of runtime capture."
+description: "Accepted generated-record specialization removing the invariant selected-port format write from crash capture."
 tags: [implementation, footprint, crash, cortex-m23, r6, accepted]
 status: accepted
 ---
 
 # Hypothesis
 
-The selected integration uses one immutable crash payload format for the entire
-generated image. The 64-byte crash record is already preinitialized, so its
-`port_format` field can be materialized before runtime at no storage cost.
-
-Selected crash fillers then omit the runtime format write.
+The selected port format is immutable for the generated image. The crash record
+is already preinitialized, so the format can be materialized there at no
+additional resident-storage cost.
 
 # Authority
 
@@ -48,8 +46,7 @@ linked delta                -8 B
 fatal symbol delta           -8 B
 ```
 
-The host profile verifies its preseeded `0x484F` value before and after crash
-capture. Cortex-M23 uses preseeded `0x4D23`.
+Host verification checks its preseeded format both before and after capture.
 
 # Decision
 
