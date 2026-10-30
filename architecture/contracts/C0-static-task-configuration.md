@@ -480,3 +480,25 @@ Task 0's period is supplied by the R6t unit-period contract rather than stored
 again in generated data.
 
 Generic and non-unit-period profiles retain the ordinary periodic-only table.
+
+# R6ar nibble-packed periodic deltas
+
+The trusted generated profile may replace R6ap's byte-per-period table with
+4-bit deltas between successive periodic periods when the generator proves:
+
+* task 0 period is one tick;
+* periodic IDs are sorted by nondecreasing period;
+* for every periodic ID i in [1,P), \`period[i] - period[i-1] <= 15\`.
+
+The generator stores the P-1 unsigned deltas in ID order, low nibble first:
+
+~~~text
+byte 0: delta(1) | delta(2)<<4
+byte 1: delta(3) | delta(4)<<4
+...
+~~~
+
+A zero delta is valid and represents equal-period RMS peers. The generated
+task-ID order remains the equal-period tie break.
+
+For P=23, the schedule object contains 22 deltas = 11 bytes.
