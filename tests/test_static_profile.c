@@ -129,7 +129,11 @@ uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT] 
     ARGHTOS_STATIC_PERIOD(10u)
 };
 #else
-#if ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8
+#if ARGHTOS_R6AP_OMIT_UNIT_PERIOD_BYTE
+_Static_assert(ARGHTOS_R5P_PERIODIC_COUNT == 1u,
+               "R6ap host fixture expects one periodic task");
+uint8_t arghtos_static_schedule8[1] = { 0u };
+#elif ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8
 uint8_t arghtos_static_schedule8[ARGHTOS_R5P_PERIODIC_COUNT] = {
     ARGHTOS_TEST_PERIOD
 };
