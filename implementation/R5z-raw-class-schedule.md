@@ -113,3 +113,24 @@ Consequences:
 
 Do not reinterpret the historical 1618 B measurement. Treat it as size
 provenance with this semantic erratum attached.
+
+# Erratum resolution
+
+R6aj resolves the async-trampoline defect without resident-byte cost by moving
+task-class selection into the generated prebuilt Cortex-M23 initial frame.
+
+The sole async task now starts directly at its application entry with the
+return guard as LR. Periodic tasks retain the shared periodic trampoline.
+
+Authoritative repair:
+
+```text
+R6ai runtime correctness control  1360 B
+R6aj generated-context repair     1340 B
+R6aj vs historical R6ag              0 B
+```
+
+See [R6aj direct async prebuilt entry](R6aj-direct-async-prebuilt-entry.md).
+
+The historical R5z artifact remains tagged with this erratum because its own
+binary predates the repair.
