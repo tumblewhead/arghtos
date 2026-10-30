@@ -3444,7 +3444,6 @@ m23-footprint-r6ag: | $(BUILD)
 		-DARGHTOS_R5AC_TERMINAL_NO_FAULT_STATE=1 \
 		-DARGHTOS_R6K_PRESEEDED_PERIODIC_READY=1 \
 		-DARGHTOS_R6Q_PRESEEDED_PERIOD_OFFSETS=1 \
-		-DARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE=1 \
 		-c footprint/m23_footprint.c -o $(BUILD)/m23_footprint_r6ag.o
 	$(CLANG) --target=arm-none-eabi -mcpu=cortex-m23 -mthumb -nostdlib -flto -fomit-frame-pointer -fno-jump-tables \
 		-fuse-ld=lld -Wl,--gc-sections \
