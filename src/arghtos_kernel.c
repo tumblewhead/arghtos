@@ -352,7 +352,15 @@ static void missed_release_add(
     arghtos_task_control_t *c,
     uint32_t count)
 {
-#if ARGHTOS_R6X_BOUNDED_MISSED_LOOP
+#if ARGHTOS_R6Y_PACKED_MISSED_ADD
+    uint32_t total = (uint32_t)ARGHTOS_CTRL_MISSED_ID(id) + count;
+
+    (void)c;
+    if (total > ARGHTOS_CTRL_MISSED_MAX) {
+        total = ARGHTOS_CTRL_MISSED_MAX;
+    }
+    ARGHTOS_CTRL_SET_MISSED_ID(id, total);
+#elif ARGHTOS_R6X_BOUNDED_MISSED_LOOP
     uint8_t status = ARGHTOS_CTRL_STATUS_ID(id);
 
     (void)c;
