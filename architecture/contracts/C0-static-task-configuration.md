@@ -408,3 +408,22 @@ start_epoch + period
 The generated schedule table remains unchanged and is still authoritative for
 subsequent periodic catch-up. Generic profiles retain the ordinary
 `next_time = start + period` materialization.
+
+# R6aj generated direct async initial context
+
+The trusted R5l/R5p/R5ab generated profile may specialize the prebuilt initial
+context by task class.
+
+For periodic IDs in \`[0,P)\`, the generated frame retains the ordinary
+periodic task-start trampoline and passes the immutable application entry in
+the initial argument register.
+
+For the sole async ID \`P\`, the generated frame may instead place the
+application entry directly in stacked PC and place the async-return fatal guard
+in stacked LR.
+
+This discharges task class at generation time rather than re-reading the raw
+R5z schedule byte at runtime.
+
+The generated frame still has exactly the same Cortex-M23 saved-context size,
+alignment, stack ownership, and saved PSP token.
