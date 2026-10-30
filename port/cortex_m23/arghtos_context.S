@@ -13,6 +13,30 @@ arghtos_port_service_call:
     bx lr
 .size arghtos_port_service_call, .-arghtos_port_service_call
 
+#if ARGHTOS_R6AM_ALIGNED_FIRST_DISPATCH_MSP
+/*
+ * R6am selected startup path.
+ *
+ * Entry is a C ABI boundary, so MSP is 8-byte aligned. This routine does not
+ * touch SP/MSP before the first pending exception becomes eligible.
+ */
+.global arghtos_port_start
+.type arghtos_port_start, %function
+.thumb_func
+arghtos_port_start:
+    ldr r0, =0xE000ED04
+    movs r1, #1
+    lsls r1, r1, #28
+    str r1, [r0]
+    cpsie i
+    isb
+1:
+    wfi
+    b.n 1b
+.size arghtos_port_start, .-arghtos_port_start
+
+#endif
+
 #if ARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE
 /*
  * Generated periodic entry pointer lives in task R4.
