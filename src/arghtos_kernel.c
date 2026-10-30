@@ -628,7 +628,11 @@ static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
 #endif
 
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
+#if ARGHTOS_R6AL_DIRECT_UNIT_TIMER_ARM
+    arghtos_port_timer_arm(now + 1u);
+#else
     arghtos_port_timer_arm(ARGHTOS_CTRL_NEXT(&controls[0]));
+#endif
 #elif ARGHTOS_R5AA_DELTA_ONLY_TIMER
     arghtos_port_timer_arm(now + best_delta);
 #elif ARGHTOS_R5T_TIMER_ALWAYS_ARMED
