@@ -78,3 +78,38 @@ R5z total          1618 B
 soft target        1536 B
 remaining gap        82 B
 ```
+
+# Erratum discovered during R6ai
+
+R6ai found one R5z call site that did **not** satisfy the partition premise
+stated above.
+
+The task-start trampoline still classified its current task with:
+
+~~~c
+ARGHTOS_TASK_PERIOD(id) != 0u
+~~~
+
+Under R5z raw schedule encoding, an async suffix entry stores its raw async
+priority rather than zero. For the canonical 23-periodic + 1-async fixture,
+task 23 stores priority \`3\`. Therefore the trampoline read \`3\` as a
+nonzero period and entered the periodic TASK_RETURN loop.
+
+The historical R5z measurement remains valid as footprint evidence, but the
+original semantic acceptance was incomplete: the 18-byte trampoline was partly
+obtained because LTO proved every raw schedule byte nonzero and removed the
+async-return-fatal path.
+
+Consequences:
+
+* R5z and descendants using that trampoline cannot claim the preserved
+  "async return is fatal" invariant without an additional repair;
+* the R5z statement that every period/priority read occurred within a
+  class-partitioned call site is false for this trampoline read;
+* R6ai's explicit generated-ID class test is the first measured direct repair,
+  but costs 20 B on the physical profile;
+* subsequent work should prefer generated initial-context specialization so the
+  async class decision is discharged before runtime.
+
+Do not reinterpret the historical 1618 B measurement. Treat it as size
+provenance with this semantic erratum attached.
