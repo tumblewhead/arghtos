@@ -150,3 +150,19 @@ cost of these additional wake-triggered PendSV/dispatch passes in the
 appropriate `K_i(R)` / interrupt-overhead bound.
 
 No application WCET or priority relation changes.
+
+# R6ag timer-owned release jitter
+
+R6ag removes one opportunistic source of early periodic-release processing from
+SLEEP_UNTIL SVC handling.
+
+A periodic release that becomes ideally due before the scheduler timer handler
+runs may now wait for that handler instead of being noticed by SVC. This does
+not create a new unbounded delay. The release jitter remains bounded by the C3
+timer-delivery jitter plus modeled higher-priority interference already
+required in \`J_i\`.
+
+Schedulability analysis selecting R6ag SHALL therefore use the timer-service
+release-jitter bound and SHALL NOT assume SVC opportunistically reduces it.
+
+No task priority or application WCET relation changes.
