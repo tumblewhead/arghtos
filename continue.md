@@ -127,47 +127,53 @@ physical-board harness
   R6v accepted                 = 1396 B
   R6aa accepted                = 1384 B
   R6ab accepted                = 1380 B
-  R6ac accepted current control= 1372 B
-  phase: R6ad unconditional trusted wake dispatch
+  R6ac accepted                = 1372 B
+  R6ad accepted current control= 1360 B
+  phase: R6ae dispatch-owned YIELD transition
 ```
 
-R6ac is preserved in
-[implementation/R6ac-preseeded-port-format.md](implementation/R6ac-preseeded-port-format.md).
+R6ad is preserved in
+[implementation/R6ad-unconditional-wake-dispatch.md](implementation/R6ad-unconditional-wake-dispatch.md).
 
-R6ac authoritative CI:
+R6ad authoritative CI:
 
 ```text
-run:        40984715361
+run:        40985479485
 conclusion: success
-R6ab:      1380 B
 R6ac:      1372 B
-delta:       -8 B
-arghtos_fatal:
-  R6ab       144 B
-  R6ac       136 B
+R6ad:      1360 B
+delta:      -12 B
+
+wake_locked_compact:
+  R6ac        52 B
+  R6ad        44 B
+arghtos_kernel_service:
+  R6ac       148 B
+  R6ad       144 B
 ```
 
-R6ad tests a size-for-cycles wake refinement. In the trusted single-async
-profile, wake state/latch mutation remains unchanged, but every supported WAKE
-requests one scheduler dispatch instead of returning a conditional dispatch
-intent.
+R6ae moves the existing YIELD `RUNNING -> READY` transition from the SVC
+service body to the immediately-owned PendSV dispatcher.
 
-The extra dispatch is bounded and does not create task eligibility:
+The Cortex-M23 exception contract guarantees that a pended PendSV executes
+before Thread mode resumes through the YIELD call, so application code cannot
+observe the intermediate RUNNING representation. The dispatcher already
+performs the same legal outgoing-task RUNNING -> READY transition before
+selection.
 
-* DORMANT/WAITING wake still requires the dispatch it already requested;
-* READY wake adds only a scheduler reevaluation;
-* RUNNING wake still only latches the pending wake bit;
-* SLEEPING wake still only latches the pending wake bit and does not end sleep.
+Owning refinements:
 
-The scheduler remains the sole authority for any resulting preemption.
+* [architecture/contracts/C1-task-api-lifecycle.md](architecture/contracts/C1-task-api-lifecycle.md)
+* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
+* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
 
 ## Exact next action
 
-1. Add the R6ad wake/dispatch contract and bounded-work proof refinement.
-2. Build physical R6ac and R6ad in the same revision.
-3. Add host checks that READY/RUNNING/SLEEPING wake requests dispatch while
-   preserving their existing state/latch effects.
-4. Compare complete resident bytes plus `wake_locked_compact`,
-   `arghtos_wake_from_interrupt`, and `arghtos_kernel_service`.
-5. Accept R6ad only for a strict physical reduction below 1372 B.
+1. Let PR #5 CI build physical R6ad and R6ae in the same revision.
+2. Require the host deferred-YIELD seam regression, wake regressions, crash
+   regressions, sanitizers, portability, historical reproduction, and physical
+   controls green.
+3. Compare complete resident bytes and `arghtos_kernel_service`.
+4. Accept R6ae only for a strict physical reduction below 1360 B.
+5. If neutral/regressive, preserve the result and keep R6ad as control.
 6. Do not merge PR #5 without explicit user permission.
