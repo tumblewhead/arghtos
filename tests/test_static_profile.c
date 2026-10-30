@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
+extern ARGHTOS_NORETURN void arghtos_task_return_guard(void);
+
 #if ARGHTOS_R5V_UNIT_PERIOD_TIMER
 #define ARGHTOS_TEST_PERIOD 1u
 #else
@@ -647,6 +649,29 @@ static void test_sleep_time_processing_owned_by_timer(void)
 }
 #endif
 
+#if ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY
+static void test_direct_async_return_guard_reason(void)
+{
+    jmp_buf env;
+
+    reset_all();
+    assert(arghtos_init(NULL) == ARGHTOS_OK);
+    start_and_escape();
+
+    arghtos_host_set_fault_jmp(&env);
+    if (setjmp(env) == 0) {
+        arghtos_task_return_guard();
+        assert(!"async return guard returned");
+    }
+    arghtos_host_set_fault_jmp(NULL);
+
+    assert(arghtos_static_crash_record.reason ==
+           ARGHTOS_FAULT_ASYNC_RETURNED);
+    assert(arghtos_static_crash_record.commit_magic ==
+           ARGHTOS_CRASH_COMMIT_MAGIC);
+}
+#endif
+
 #if ARGHTOS_R6M_COMMIT_RECURSION_GUARD
 static void test_recursive_fatal_uses_commit_guard(void)
 {
@@ -701,6 +726,9 @@ int main(void)
 #endif
 #if ARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE
     test_sleep_time_processing_owned_by_timer();
+#endif
+#if ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY
+    test_direct_async_return_guard_reason();
 #endif
 #if ARGHTOS_R6M_COMMIT_RECURSION_GUARD
     test_recursive_fatal_uses_commit_guard();
