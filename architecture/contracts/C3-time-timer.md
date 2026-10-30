@@ -351,3 +351,36 @@ between the timer transaction and PendSV, no application execution observes the
 transition at a different logical boundary.
 
 PendSV saves the interrupted continuation and runs the unchanged selector.
+
+# R6ag SLEEP_UNTIL time-rescan elision
+
+R6ag is valid only on top of the generated unit-period timer profile.
+
+Immediately before a successful SLEEP_UNTIL state change, the requested
+deadline is strictly future relative to the sampled \`now\`:
+
+~~~text
+deadline - now >= 1 tick
+~~~
+
+R6t proves the scheduler timer is already armed for the period-1 task at the
+first future unit tick, or is already due/pending if service has been delayed.
+Therefore the newly stored async sleep deadline cannot require an earlier timer
+arm.
+
+The SVC-side call to \`process_time_locked(now)\` is not required to preserve
+the sleep deadline.
+
+That call can also opportunistically process a periodic release whose ideal
+epoch is already due while timer delivery is delayed. R6ag deliberately leaves
+that release to the scheduler timer interrupt instead. C3 already permits
+release lateness up to the timer-jitter/interference bound, so the release
+remains within the existing timing contract.
+
+Because the profile has exactly one async task and that task becomes SLEEPING
+before dispatch, omitting the opportunistic scan cannot allow async application
+execution to run ahead of a due periodic job. Until the timer interrupt
+materializes the release, the dispatcher can only select already-READY periodic
+work or idle.
+
+Generic profiles retain SVC-side time processing.
