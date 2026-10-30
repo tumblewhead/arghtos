@@ -140,9 +140,10 @@ physical-board harness
   R6am accepted                = 1320 B
   R6an rejected neutral        = 1320 B
   R6ao accepted                = 1319 B
-  R6ap accepted current ctl    = 1318 B
+  R6ap accepted                = 1318 B
   R6aq rejected regressive     = 1358 B
-  phase: R6ar nibble-packed periodic deltas
+  R6ar accepted current ctl    = 1292 B
+  phase: R6as two-bit packed periodic deltas
 ```
 
 Correctness repair chain:
@@ -286,37 +287,51 @@ R6aq additionally outlined:
   missed_release_add            40 B
 ```
 
-R6ar targets the generated period table instead of timer control flow. The
-accepted min profile consumes periods only in the sequential periodic time
-scan. The generator therefore stores successive nondecreasing period deltas in
-4-bit nibbles.
+R6ar is preserved in
+[implementation/R6ar-nibble-period-deltas.md](implementation/R6ar-nibble-period-deltas.md).
 
-For the canonical 23-periodic fixture:
+R6ar authoritative CI:
 
 ```text
-R6ap: 22 period bytes
-R6ar: 22 deltas packed into 11 bytes
+run:        41015852511
+conclusion: success
+R6ap:      1318 B
+R6ar:      1292 B
+delta:      -26 B
+
+period table:
+  R6ap        22 B
+  R6ar        11 B
+
+arghtos_timer_interrupt:
+  R6ap       184 B
+  R6ar       180 B
 ```
 
-Task 0 remains implicit period 1. The scan accumulates one decoded delta before
-processing each later periodic ID. Generator proof requires every adjacent
-period delta to fit in 0..15; zero supports equal-period peers.
+R6as strengthens the generated delta bound from 0..15 to 0..3 and packs four
+adjacent period deltas per byte. The canonical 22 deltas therefore occupy six
+bytes.
 
-Owning refinements:
+The sequential decoder becomes branchless:
 
-* [architecture/contracts/C0-static-task-configuration.md](architecture/contracts/C0-static-task-configuration.md)
-* [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
-* [proof/P0-static-configuration-validity.md](proof/P0-static-configuration-validity.md)
-* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
+```text
+packed = table[k >> 2]
+shift  = (k & 3) * 2
+delta  = (packed >> shift) & 3
+period += delta
+```
+
+Generator evidence must prove every adjacent periodic delta fits 0..3; zero
+continues to represent equal-period peers.
 
 ## Exact next action
 
-1. Let PR #5 CI build host R6ar and physical R6ap/R6ar in the same revision.
+1. Let PR #5 CI build host R6as and physical R6ar/R6as in the same revision.
 2. Require generated-frame audits, async-return-fatal repair, host semantics,
    sanitizer, portability, historical controls, and physical controls green.
-3. Compare complete resident bytes, packed schedule size, and
+3. Compare complete resident bytes, packed period-table size, and
    `arghtos_timer_interrupt`.
-4. Accept R6ar only for a strict physical reduction below 1318 B.
-5. If decoder code outweighs the 11-byte data saving, preserve the result and
-   keep R6ap as control.
+4. Accept R6as only for a strict physical reduction below 1292 B.
+5. If decoder cost outweighs the five saved data bytes, preserve the result and
+   keep R6ar as control.
 6. Do not merge PR #5 without explicit user permission.
