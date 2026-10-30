@@ -3919,7 +3919,7 @@ m23-footprint-r6am: | $(BUILD)
 		-DARGHTOS_R6R_FLAGLESS_KERNEL_STATE=1 \
 		-c src/arghtos_kernel.c -o $(BUILD)/arghtos_kernel_m23_r6am.o
 	$(CLANG) $(M23_COMMON) -flto -fomit-frame-pointer -fno-jump-tables \
-		-DARGHTOS_ENTRY_NEXT_OVERLAY=1 -DARGHTOS_R5AF_ASM_HARDFAULT_ENTRY=1 -DARGHTOS_R5AG_LINK_ALIAS_TERMINAL=1 -DARGHTOS_R5X_FORCE_CRASH_INLINE=1 -DARGHTOS_R6AC_PRESEEDED_PORT_FORMAT=1 -c port/cortex_m23/arghtos_port.c \
+		-DARGHTOS_ENTRY_NEXT_OVERLAY=1 -DARGHTOS_R5AF_ASM_HARDFAULT_ENTRY=1 -DARGHTOS_R5AG_LINK_ALIAS_TERMINAL=1 -DARGHTOS_R5X_FORCE_CRASH_INLINE=1 -DARGHTOS_R6AC_PRESEEDED_PORT_FORMAT=1 -DARGHTOS_R6AM_ALIGNED_FIRST_DISPATCH_MSP=1 -c port/cortex_m23/arghtos_port.c \
 		-o $(BUILD)/arghtos_port_m23_r6am.o
 	# Dedicated non-LTO evidence object: Clang does not reliably emit a .su
 	# sidecar for the LTO object. Keep the same target/profile flags and prove
