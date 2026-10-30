@@ -409,3 +409,20 @@ for every periodic task ID.
 Therefore every invocation of the unchanged catch-up recurrence receives the
 same period as the accepted R6ap profile. Release epochs, missed-release
 counts, wrap-safe due behavior, and RMS ordering are unchanged.
+
+# R6as two-bit period equivalence
+
+R6as changes only the bit width used to serialize the same generated R6ar
+deltas.
+
+For each periodic ID i >= 1, the decoder recovers exactly:
+
+~~~text
+d_i = T_i - T_(i-1)
+~~~
+
+because the generator proves d_i <= 3 and stores that exact two-bit value.
+
+The same R6ar induction therefore gives reconstructed period R_i = T_i for all
+periodic IDs. Catch-up, release phase, missed-release arithmetic, and timer
+behavior are unchanged.
