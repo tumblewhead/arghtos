@@ -332,3 +332,23 @@ The refinement is valid only when C4 guarantees that a YIELD service request
 cannot resume Thread mode before the pended PendSV dispatch executes.
 
 Generic ports and profiles retain the service-side READY write.
+
+# R6ag timer-owned elapsed-time release during sleep
+
+In the trusted unit-period single-async minimum profile, a successful future
+\`SLEEP_UNTIL\` request may stop invoking the general time engine from SVC.
+
+The service still:
+
+* reads \`now\`;
+* rejects an already-due deadline as the ordinary no-op case;
+* stores the future absolute deadline;
+* transitions the sole async worker RUNNING -> SLEEPING;
+* requests dispatch.
+
+Elapsed periodic-release catch-up and async sleep expiry remain owned by the
+scheduler timer interrupt.
+
+This changes only when already-due periodic releases are opportunistically
+noticed by SVC. Their required release remains governed by C3's timer-delivery
+jitter bound.
