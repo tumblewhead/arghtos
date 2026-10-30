@@ -130,7 +130,8 @@ physical-board harness
   R6ac accepted                = 1372 B
   R6ad accepted                = 1360 B
   R6ae accepted current control= 1348 B
-  phase: R6af unconditional crash task-id materialization (wired)
+  R6af rejected neutral        = 1348 B
+  phase: R6ag timer-owned SLEEP_UNTIL release processing
 ```
 
 R6ae is preserved in
@@ -152,26 +153,45 @@ arghtos_kernel_dispatch:
   both       116 B
 ```
 
-R6af targets crash task attribution. R5n already proves that on admitted
-generated-profile execution `kernel.current_task` is either INVALID or a
-configured task ID.
+R6af is preserved in
+[implementation/R6af-unconditional-crash-task-id.md](implementation/R6af-unconditional-crash-task-id.md).
 
-The generated crash record already starts with `task_id=INVALID`. R6af will:
+R6af authoritative CI:
 
-* always write `kernel.current_task` into `task_id`;
-* set TASK_VALID only when that value is not INVALID;
-* preserve preseeded PORT_STATE_VALID and port_format fields;
-* retain R6m recursive-fatal and commit-last behavior.
+```text
+run:        40988335478
+conclusion: success
+R6ae:      1348 B
+R6af:      1348 B
+delta:        0 B
+arghtos_fatal:
+  both       136 B
+```
 
-Writing INVALID when no task is current is idempotent.
+R6ag removes the SVC-side `process_time_locked(now)` call from a successful
+future SLEEP_UNTIL request in the trusted period-1 / single-async profile.
+
+The sleep service still stores the absolute future deadline, marks the sole
+async worker SLEEPING, and requests dispatch. The already-armed period-1 timer
+cannot be later than that sleep deadline.
+
+If a periodic release is already ideally due while timer delivery is delayed,
+R6ag no longer notices it opportunistically from SVC. It remains owned by the
+scheduler timer interrupt and therefore remains bounded by the existing C3/P6
+timer-jitter contract.
+
+The host challenger deliberately simulates this late-timer case and verifies:
+
+* SVC does not advance overdue periodic state or rearm the timer;
+* the timer interrupt performs periodic arithmetic catch-up;
+* a later timer interrupt still expires the async absolute sleep deadline.
 
 ## Exact next action
 
-1. PR #5 now builds physical R6ae and R6af in the same revision.
-2. Require host regressions for both INVALID and valid-current crash task
-   attribution, plus recursive-fatal, sanitizer, portability, historical
-   reproduction, and physical controls green.
-3. Compare complete resident bytes and `arghtos_fatal`.
-4. Accept R6af only for a strict physical reduction below 1348 B.
+1. Let PR #5 CI build physical R6ae and R6ag in the same revision.
+2. Require the timer-owned sleep regression, sanitizer, portability,
+   historical reproduction, and all physical controls green.
+3. Compare complete resident bytes and `arghtos_kernel_service`.
+4. Accept R6ag only for a strict physical reduction below 1348 B.
 5. If neutral/regressive, preserve the result and keep R6ae as control.
 6. Do not merge PR #5 without explicit user permission.
