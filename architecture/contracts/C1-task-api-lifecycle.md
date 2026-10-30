@@ -352,3 +352,29 @@ scheduler timer interrupt.
 This changes only when already-due periodic releases are opportunistically
 noticed by SVC. Their required release remains governed by C3's timer-delivery
 jitter bound.
+
+# R6ah default-dispatch generated service control flow
+
+The trusted R6ad/R6ae/R6ag minimum profile has exactly two legal service
+outcomes that do not require a dispatch request:
+
+1. WAIT observes \`wake_pending=1\`, clears the latch, and leaves the caller
+   RUNNING.
+2. SLEEP_UNTIL observes an already-due deadline and returns without changing
+   scheduler state.
+
+Every other admitted service requests dispatch:
+
+* YIELD;
+* WAIT with no pending wake;
+* future SLEEP_UNTIL;
+* WAKE under R6ad;
+* TASK_RETURN.
+
+R6ah may therefore represent dispatch as the common service epilogue rather
+than a per-call boolean. The two no-dispatch cases return \`ARGHTOS_OK\`
+directly after completing their ordinary checks/mutation.
+
+This is a control-flow representation refinement only. Public return values,
+task-state transitions, wake-latch semantics, and dispatch-request cardinality
+are unchanged.
