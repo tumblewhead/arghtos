@@ -214,3 +214,26 @@ padding are absent.
 This reduces rather than expands the finite resident state established by P0.
 Generic ABI/storage claims remain unchanged for profiles that retain the
 ordinary C9 representation.
+
+# R6ao periodic-only schedule-table refinement
+
+Under R5p/R5ab, the generated task set is a periodic prefix plus exactly one
+async task.
+
+R6ao removes only the async task's raw priority byte from the generated
+schedule8 object.
+
+Every surviving schedule8 index is statically confined to the periodic prefix.
+The single-async selector does not require priority ordering, and R6aj/R6ak
+remove the former trampoline class read that exposed the R5z defect.
+
+Therefore the generated table length may be:
+
+~~~text
+sizeof(schedule8) = ARGHTOS_R5P_PERIODIC_COUNT
+~~~
+
+without removing any value observed by admitted execution.
+
+Task IDs, task count, control slots, task metadata, and public scheduling
+semantics remain unchanged.
