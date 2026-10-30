@@ -1260,7 +1260,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 #endif
             ARGHTOS_CTRL_NEXT(&controls[self]) = deadline;
             ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_SLEEPING);
+#if !ARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE
             process_time_locked(now);
+#endif
             #if ARGHTOS_R6N_OK_ONLY_SERVICES
         dispatch = true;
 #else
