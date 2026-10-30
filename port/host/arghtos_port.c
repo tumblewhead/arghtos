@@ -2,6 +2,10 @@
 #include "../../src/arghtos_kernel_port.h"
 #include "arghtos_host_port.h"
 
+#ifndef ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
+#define ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT 0
+#endif
+
 #include <stdlib.h>
 
 static arghtos_host_mode_t host_mode = ARGHTOS_HOST_STARTUP;
@@ -207,7 +211,9 @@ void arghtos_port_crash_fill(
         host_recursive_fault_on_crash_fill = false;
         arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
     }
+#if !ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
     record->port_format = 0x484Fu;
+#endif
     record->port_words = 1u;
     record->port_state[0] = (uint32_t)host_mode;
 }
