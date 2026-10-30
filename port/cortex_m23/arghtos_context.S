@@ -139,11 +139,14 @@ PendSV_Handler:
 1:
     /*
      * First dispatch entered from Thread mode using MSP.
-     * Reclaim the hardware exception frame before switching Thread mode to
-     * PSP. xPSR[9] records whether hardware inserted one 4-byte alignment
-     * word above the basic frame.
+     * Generic profiles inspect stacked xPSR[9] for optional alignment padding.
+     * R6am proves the selected startup MSP is already 8-byte aligned and that
+     * arghtos_port_start() consumes zero stack, so the frame is exactly 32 B.
      */
     mrs r5, msp
+#if ARGHTOS_R6AM_ALIGNED_FIRST_DISPATCH_MSP
+    adds r5, #32
+#else
     ldr r1, [r5, #28]
 #if ARGHTOS_R5AD_COMPACT_API_VENEERS
     adds r5, #32
@@ -164,6 +167,7 @@ PendSV_Handler:
     lsls r1, r1, #2
     adds r5, #32
     adds r5, r5, r1
+#endif
 #endif
     msr msp, r5
     movs r0, #0
