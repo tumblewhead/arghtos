@@ -19,7 +19,11 @@
 extern arghtos_task_control_t arghtos_static_slots[ARGHTOS_MAX_TASKS];
 #define ARGHTOS_TASK_ENTRY(id)    ARGHTOS_CTRL_ENTRY(&arghtos_static_slots[(id)])
 #if ARGHTOS_R5I_SCHEDULE8
+#if ARGHTOS_R6AO_PERIODIC_ONLY_SCHEDULE8
+extern uint8_t arghtos_static_schedule8[ARGHTOS_R5P_PERIODIC_COUNT];
+#else
 extern uint8_t arghtos_static_schedule8[ARGHTOS_MAX_TASKS];
+#endif
 #if ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT > 0u
 extern uint32_t arghtos_static_schedule8_overflow[ARGHTOS_R5I_SCHEDULE_OVERFLOW_COUNT];
 #endif
