@@ -418,3 +418,24 @@ identical dispatch-request cardinality, and the same public result.
 R6e serialization guarantees the early returns do not bypass a required local
 critical-section exit. No P1 state transition is added, removed, or reordered
 relative to an application-visible boundary.
+
+# R6ai trampoline class-boundary refinement
+
+R5p establishes a bijection between generated class and ID range:
+
+~~~text
+periodic IDs = [0, P)
+async IDs    = [P, N)
+~~~
+
+The ordinary trampoline classifies with \`ARGHTOS_TASK_PERIOD(id) != 0\`.
+For every admitted R5p generated configuration, that predicate and
+\`id < P\` identify the same task class.
+
+Replacing the schedule lookup with the ID-boundary predicate therefore selects
+the same trampoline lifecycle for every configured task:
+
+* periodic entry returns through TASK_RETURN and repeats on later release;
+* async entry return remains fatal.
+
+No P1 state transition, return rule, or scheduler-visible task class changes.
