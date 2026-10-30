@@ -128,52 +128,48 @@ physical-board harness
   R6aa accepted                = 1384 B
   R6ab accepted                = 1380 B
   R6ac accepted                = 1372 B
-  R6ad accepted current control= 1360 B
-  phase: R6ae dispatch-owned YIELD transition
+  R6ad accepted                = 1360 B
+  R6ae accepted current control= 1348 B
+  phase: R6af unconditional crash task-id materialization
 ```
 
-R6ad is preserved in
-[implementation/R6ad-unconditional-wake-dispatch.md](implementation/R6ad-unconditional-wake-dispatch.md).
+R6ae is preserved in
+[implementation/R6ae-dispatch-owned-yield.md](implementation/R6ae-dispatch-owned-yield.md).
 
-R6ad authoritative CI:
+R6ae authoritative CI:
 
 ```text
-run:        40985479485
+run:        40985917356
 conclusion: success
-R6ac:      1372 B
 R6ad:      1360 B
+R6ae:      1348 B
 delta:      -12 B
 
-wake_locked_compact:
-  R6ac        52 B
-  R6ad        44 B
 arghtos_kernel_service:
-  R6ac       148 B
   R6ad       144 B
+  R6ae       132 B
+arghtos_kernel_dispatch:
+  both       116 B
 ```
 
-R6ae moves the existing YIELD `RUNNING -> READY` transition from the SVC
-service body to the immediately-owned PendSV dispatcher.
+R6af targets crash task attribution. R5n already proves that on admitted
+generated-profile execution `kernel.current_task` is either INVALID or a
+configured task ID.
 
-The Cortex-M23 exception contract guarantees that a pended PendSV executes
-before Thread mode resumes through the YIELD call, so application code cannot
-observe the intermediate RUNNING representation. The dispatcher already
-performs the same legal outgoing-task RUNNING -> READY transition before
-selection.
+The generated crash record already starts with `task_id=INVALID`. R6af will:
 
-Owning refinements:
+* always write `kernel.current_task` into `task_id`;
+* set TASK_VALID only when that value is not INVALID;
+* preserve preseeded PORT_STATE_VALID and port_format fields;
+* retain R6m recursive-fatal and commit-last behavior.
 
-* [architecture/contracts/C1-task-api-lifecycle.md](architecture/contracts/C1-task-api-lifecycle.md)
-* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
-* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
+Writing INVALID when no task is current is idempotent.
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6ad and R6ae in the same revision.
-2. Require the host deferred-YIELD seam regression, wake regressions, crash
-   regressions, sanitizers, portability, historical reproduction, and physical
-   controls green.
-3. Compare complete resident bytes and `arghtos_kernel_service`.
-4. Accept R6ae only for a strict physical reduction below 1360 B.
-5. If neutral/regressive, preserve the result and keep R6ad as control.
+1. Add the R6af crash-attribution contract/proof refinement.
+2. Add a host regression for both INVALID and valid-current task attribution.
+3. Build physical R6ae and R6af in the same revision.
+4. Compare complete resident bytes and `arghtos_fatal`.
+5. Accept R6af only for a strict physical reduction below 1348 B.
 6. Do not merge PR #5 without explicit user permission.
