@@ -454,3 +454,23 @@ wrap-safe due interval and is at most `0x80000000`. Since
 
 This representation is exactly equivalent to the existing room/subtraction
 saturator and retains the same C5 diagnostic semantics.
+
+# R6z trusted selected-port crash payload
+
+When C4 proves the selected crash filler always returns
+`1 <= port_words <= 10`, the generated crash-record image may preseed:
+
+```text
+flags |= ARGHTOS_CRASH_F_PORT_STATE_VALID
+```
+
+The portable fatal path may then omit the post-fill clamp and zero-payload test.
+Task attribution ORs TASK_VALID into the preseeded flags rather than replacing
+them.
+
+R6z composes with the R6m commit-word recursion guard. The record remains
+invalid while capture is in progress and is committed valid only after the port
+payload has been written and the release fence executes.
+
+Generic/debug and unproven ports retain the clamp, zero-payload handling, and
+runtime PORT_STATE_VALID derivation.
