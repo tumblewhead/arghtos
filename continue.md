@@ -132,7 +132,8 @@ physical-board harness
   R6ae accepted                = 1348 B
   R6af rejected neutral        = 1348 B
   R6ag accepted current control= 1340 B
-  phase: R6ah default-dispatch service control flow (wired)
+  R6ah rejected neutral        = 1340 B
+  phase: R6ai generated trampoline class test
 ```
 
 R6ae is preserved in
@@ -186,26 +187,40 @@ arghtos_kernel_service:
   R6ag       128 B
 ```
 
-R6ah inverts the trusted service dispatch control flow. Under the accepted
-R6ad/R6ae/R6ag profile, every legal service requires dispatch except exactly:
+R6ah is preserved in
+[implementation/R6ah-default-dispatch-services.md](implementation/R6ah-default-dispatch-services.md).
 
-* WAIT when a pending wake is consumed;
-* SLEEP_UNTIL when the requested absolute deadline is already due.
+R6ah authoritative CI:
 
-R6ah will early-return OK for those two cases and make
-`arghtos_port_request_dispatch()` the common service epilogue. This removes
-the per-call dispatch boolean without changing any admitted state transition or
-return value.
+```text
+run:        40989861862
+conclusion: success
+R6ag:      1340 B
+R6ah:      1340 B
+delta:        0 B
+arghtos_kernel_service:
+  both       128 B
+```
+
+R6ai uses the R5p generated class boundary in the task-start trampoline instead
+of reloading the compact schedule byte only to test whether the task period is
+nonzero.
+
+For every admitted generated configuration:
+
+```text
+id < ARGHTOS_R5P_PERIODIC_COUNT  <=> periodic
+otherwise                        <=> async
+```
+
+The periodic TASK_RETURN loop and async-return fatal behavior are otherwise
+unchanged.
 
 ## Exact next action
 
-1. PR #5 now builds physical R6ag and R6ah in the same revision.
-2. Require host proof that pending-wake WAIT and already-due sleep issue zero
-   dispatches, while YIELD, normal WAIT, future sleep, WAKE, and TASK_RETURN
-   retain their dispatch behavior.
-3. Require sanitizer, portability, historical reproduction, and all physical
-   controls green.
-4. Compare complete resident bytes and `arghtos_kernel_service`.
-5. Accept R6ah only for a strict physical reduction below 1340 B.
-6. If neutral/regressive, preserve the result and keep R6ag as control.
-7. Do not merge PR #5 without explicit user permission.
+1. Let PR #5 CI build physical R6ag and R6ai in the same revision.
+2. Require host/sanitizer/portability/historical and physical controls green.
+3. Compare complete resident bytes and `arghtos_task_start_trampoline`.
+4. Accept R6ai only for a strict physical reduction below 1340 B.
+5. If neutral/regressive, preserve the result and keep R6ag as control.
+6. Do not merge PR #5 without explicit user permission.
