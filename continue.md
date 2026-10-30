@@ -137,7 +137,7 @@ physical-board harness
   R6aj accepted semantic ctl   = 1340 B
   R6ak accepted current ctl    = 1328 B
   R6al rejected neutral        = 1328 B
-  phase: R6am fixed aligned first-dispatch MSP reclaim
+  phase: R6am fixed aligned first-dispatch MSP reclaim (wired)
 ```
 
 Correctness repair chain:
@@ -204,14 +204,14 @@ Generic/debug profiles retain xPSR alignment decoding.
 
 ## Exact next action
 
-1. Add the R6am C4/P2 contract/proof refinement.
-2. Add a machine-readable checker for the selected port's `.su` file and
-   require `arghtos_port_start` static stack usage == 0.
-3. Add an R6am PendSV assembly branch that reclaims exactly 32 bytes on first
-   dispatch without reading stacked xPSR.
-4. Build physical R6ak and R6am in the same revision.
-5. Require R6ak/R6am frame audits, R6aj async-return regression, sanitizers,
-   portability, historical controls, and all physical controls green.
-6. Compare resident bytes and `PendSV_Handler`.
-7. Accept R6am only for a strict physical reduction below 1328 B.
+1. Let PR #5 CI build physical R6ak and R6am in the same revision.
+2. R6am must first pass `tools/check_stack_usage.py` proving selected
+   `arghtos_port_start` static stack usage is exactly 0 B.
+3. Require R6ak/R6am generated-frame audits, R6aj async-return regression,
+   sanitizers, portability, historical controls, and all physical controls
+   green.
+4. Compare complete resident bytes and `PendSV_Handler`.
+5. Accept R6am only for a strict physical reduction below 1328 B.
+6. If the stack-usage premise fails, reject R6am regardless of linked size.
+7. If neutral/regressive, preserve the result and keep R6ak as control.
 8. Do not merge PR #5 without explicit user permission.
