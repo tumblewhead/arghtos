@@ -135,3 +135,18 @@ additional bounded PendSV/dispatch cost per scheduler timer tick in `K_i(R)`.
 
 No application execution priority changes; the additional work is scheduler
 overhead already represented by the P6 kernel-overhead term.
+
+# R6ad unconditional wake-dispatch overhead
+
+R6ad may execute one redundant PendSV/dispatcher pass for a wake that did not
+change target eligibility, for example a repeated wake while the sole async
+worker is READY, RUNNING, or SLEEPING.
+
+This does not alter fixed-priority selection or allow async application work to
+run ahead of READY periodic work. It adds only bounded kernel overhead.
+
+Any schedulability analysis selecting R6ad SHALL include the maximum rate and
+cost of these additional wake-triggered PendSV/dispatch passes in the
+appropriate `K_i(R)` / interrupt-overhead bound.
+
+No application WCET or priority relation changes.
