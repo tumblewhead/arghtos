@@ -1195,7 +1195,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
     arghtos_irq_key_t key;
 #endif
     const arghtos_task_id_t self = kernel.current_task;
-#if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+    /* Dispatch is the common epilogue; only two cases return before it. */
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
     bool dispatch = false;
 #else
     uint8_t outcome = ARGHTOS_OK;
@@ -1215,7 +1217,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
             ARGHTOS_CTRL_AGE_ID(self) = 0u;
         }
 #endif
-        #if ARGHTOS_R6N_OK_ONLY_SERVICES
+        #if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+        /* Common epilogue dispatches. */
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
         dispatch = true;
 #else
         outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
@@ -1225,12 +1229,17 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
     case ARGHTOS_SERVICE_WAIT:
         if (ARGHTOS_CTRL_WAKE_PENDING_ID(self)) {
             ARGHTOS_CTRL_CLEAR_WAKE_ID(self);
+#if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+            return ARGHTOS_OK;
+#endif
         } else {
             ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_WAITING);
 #if !ARGHTOS_R5R_ELIDE_AGE_RESETS
             ARGHTOS_CTRL_AGE_ID(self) = 0u;
 #endif
-            #if ARGHTOS_R6N_OK_ONLY_SERVICES
+            #if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+        /* Common epilogue dispatches. */
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
         dispatch = true;
 #else
         outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
@@ -1247,7 +1256,11 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 #endif
 
             if (time_due(now, deadline)) {
+#if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+                return ARGHTOS_OK;
+#else
                 break;
+#endif
             }
 #if !ARGHTOS_MINIMAL_VALIDATION
             if (!duration_valid(delta)) {
@@ -1263,7 +1276,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 #if !ARGHTOS_R6AG_TIMER_OWNS_SLEEP_RELEASE
             process_time_locked(now);
 #endif
-            #if ARGHTOS_R6N_OK_ONLY_SERVICES
+            #if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+        /* Common epilogue dispatches. */
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
         dispatch = true;
 #else
         outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
@@ -1274,7 +1289,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
     case ARGHTOS_SERVICE_WAKE:
 #if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
         wake_locked_compact();
+#if !ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
         dispatch = true;
+#endif
 #elif ARGHTOS_R6N_OK_ONLY_SERVICES
 #if ARGHTOS_R6AB_SINGLE_WAKE_TARGET
         dispatch = wake_locked_compact();
@@ -1288,7 +1305,9 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 
     case ARGHTOS_SERVICE_TASK_RETURN:
         ARGHTOS_CTRL_SET_STATE_ID(self, ARGHTOS_TASK_DORMANT);
-        #if ARGHTOS_R6N_OK_ONLY_SERVICES
+        #if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+        /* Common epilogue dispatches. */
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
         dispatch = true;
 #else
         outcome = ARGHTOS_WAKE_DISPATCH_BIT | ARGHTOS_OK;
@@ -1308,7 +1327,10 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
     arghtos_port_critical_exit(key);
 #endif
 
-#if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+    arghtos_port_request_dispatch();
+    return ARGHTOS_OK;
+#elif ARGHTOS_R6N_OK_ONLY_SERVICES
     if (dispatch) {
         arghtos_port_request_dispatch();
     }
