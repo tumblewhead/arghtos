@@ -434,3 +434,23 @@ and therefore preserves the C5 saturating diagnostic contract.
 
 The loop executes at most `15 - old_missed <= 15` iterations, regardless of
 the delayed-release count.
+
+# R6y packed missed-release add/clamp
+
+The trusted compact minimum profile may compute the four-bit missed-release
+counter as an add-then-clamp operation:
+
+```text
+total = old_missed + count
+new_missed = min(total, 15)
+```
+
+The packed low nibble containing task state/wake information is preserved by the
+existing missed-count setter.
+
+For every admitted delayed-release update, `count` is derived from the
+wrap-safe due interval and is at most `0x80000000`. Since
+`old_missed <= 15`, the 32-bit addition cannot overflow.
+
+This representation is exactly equivalent to the existing room/subtraction
+saturator and retains the same C5 diagnostic semantics.
