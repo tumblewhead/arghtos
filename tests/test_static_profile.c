@@ -331,9 +331,15 @@ static void test_static_dispatch_and_async_wake(void)
     assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_READY);
     assert(arghtos_host_dispatch_request_count() == 1u);
 #endif
+#if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+    arghtos_host_clear_dispatch_requests();
+#endif
     assert(arghtos_port_service_call(
         ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
     assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_DORMANT);
+#if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+    assert(arghtos_host_dispatch_request_count() == 1u);
+#endif
 
 #if ARGHTOS_TEST_THREE_TASKS
     {
@@ -376,6 +382,9 @@ static void test_static_dispatch_and_async_wake(void)
     assert(arghtos_port_service_call(ARGHTOS_SERVICE_WAIT, 0u) == ARGHTOS_OK);
     assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_RUNNING);
     assert(!ARGHTOS_CTRL_WAKE_PENDING(&c[1]));
+#if ARGHTOS_R6AH_DEFAULT_DISPATCH_SERVICES
+    assert(arghtos_host_dispatch_request_count() == 0u);
+#endif
 
     arghtos_host_set_time(10u);
     assert(arghtos_sleep_until(20u) == ARGHTOS_OK);
