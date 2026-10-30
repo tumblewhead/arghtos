@@ -378,3 +378,21 @@ directly after completing their ordinary checks/mutation.
 This is a control-flow representation refinement only. Public return values,
 task-state transitions, wake-latch semantics, and dispatch-request cardinality
 are unchanged.
+
+# R6ai generated trampoline class test
+
+The trusted R5p generated-order profile may classify the task-start trampoline
+by task ID instead of reloading the compact schedule field.
+
+C0 already proves:
+
+~~~text
+id < ARGHTOS_R5P_PERIODIC_COUNT  <=> periodic task
+id >= ARGHTOS_R5P_PERIODIC_COUNT <=> async task
+~~~
+
+R6ai therefore uses that generated boundary to choose between the periodic
+bounded-job loop and the asynchronous persistent-worker path.
+
+The application entry, periodic TASK_RETURN service, async-return fatal rule,
+and all lifecycle transitions are unchanged.
