@@ -261,3 +261,20 @@ total <= 0x8000000F < UINT32_MAX
 ```
 
 Therefore R6y preserves P7 bounded work and C5 saturation semantics exactly.
+
+# R6ad unconditional wake-dispatch bound
+
+Each accepted R6ad wake adds at most one dispatch request.
+
+The resulting PendSV path performs the already-bounded selector/dispatch work;
+it does not loop on wake history, allocate storage, or add event multiplicity.
+
+Thus wake-triggered work remains bounded per API invocation by:
+
+```text
+fixed wake mutation + one bounded PendSV/dispatch pass
+```
+
+Repeated external wakes can cause repeated bounded invocations, exactly as
+ordinary interrupt activity already can. No individual scheduler operation
+becomes history-dependent or unbounded.
