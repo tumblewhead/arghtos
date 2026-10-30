@@ -474,3 +474,15 @@ payload has been written and the release fence executes.
 
 Generic/debug and unproven ports retain the clamp, zero-payload handling, and
 runtime PORT_STATE_VALID derivation.
+
+# R6ac preseeded port-format field
+
+When C4 proves one immutable selected-port crash format, the generated C5 record
+may preseed `port_format` alongside its existing invariant header and
+PORT_STATE_VALID flag.
+
+Crash capture still writes the dynamic payload words/count, reason, timestamp,
+task attribution, and final commit marker. Only the invariant format write is
+removed.
+
+The record remains invalid until the R6m commit-last transaction completes.
