@@ -445,3 +445,28 @@ Therefore task 0 is due on every admitted call to the time engine.
 R6aq may process task 0 without evaluating \`time_due()\`, set its next ideal
 release directly to \`now + 1\`, and then scan periodic IDs 1..P-1 with the
 ordinary due/catch-up logic.
+
+# R6ar sequential period-delta reconstruction
+
+R6ar is valid because the accepted generated time engine scans the periodic
+prefix strictly in ascending task-ID order.
+
+The scan initializes:
+
+~~~text
+period = 1
+~~~
+
+for task 0. Before processing each later periodic ID, it decodes the next
+generated 4-bit delta and accumulates:
+
+~~~text
+period += delta
+~~~
+
+The resulting period sequence is exactly the generator's original
+nondecreasing periodic sequence. No random period lookup is required by the
+accepted minimum profile.
+
+Due testing, arithmetic delayed-release catch-up, missed-release accounting,
+and timer ownership are otherwise unchanged.
