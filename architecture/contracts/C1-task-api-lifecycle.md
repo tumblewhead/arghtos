@@ -313,3 +313,22 @@ always equal to the generated `WAKE_ID` on admitted executions.
 
 The externally observable wake transition, return value, pending-wake latch,
 and dispatch intent are unchanged.
+
+# R6ae dispatch-owned YIELD transition
+
+The trusted Cortex-M23 minimum profile may defer the physical
+`RUNNING -> READY` write for YIELD from `arghtos_kernel_service()` to the
+already-required PendSV dispatcher.
+
+The public YIELD semantics remain:
+
+```text
+RUNNING -> READY
+request dispatch
+resume only when selected RUNNING again
+```
+
+The refinement is valid only when C4 guarantees that a YIELD service request
+cannot resume Thread mode before the pended PendSV dispatch executes.
+
+Generic ports and profiles retain the service-side READY write.
