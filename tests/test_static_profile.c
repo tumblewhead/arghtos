@@ -682,6 +682,9 @@ static void test_recursive_fatal_uses_commit_guard(void)
     start_and_escape();
 
     assert(arghtos_static_crash_record.commit_magic == 0u);
+#if ARGHTOS_R6AN_REASON_RECURSION_GUARD
+    assert(arghtos_static_crash_record.reason == ARGHTOS_FAULT_NONE);
+#endif
     arghtos_host_set_recursive_fault_on_crash_fill(true);
     arghtos_host_set_fault_jmp(&env);
     if (setjmp(env) == 0) {
@@ -691,8 +694,14 @@ static void test_recursive_fatal_uses_commit_guard(void)
     arghtos_host_set_fault_jmp(NULL);
 
     assert(arghtos_host_crash_fill_count() == 1u);
+#if ARGHTOS_R6AN_REASON_RECURSION_GUARD
+    assert(arghtos_static_crash_record.reason ==
+           ARGHTOS_FAULT_KERNEL_INVARIANT);
+    assert(arghtos_static_crash_record.commit_magic == 0u);
+#else
     assert(arghtos_static_crash_record.commit_magic ==
            ARGHTOS_R6M_CAPTURE_IN_PROGRESS);
+#endif
 }
 #endif
 
