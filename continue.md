@@ -136,7 +136,8 @@ physical-board harness
   R6ai runtime correctness ctl = 1360 B
   R6aj accepted semantic ctl   = 1340 B
   R6ak accepted current ctl    = 1328 B
-  phase: R6al direct unit-tick timer arm
+  R6al rejected neutral        = 1328 B
+  phase: R6am fixed aligned first-dispatch MSP reclaim
 ```
 
 Correctness repair chain:
@@ -168,32 +169,49 @@ frame relocation audit:
 R6ak preserves the R6aj async-return-fatal repair and is now the semantic and
 physical R6 control.
 
-R6al consumes the existing R6t proof:
+R6al is preserved in
+[implementation/R6al-direct-unit-timer-arm.md](implementation/R6al-direct-unit-timer-arm.md).
+
+R6al authoritative CI:
 
 ```text
-post-time-engine next_time[0] = now + 1
+run:        40996547586
+conclusion: success
+R6ak:      1328 B
+R6al:      1328 B
+delta:        0 B
+arghtos_timer_interrupt:
+  both       184 B
 ```
 
-and changes only the final period-1 timer arm from:
+R6ak remains the current semantic and physical control at 1328 B.
 
-```text
-arm(next_time[0])
-```
+R6am targets only first-dispatch PendSV MSP reclamation.
 
-to:
+The current selected path reads stacked xPSR[9] and conditionally reclaims
+either 32 or 36 bytes. R6am will use a fixed 32-byte reclaim only if CI proves:
 
-```text
-arm(now + 1)
-```
+1. the call from portable C into the selected `arghtos_port_start()` obeys
+   the Cortex-M23 AAPCS 8-byte public-interface SP rule;
+2. the selected `arghtos_port_start()` has zero static stack usage, so MSP
+   stays 8-byte aligned until the first exception;
+3. the first scheduler exception frame therefore has no hardware alignment
+   padding; and
+4. any higher-priority handler before PendSV restores that same underlying
+   Thread frame, so tail-chaining does not alter its padding status.
 
-The stored ideal release epoch is unchanged.
+Generic/debug profiles retain xPSR alignment decoding.
 
 ## Exact next action
 
-1. Let PR #5 CI build host R6al and physical R6ak/R6al in the same revision.
-2. Require timer regressions, R6ak frame audit, R6aj async-return regression,
-   sanitizers, portability, historical controls, and physical controls green.
-3. Compare complete resident bytes and `arghtos_timer_interrupt`.
-4. Accept R6al only for a strict physical reduction below 1328 B.
-5. If neutral/regressive, preserve the result and keep R6ak as control.
-6. Do not merge PR #5 without explicit user permission.
+1. Add the R6am C4/P2 contract/proof refinement.
+2. Add a machine-readable checker for the selected port's `.su` file and
+   require `arghtos_port_start` static stack usage == 0.
+3. Add an R6am PendSV assembly branch that reclaims exactly 32 bytes on first
+   dispatch without reading stacked xPSR.
+4. Build physical R6ak and R6am in the same revision.
+5. Require R6ak/R6am frame audits, R6aj async-return regression, sanitizers,
+   portability, historical controls, and all physical controls green.
+6. Compare resident bytes and `PendSV_Handler`.
+7. Accept R6am only for a strict physical reduction below 1328 B.
+8. Do not merge PR #5 without explicit user permission.
