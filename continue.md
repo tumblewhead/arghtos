@@ -126,49 +126,48 @@ physical-board harness
   R6u accepted                 = 1420 B
   R6v accepted                 = 1396 B
   R6aa accepted                = 1384 B
-  R6ab accepted control        = 1380 B
-  phase: R6ac preseeded selected-port crash format
+  R6ab accepted                = 1380 B
+  R6ac accepted current control= 1372 B
+  phase: R6ad unconditional trusted wake dispatch
 ```
 
-R6ab is preserved in
-[implementation/R6ab-singleton-wake-target.md](implementation/R6ab-singleton-wake-target.md).
+R6ac is preserved in
+[implementation/R6ac-preseeded-port-format.md](implementation/R6ac-preseeded-port-format.md).
 
-R6ab authoritative CI:
+R6ac authoritative CI:
 
 ```text
-run:        40984337290
+run:        40984715361
 conclusion: success
-R6aa:      1384 B
 R6ab:      1380 B
-delta:       -4 B
+R6ac:      1372 B
+delta:       -8 B
+arghtos_fatal:
+  R6ab       144 B
+  R6ac       136 B
 ```
 
-R6ac consumes the selected-port invariant that the crash payload format ID is
-fixed for the entire generated image.
+R6ad tests a size-for-cycles wake refinement. In the trusted single-async
+profile, wake state/latch mutation remains unchanged, but every supported WAKE
+requests one scheduler dispatch instead of returning a conditional dispatch
+intent.
 
-The generated record now preseeds:
+The extra dispatch is bounded and does not create task eligibility:
 
-```text
-host verification port: 0x484F
-Cortex-M23 port:         0x4D23
-```
+* DORMANT/WAITING wake still requires the dispatch it already requested;
+* READY wake adds only a scheduler reevaluation;
+* RUNNING wake still only latches the pending wake bit;
+* SLEEPING wake still only latches the pending wake bit and does not end sleep.
 
-The selected crash fillers omit their runtime `port_format` write. Dynamic
-payload words/count, R6m recursive-fatal protection, and commit-last ordering
-remain unchanged.
-
-Owning refinements:
-
-* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
-* [architecture/contracts/C5-fault-diagnostics.md](architecture/contracts/C5-fault-diagnostics.md)
-* [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
+The scheduler remains the sole authority for any resulting preemption.
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6ab and R6ac in the same revision.
-2. Require pre/post crash-format assertions, recursive-fatal, sanitizer,
-   portability, historical reproduction, and physical-control gates green.
-3. Compare complete resident bytes and `arghtos_fatal`.
-4. Accept R6ac only for a strict physical reduction below 1380 B.
-5. If neutral/regressive, preserve the result and keep R6ab as control.
+1. Add the R6ad wake/dispatch contract and bounded-work proof refinement.
+2. Build physical R6ac and R6ad in the same revision.
+3. Add host checks that READY/RUNNING/SLEEPING wake requests dispatch while
+   preserving their existing state/latch effects.
+4. Compare complete resident bytes plus `wake_locked_compact`,
+   `arghtos_wake_from_interrupt`, and `arghtos_kernel_service`.
+5. Accept R6ad only for a strict physical reduction below 1372 B.
 6. Do not merge PR #5 without explicit user permission.
