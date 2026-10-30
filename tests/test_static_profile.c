@@ -438,7 +438,45 @@ static void test_static_crash_record_symbol_is_used(void)
     assert((arghtos_static_crash_record.flags &
             ARGHTOS_CRASH_F_PORT_STATE_VALID) != 0u);
 #endif
+#if ARGHTOS_R6AF_UNCONDITIONAL_CRASH_TASK_ID
+    assert(arghtos_static_crash_record.task_id == ARGHTOS_TASK_ID_INVALID);
+    assert((arghtos_static_crash_record.flags &
+            ARGHTOS_CRASH_F_TASK_VALID) == 0u);
+#endif
 }
+
+#if ARGHTOS_R6AF_UNCONDITIONAL_CRASH_TASK_ID
+static void test_crash_attribution_with_current_task(void)
+{
+    const arghtos_task_control_t *ctrl;
+    jmp_buf env;
+
+    reset_all();
+    assert(arghtos_init(NULL) == ARGHTOS_OK);
+    start_and_escape();
+
+    ctrl = arghtos_test_controls();
+    assert(arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE) == ctrl[0].context);
+    assert(arghtos_test_kernel()->current_task == 0u);
+
+    arghtos_host_set_fault_jmp(&env);
+    if (setjmp(env) == 0) {
+        arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+        assert(!"fatal returned");
+    }
+    arghtos_host_set_fault_jmp(NULL);
+
+    assert(arghtos_static_crash_record.commit_magic ==
+           ARGHTOS_CRASH_COMMIT_MAGIC);
+    assert(arghtos_static_crash_record.task_id == 0u);
+    assert((arghtos_static_crash_record.flags &
+            ARGHTOS_CRASH_F_TASK_VALID) != 0u);
+#if ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
+    assert((arghtos_static_crash_record.flags &
+            ARGHTOS_CRASH_F_PORT_STATE_VALID) != 0u);
+#endif
+}
+#endif
 
 #if ARGHTOS_COMPACT_RUNTIME
 static void test_compact_runtime_saturation(void)
@@ -577,6 +615,9 @@ int main(void)
     test_static_init_ignores_runtime_config();
     test_static_dispatch_and_async_wake();
     test_static_crash_record_symbol_is_used();
+#if ARGHTOS_R6AF_UNCONDITIONAL_CRASH_TASK_ID
+    test_crash_attribution_with_current_task();
+#endif
 #if ARGHTOS_R6AE_DISPATCH_OWNS_YIELD_READY
     test_deferred_yield_ready_owned_by_dispatch();
 #endif
