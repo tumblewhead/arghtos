@@ -109,9 +109,6 @@ jobs:
       - name: Host R6ag timer-owned-sleep-release control
         run: make host-test-r6ag
 
-      - name: Host R6ah default-dispatch-services challenger
-        run: make host-test-r6ah
-
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -207,9 +204,6 @@ jobs:
 
       - name: Cortex-M23 R6ag timer-owned-sleep-release physical control
         run: make m23-footprint-r6ag
-
-      - name: Cortex-M23 R6ah default-dispatch-services physical challenger
-        run: make m23-footprint-r6ah
 
       - name: Enforce R5ag 1536-byte resident target
         run: |
@@ -393,23 +387,9 @@ jobs:
           print(f"physical R6ae control: {aev} B; R6ag challenger: {agv} B; delta: {agv-aev} B")
           PY
 
-      - name: Evaluate R6ah physical challenger
-        run: |
-          python3 - <<'PY'
-          import json
-          with open("build/footprint-r6ag.json", "r", encoding="utf-8") as f:
-              ag = json.load(f)
-          with open("build/footprint-r6ah.json", "r", encoding="utf-8") as f:
-              ah = json.load(f)
-          agv = ag["arghtos_resident_total"]
-          ahv = ah["arghtos_resident_total"]
-          assert ahv <= 1536, f"physical R6ah challenger misses target: {ahv} B > 1536 B"
-          print(f"physical R6ag control: {agv} B; R6ah challenger: {ahv} B; delta: {ahv-agv} B")
-          PY
-
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v r6z r6aa r6ab r6ac r6ad r6ae r6ag r6ah; do
+          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v r6z r6aa r6ab r6ac r6ad r6ae r6ag; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -452,7 +432,6 @@ jobs:
             build/footprint-r6ad.json
             build/footprint-r6ae.json
             build/footprint-r6ag.json
-            build/footprint-r6ah.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5ag.map
@@ -483,7 +462,6 @@ jobs:
             build/m23-r6ad.map
             build/m23-r6ae.map
             build/m23-r6ag.map
-            build/m23-r6ah.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5ag-symbols.txt
@@ -514,7 +492,6 @@ jobs:
             build/m23-r6ad-symbols.txt
             build/m23-r6ae-symbols.txt
             build/m23-r6ag-symbols.txt
-            build/m23-r6ah-symbols.txt
             build/m23-r4y.elf
             build/m23-r5ag.elf
             build/m23-r6b.elf
@@ -544,5 +521,4 @@ jobs:
             build/m23-r6ad.elf
             build/m23-r6ae.elf
             build/m23-r6ag.elf
-            build/m23-r6ah.elf
             build/*.su
