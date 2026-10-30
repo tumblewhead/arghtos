@@ -1887,12 +1887,20 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
 #endif
 #endif
 
-#if ARGHTOS_R6AI_GENERATED_TRAMPOLINE_CLASS
+#if ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY
+    /*
+     * Only generated periodic initial contexts enter this trampoline.
+     * The sole async frame starts directly at its application entry.
+     */
+    {
+        for (;;) {
+#elif ARGHTOS_R6AI_GENERATED_TRAMPOLINE_CLASS
     if (task_is_periodic(id)) {
+        for (;;) {
 #else
     if (ARGHTOS_TASK_PERIOD(id) != 0u) {
-#endif
         for (;;) {
+#endif
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
             entry();
 #else
@@ -1912,17 +1920,23 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
         }
     }
 
+#if !ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY
 #if ARGHTOS_ENTRY_NEXT_OVERLAY
     entry();
 #else
     ARGHTOS_TASK_ENTRY(id)();
 #endif
     arghtos_fatal(ARGHTOS_FAULT_ASYNC_RETURNED, NULL);
+#endif
 }
 
 ARGHTOS_NORETURN void arghtos_task_return_guard(void)
 {
+#if ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY
+    arghtos_fatal(ARGHTOS_FAULT_ASYNC_RETURNED, NULL);
+#else
     arghtos_fatal(ARGHTOS_FAULT_KERNEL_INVARIANT, NULL);
+#endif
 }
 
 #ifdef ARGHTOS_TEST
