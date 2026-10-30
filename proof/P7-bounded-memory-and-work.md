@@ -278,3 +278,22 @@ fixed wake mutation + one bounded PendSV/dispatch pass
 Repeated external wakes can cause repeated bounded invocations, exactly as
 ordinary interrupt activity already can. No individual scheduler operation
 becomes history-dependent or unbounded.
+
+# R6an reason-owned recursion-bound refinement
+
+R6an replaces R6m's separate nonzero in-progress commit marker with the
+already-required nonzero crash reason.
+
+Generated startup supplies \`reason = NONE = 0\`. Every admitted selected-profile
+fatal caller supplies a fixed nonzero reason. The first fatal entry writes that
+reason before any port crash-fill operation.
+
+A recursive entry therefore performs one fixed reason comparison and transfers
+directly to the non-returning terminal hook. It cannot start a second fill.
+
+The first capture still performs one release fence and one final
+\`commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC\` write. No loop, allocation, or
+history-dependent work is added.
+
+Thus recursive-fatal work remains fixed and bounded, while one in-progress
+commit-word store is removed.
