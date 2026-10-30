@@ -13,6 +13,23 @@ arghtos_port_service_call:
     bx lr
 .size arghtos_port_service_call, .-arghtos_port_service_call
 
+#if ARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE
+/*
+ * Generated periodic entry pointer lives in task R4.
+ * TASK_RETURN ignores arg0/R1 in the trusted service domain.
+ */
+.global arghtos_task_start_trampoline
+.type arghtos_task_start_trampoline, %function
+.thumb_func
+arghtos_task_start_trampoline:
+1:
+    blx r4
+    movs r0, #4
+    svc #0
+    b.n 1b
+.size arghtos_task_start_trampoline, .-arghtos_task_start_trampoline
+
+#endif
 #if ARGHTOS_R5AD_COMPACT_API_VENEERS
 /*
  * Public task-context service veneers for the trusted minimum-size target.
