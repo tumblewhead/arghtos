@@ -497,6 +497,40 @@ static void test_compact_runtime_saturation(void)
 }
 #endif
 
+#if ARGHTOS_R6AE_DISPATCH_OWNS_YIELD_READY
+static void test_deferred_yield_ready_owned_by_dispatch(void)
+{
+    const arghtos_task_control_t *c;
+    arghtos_context_t ctx;
+
+    reset_all();
+    assert(arghtos_init(NULL) == ARGHTOS_OK);
+    start_and_escape();
+
+    c = arghtos_test_controls();
+    ctx = arghtos_kernel_dispatch(ARGHTOS_CONTEXT_NONE);
+    assert(ctx == c[0].context);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_RUNNING);
+
+    arghtos_host_set_mode(ARGHTOS_HOST_TASK);
+    arghtos_host_clear_dispatch_requests();
+    assert(arghtos_port_service_call(ARGHTOS_SERVICE_YIELD, 0u) == ARGHTOS_OK);
+
+    /*
+     * The host seam returns from the service directly instead of Cortex-M23
+     * exception tail-chaining. R6ae intentionally leaves the task RUNNING
+     * until the immediately-owned PendSV dispatcher saves its context.
+     */
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_RUNNING);
+    assert(arghtos_host_dispatch_request_count() == 1u);
+
+    ctx = arghtos_kernel_dispatch(ctx);
+    assert(ctx == c[0].context);
+    assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_RUNNING);
+    assert(arghtos_test_kernel()->current_task == 0u);
+}
+#endif
+
 #if ARGHTOS_R6M_COMMIT_RECURSION_GUARD
 static void test_recursive_fatal_uses_commit_guard(void)
 {
@@ -543,6 +577,9 @@ int main(void)
     test_static_init_ignores_runtime_config();
     test_static_dispatch_and_async_wake();
     test_static_crash_record_symbol_is_used();
+#if ARGHTOS_R6AE_DISPATCH_OWNS_YIELD_READY
+    test_deferred_yield_ready_owned_by_dispatch();
+#endif
 #if ARGHTOS_R6M_COMMIT_RECURSION_GUARD
     test_recursive_fatal_uses_commit_guard();
 #endif
