@@ -124,52 +124,56 @@ physical-board harness
   R6s accepted                 = 1480 B
   R6t accepted                 = 1424 B
   R6u accepted                 = 1420 B
-  R6v accepted control         = 1396 B
-  R6w rejected regressive      = 1400 B
-  R6x rejected regressive      = 1400 B
-  R6y rejected neutral         = 1396 B
-  R6z rejected regressive      = 1400 B
-  phase: R6aa inline trusted crash payload
+  R6v accepted                 = 1396 B
+  R6aa accepted control        = 1384 B
+  R6ab active challenger
 ```
 
-Recent rejected checkpoints:
+R6aa is preserved in
+[implementation/R6aa-inlined-trusted-crash-payload.md](implementation/R6aa-inlined-trusted-crash-payload.md).
 
-* [implementation/R6w-early-periodic-ready.md](implementation/R6w-early-periodic-ready.md)
-* [implementation/R6x-bounded-missed-loop.md](implementation/R6x-bounded-missed-loop.md)
-* [implementation/R6y-packed-missed-add.md](implementation/R6y-packed-missed-add.md)
-* [implementation/R6z-trusted-crash-payload.md](implementation/R6z-trusted-crash-payload.md)
-
-R6z authoritative CI:
+R6aa authoritative CI:
 
 ```text
-run:        40983706583
+run:        40983889248
 conclusion: success
 R6v:       1396 B
-R6z:       1400 B
-delta:       +4 B
-
-R6v:
-  arghtos_fatal            156 B
-  crash_fill               inlined
-
-R6z:
-  arghtos_fatal             68 B
-  arghtos_port_crash_fill   92 B
-  combined                 160 B
+R6z:       1400 B rejected (outlined crash fill)
+R6aa:      1384 B accepted
+delta from R6v: -12 B
 ```
 
-R6aa keeps the valid R6z selected-port payload proof but forces the Cortex-M23
-crash filler inline. This tests whether the redundant clamp/zero-payload
-branches can be removed without triggering the four-byte LTO outlining penalty.
+R6ab consumes the generated single-async invariant. With generated ordering and
+exactly one async task, every supported wake target is:
 
-No semantic contract changes beyond R6z are introduced.
+```text
+ARGHTOS_R5P_PERIODIC_COUNT
+```
+
+The minimum profile therefore:
+
+* removes the runtime target parameter from `wake_locked_compact()`;
+* ignores the public interrupt-wake argument under the trusted contract;
+* omits the SVC wake target propagation;
+* removes the target move from the Cortex-M23 public wake veneer.
+
+Public API signatures remain unchanged. Generic/debug and multi-async profiles
+retain runtime wake targets.
+
+Owning refinements:
+
+* [architecture/contracts/C1-task-api-lifecycle.md](architecture/contracts/C1-task-api-lifecycle.md)
+* [architecture/contracts/C2-wake.md](architecture/contracts/C2-wake.md)
+* [proof/P1-task-state-invariants.md](proof/P1-task-state-invariants.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build R6v, R6z, and R6aa in the same revision.
-2. Require crash-record, recursive-fatal, sanitizer, portability, historical
-   reproduction, and physical-control gates green.
-3. Compare R6aa resident bytes and fatal/crash-fill symbol shape against R6v.
-4. Accept R6aa only for a strict physical reduction below 1396 B.
-5. If neutral/regressive, preserve the result and return to R6v as control.
+1. Let PR #5 CI build physical R6aa and R6ab in the same revision.
+2. Require wake semantics, interrupt wake, sanitizer, portability, historical
+   reproduction, crash-path, and physical-control gates green.
+3. Compare complete resident bytes plus `wake_locked_compact`,
+   `arghtos_wake_from_interrupt`, `arghtos_kernel_service`, and public
+   `arghtos_wake`.
+4. Accept R6ab only for a strict physical reduction below 1384 B.
+5. If neutral/regressive, preserve the result and keep R6aa as control.
 6. Do not merge PR #5 without explicit user permission.
