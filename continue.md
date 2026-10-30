@@ -126,20 +126,35 @@ physical-board harness
   R6u accepted                 = 1420 B
   R6v accepted control         = 1396 B
   R6w rejected regressive      = 1400 B
-  phase: R6x bounded missed-release saturator
+  R6x rejected regressive      = 1400 B
+  phase: R6y packed missed add/clamp
 ```
 
-R6w is preserved in
-[implementation/R6w-early-periodic-ready.md](implementation/R6w-early-periodic-ready.md)
-and removed from the live build/CI surface.
+Rejected checkpoints:
 
-R6x replaces compact missed-release room arithmetic with a packed high-nibble
-increment loop. Each iteration adds one missed release while preserving the low
-state/wake nibble. The loop stops when the requested increment is exhausted or
-the four-bit count saturates at 15.
+* [implementation/R6w-early-periodic-ready.md](implementation/R6w-early-periodic-ready.md)
+* [implementation/R6x-bounded-missed-loop.md](implementation/R6x-bounded-missed-loop.md)
 
-The loop is capped at 15 iterations per due periodic task, independent of the
-magnitude of delayed release history.
+R6x authoritative rerun:
+
+```text
+run:        40982797574
+conclusion: success
+R6v:       1396 B
+R6x:       1400 B
+delta:       +4 B
+```
+
+R6y keeps constant-time missed-release update work and replaces the accepted
+room/subtraction saturator with:
+
+```text
+total = old_missed + count
+new_missed = min(total, 15)
+```
+
+The C3/P4 delayed-release bound proves this 32-bit addition cannot overflow.
+The existing packed setter preserves task state and wake bits.
 
 Owning refinements:
 
@@ -148,11 +163,10 @@ Owning refinements:
 
 ## Exact next action
 
-1. PR #5 now builds physical R6v and R6x in the same revision.
-2. Require exact small missed-count and saturation host checks, sanitizers,
+1. Let PR #5 CI build physical R6v and R6y in the same revision.
+2. Require exact small-count and saturation host checks, sanitizers,
    portability, historical reproduction, and physical controls green.
 3. Compare complete resident bytes and `process_time_locked`.
-4. Accept R6x only for a strict physical reduction.
-5. If accepted, record the bounded-cycle trade explicitly in the implementation
-   checkpoint.
+4. Accept R6y only for a strict physical reduction.
+5. If neutral/regressive, preserve the result and keep R6v = 1396 B as control.
 6. Do not merge PR #5 without explicit user permission.
