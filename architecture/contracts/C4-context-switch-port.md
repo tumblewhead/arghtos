@@ -634,3 +634,27 @@ Therefore, for these selected ports, a successful
 exceeds the ten-word public crash-record payload.
 
 Generic ports retain the ordinary defensive range checks.
+
+# R6ac fixed selected-port crash format
+
+The selected trusted minimum-profile port has one compile-time crash payload
+format identifier for the lifetime of the generated image.
+
+For Cortex-M23:
+
+```text
+port_format = ARGHTOS_M23_CRASH_FORMAT = 0x4D23
+```
+
+For the host verification port:
+
+```text
+port_format = 0x484F
+```
+
+The generated crash record may therefore contain the selected port format
+before runtime begins, and `arghtos_port_crash_fill()` need not rewrite that
+field on each capture.
+
+Generic ports and profiles that do not prove one fixed format retain the
+runtime write.
