@@ -356,3 +356,29 @@ next    += releases * period
 
 is unchanged for every task, so release epochs, missed counts, and drift
 properties are identical.
+
+# R6aq task0 unconditional-due proof
+
+R6t establishes that the armed scheduler deadline is task 0's next release.
+C3 requires timer service at or after that armed deadline. R6ag ensures the
+time engine is reached only from that timer service.
+
+Thus at every admitted time-engine entry:
+
+~~~text
+now >= next_time[0]   in the C3 half-range due ordering
+~~~
+
+For period 1:
+
+~~~text
+late     = now - old_next
+releases = 1 + late
+new_next = old_next + releases = now + 1
+~~~
+
+If task 0 was DORMANT, one release becomes READY and \`late\` releases are
+missed. Otherwise all \`late + 1\` releases are missed. This is exactly the
+ordinary period-1 catch-up result.
+
+IDs 1..P-1 retain the unchanged generic arithmetic catch-up path.
