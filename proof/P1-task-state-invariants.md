@@ -336,3 +336,24 @@ profile. Therefore every admitted wake target is the unique member of `A`.
 Replacing a runtime wake ID with that compile-time ID selects the same control
 record for every supported execution. No P1 state transition or wake result is
 changed.
+
+# R6ae deferred YIELD transition refinement
+
+R6ae moves one already-legal P1 edge:
+
+```text
+RUNNING -> READY
+```
+
+from the YIELD service body to the immediately following PendSV dispatcher.
+
+C4 proves no Thread-mode application instruction can execute in the interval.
+When PendSV saves the outgoing context, `arghtos_kernel_dispatch()` observes
+the current task still RUNNING and performs the same RUNNING -> READY transition
+before calling the selector.
+
+Thus the selector sees the same READY set as the ordinary implementation and
+the public YIELD call can resume only after a READY -> RUNNING selection.
+
+No P1 edge is added or removed; only the owner of the existing preemption edge
+changes within one SVC-to-PendSV transaction.
