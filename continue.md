@@ -127,46 +127,54 @@ physical-board harness
   R6v accepted control         = 1396 B
   R6w rejected regressive      = 1400 B
   R6x rejected regressive      = 1400 B
-  phase: R6y packed missed add/clamp
+  R6y rejected neutral         = 1396 B
+  phase: R6z trusted selected crash payload
 ```
 
-Rejected checkpoints:
+Recent rejected checkpoints:
 
 * [implementation/R6w-early-periodic-ready.md](implementation/R6w-early-periodic-ready.md)
 * [implementation/R6x-bounded-missed-loop.md](implementation/R6x-bounded-missed-loop.md)
+* [implementation/R6y-packed-missed-add.md](implementation/R6y-packed-missed-add.md)
 
-R6x authoritative rerun:
+R6y authoritative CI:
 
 ```text
-run:        40982797574
+run:        40983178221
 conclusion: success
 R6v:       1396 B
-R6x:       1400 B
-delta:       +4 B
+R6y:       1396 B
+delta:        0 B
 ```
 
-R6y keeps constant-time missed-release update work and replaces the accepted
-room/subtraction saturator with:
+R6z targets the 156-byte fatal path. The selected Cortex-M23 crash filler is
+proved to emit exactly 2, 3, or 10 payload words; the host verification port
+emits exactly 1. Thus every selected-port crash fill satisfies:
 
 ```text
-total = old_missed + count
-new_missed = min(total, 15)
+1 <= port_words <= 10
 ```
 
-The C3/P4 delayed-release bound proves this 32-bit addition cannot overflow.
-The existing packed setter preserves task state and wake bits.
+R6z composes this with R6m rather than re-enabling the old R5w experiment:
+
+* generated crash flags preseed PORT_STATE_VALID;
+* TASK_VALID is ORed into that preseed;
+* the post-fill >10 clamp is removed;
+* the post-fill zero-payload test and PORT_STATE_VALID write are removed;
+* R6m commit-word recursion protection and commit-last ordering remain intact.
 
 Owning refinements:
 
+* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
 * [architecture/contracts/C5-fault-diagnostics.md](architecture/contracts/C5-fault-diagnostics.md)
-* [proof/P7-bounded-memory-and-work.md](proof/P7-bounded-memory-and-work.md)
+* [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6v and R6y in the same revision.
-2. Require exact small-count and saturation host checks, sanitizers,
-   portability, historical reproduction, and physical controls green.
-3. Compare complete resident bytes and `process_time_locked`.
-4. Accept R6y only for a strict physical reduction.
+1. Let PR #5 CI build physical R6v and R6z in the same revision.
+2. Require crash-record, recursive-fatal, sanitizer, portability, historical
+   reproduction, and physical-control gates green.
+3. Compare complete resident bytes and `arghtos_fatal`.
+4. Accept R6z only for a strict physical reduction.
 5. If neutral/regressive, preserve the result and keep R6v = 1396 B as control.
 6. Do not merge PR #5 without explicit user permission.
