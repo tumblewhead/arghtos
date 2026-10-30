@@ -206,7 +206,9 @@ static bool duration_valid(arghtos_duration_t dt)
 }
 #endif
 
-#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT && !ARGHTOS_R6G_PROVEN_CURRENT_DOMAIN
+#if !ARGHTOS_R5W_TRUSTED_CRASH_PORT && \
+    !ARGHTOS_R6G_PROVEN_CURRENT_DOMAIN && \
+    !ARGHTOS_R6AF_UNCONDITIONAL_CRASH_TASK_ID
 static bool task_id_valid(arghtos_task_id_t id)
 {
     return id < ARGHTOS_TASK_COUNT;
@@ -1766,7 +1768,12 @@ ARGHTOS_NORETURN void arghtos_fatal(
     r->reason = reason;
     r->timestamp = arghtos_port_time_now();
 
-#if ARGHTOS_R5W_TRUSTED_CRASH_PORT
+#if ARGHTOS_R6AF_UNCONDITIONAL_CRASH_TASK_ID
+    r->task_id = kernel.current_task;
+    if (kernel.current_task != ARGHTOS_TASK_ID_INVALID) {
+        r->flags |= ARGHTOS_CRASH_F_TASK_VALID;
+    }
+#elif ARGHTOS_R5W_TRUSTED_CRASH_PORT
     if (kernel.current_task != ARGHTOS_TASK_ID_INVALID) {
         r->task_id = kernel.current_task;
         r->flags |= ARGHTOS_CRASH_F_TASK_VALID;
