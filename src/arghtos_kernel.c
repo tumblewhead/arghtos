@@ -1874,7 +1874,9 @@ ARGHTOS_NORETURN void arghtos_task_start_trampoline(arghtos_task_fn_t entry)
 ARGHTOS_NORETURN void arghtos_task_start_trampoline(void)
 #endif
 {
+#if !ARGHTOS_R6AJ_DIRECT_ASYNC_PREBUILT_ENTRY
     arghtos_task_id_t id = kernel.current_task;
+#endif
 
 #if !ARGHTOS_R5N_PROVEN_DISPATCH
     if (!task_id_valid(id)) {
