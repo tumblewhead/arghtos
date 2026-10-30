@@ -515,10 +515,18 @@ static ARGHTOS_TIME_RETURN process_time_locked(arghtos_time_t now)
 #if ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
         if (id != 0u) {
             const uint8_t delta_index = (uint8_t)(id - 1u);
+#if ARGHTOS_R6AS_TWO_BIT_PERIOD_DELTAS
+            const uint8_t packed =
+                arghtos_static_schedule8[delta_index >> 2u];
+            const uint8_t shift = (uint8_t)((delta_index & 3u) << 1u);
+            const uint8_t delta =
+                (uint8_t)((packed >> shift) & 0x03u);
+#else
             const uint8_t packed =
                 arghtos_static_schedule8[delta_index >> 1u];
             const uint8_t delta = (uint8_t)(
                 ((delta_index & 1u) != 0u) ? (packed >> 4u) : (packed & 0x0Fu));
+#endif
             r6ar_period += delta;
         }
         const uint32_t period = r6ar_period;
