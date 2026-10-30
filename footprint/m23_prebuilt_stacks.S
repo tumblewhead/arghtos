@@ -22,11 +22,20 @@ app_stacks:
     /* 64 bytes ordinary task stack below the initial saved context. */
     .space 64
 
+#if ARGHTOS_R6AK_ASM_PERIODIC_TRAMPOLINE
+    /* Software-saved R4-R11: generated application entry lives in R4. */
+    .word task_stub
+    .word 0, 0, 0, 0, 0, 0, 0
+
+    /* Hardware frame: R0-R3, R12, LR, PC, xPSR. */
+    .word 0
+#else
     /* Software-saved R4-R11. */
     .word 0, 0, 0, 0, 0, 0, 0, 0
 
     /* Hardware frame: R0-R3, R12, LR, PC, xPSR. */
     .word task_stub
+#endif
     .word 0, 0, 0, 0
     .word arghtos_task_return_guard
     .word arghtos_task_start_trampoline - 1
