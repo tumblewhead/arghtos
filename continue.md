@@ -135,9 +135,10 @@ physical-board harness
   R6ah rejected neutral        = 1340 B
   R6ai runtime correctness ctl = 1360 B
   R6aj accepted semantic ctl   = 1340 B
-  R6ak accepted current ctl    = 1328 B
+  R6ak accepted                = 1328 B
   R6al rejected neutral        = 1328 B
-  phase: R6am fixed aligned first-dispatch MSP reclaim (wired)
+  R6am accepted current ctl    = 1320 B
+  phase: R6an reason-owned recursive-fatal guard
 ```
 
 Correctness repair chain:
@@ -186,41 +187,58 @@ arghtos_timer_interrupt:
 
 R6ak remains the current semantic and physical control at 1328 B.
 
-R6am targets only first-dispatch PendSV MSP reclamation.
+R6am is preserved in
+[implementation/R6am-aligned-first-dispatch.md](implementation/R6am-aligned-first-dispatch.md).
 
-The current selected path reads stacked xPSR[9] and conditionally reclaims
-either 32 or 36 bytes. R6am will use a fixed 32-byte reclaim only if CI proves:
+R6am authoritative CI:
 
-1. the call from portable C into the selected `arghtos_port_start()` obeys
-   the Cortex-M23 AAPCS 8-byte public-interface SP rule;
-2. the selected `arghtos_port_start()` has zero static stack usage, so MSP
-   stays 8-byte aligned until the first exception;
-3. the first scheduler exception frame therefore has no hardware alignment
-   padding; and
-4. any higher-priority handler before PendSV restores that same underlying
-   Thread frame, so tail-chaining does not alter its padding status.
+```text
+run:        40998129667
+conclusion: success
 
-Generic/debug profiles retain xPSR alignment decoding.
+R6ak control              1328 B
+R6am                      1320 B
+delta                       -8 B
 
+arghtos_port_start           18 B
+PendSV_Handler:
+  R6ak                       92 B
+  R6am                       84 B
 
-R6am evidence update:
+generated-frame audit: PASS
+selected startup: assembly, no SP/MSP write
+```
 
-* the first attempt used Clang `.su` stack-usage metadata;
-* Clang emitted no `.su` file for the LTO port object, so that build failed
-  before linking and produced no footprint claim;
-* the final challenger replaces selected `arghtos_port_start` with explicit
-  zero-stack assembly and keeps the generic C start path unchanged.
+R6am is now the accepted semantic and physical control.
+
+R6an targets the fatal recursion guard. In the trusted selected kernel/port
+profile every admitted call to `arghtos_fatal()` uses a nonzero reason.
+The generated crash record begins with `reason = ARGHTOS_FAULT_NONE = 0`.
+
+R6an will use the reason field itself as the in-progress/recursive guard:
+
+```text
+if reason field != NONE:
+    terminal
+reason field = actual nonzero fault reason
+...
+release fence
+commit_magic = CRASH_COMMIT_MAGIC
+terminal
+```
+
+This removes the separate CAPTURE_IN_PROGRESS write to `commit_magic` while
+preserving commit-last validity. Recursive capture remains terminal because the
+real reason is written before any port crash-fill call.
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6ak and R6am in the same revision.
-2. R6am now supplies `arghtos_port_start` directly in Cortex-M23 assembly.
-   The selected start sequence must remain free of SP/MSP writes.
-3. Require R6ak/R6am generated-frame audits, R6aj async-return regression,
-   sanitizers, portability, historical controls, and all physical controls
-   green.
-4. Compare complete resident bytes, `PendSV_Handler`, and
-   `arghtos_port_start`.
-5. Accept R6am only for a strict physical reduction below 1328 B.
-6. If neutral/regressive, preserve the result and keep R6ak as control.
-7. Do not merge PR #5 without explicit user permission.
+1. Add the R6an C5/P2 recursion-guard contract and proof.
+2. Add a profile gate requiring R6m, preseeded crash state, and the selected
+   closed nonzero fatal-reason domain.
+3. Update the recursive-fatal host regression: recursive capture must occur
+   once, leave `commit_magic == 0`, and leave the first nonzero reason visible
+   in the invalid in-progress record.
+4. Build physical R6am and R6an side by side.
+5. Accept R6an only for a strict physical reduction below 1320 B.
+6. Do not merge PR #5 without explicit user permission.
