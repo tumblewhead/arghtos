@@ -135,61 +135,65 @@ physical-board harness
   R6ah rejected neutral        = 1340 B
   R6ai runtime correctness ctl = 1360 B
   R6aj accepted semantic ctl   = 1340 B
-  phase: R6ak R4 assembly periodic trampoline
+  R6ak accepted current ctl    = 1328 B
+  phase: R6al direct unit-tick timer arm
 ```
 
-R6ai exposed a semantic defect in the R5z raw-schedule lineage: the shared
-task-start trampoline used the raw async-priority byte as if it were a period.
-The historical R5z/R5ag footprint evidence remains valid, but those binaries do
-not independently preserve the promised async-return-fatal lifecycle.
+Correctness repair chain:
 
-Errata and repair evidence:
-
-* [implementation/R5z-raw-class-schedule.md](implementation/R5z-raw-class-schedule.md)
-* [implementation/R5-target-crossing-1534.md](implementation/R5-target-crossing-1534.md)
 * [implementation/R6ai-generated-trampoline-class.md](implementation/R6ai-generated-trampoline-class.md)
 * [implementation/R6aj-direct-async-prebuilt-entry.md](implementation/R6aj-direct-async-prebuilt-entry.md)
+* [implementation/R6ak-r4-asm-periodic-trampoline.md](implementation/R6ak-r4-asm-periodic-trampoline.md)
 
-R6aj authoritative repair:
+R6ak authoritative CI:
 
 ```text
-run:        40995123969
+run:        40996040636
 conclusion: success
 
-R6ag historical size-only  1340 B
-R6ai correctness control   1360 B
-R6aj semantic repair       1340 B
+R6aj semantic control       1340 B
+R6ak                        1328 B
+delta                        -12 B
 
-R6aj vs R6ai                -20 B
-R6aj vs R6ag                  0 B
+task-start trampoline:
+  R6aj                        18 B
+  R6ak                         8 B
 
-prebuilt-frame relocation audit:
-  23 periodic trampoline frames
+frame relocation audit:
+  23 periodic frames via R4
    1 direct async frame
   PASS
 ```
 
-R6aj is now the current semantic and physical R6 control.
+R6ak preserves the R6aj async-return-fatal repair and is now the semantic and
+physical R6 control.
 
-R6ak keeps R6aj's direct async frame but specializes the generated periodic
-frames:
+R6al consumes the existing R6t proof:
 
-* periodic application entry moves from stacked R0 into saved R4;
-* R4 is already preserved by the normal PendSV context;
-* portable C `arghtos_task_start_trampoline` is omitted in the target profile;
-* Cortex-M23 supplies an 8-byte loop:
-  `BLX R4; MOVS R0,#4; SVC #0; B loop`;
-* TASK_RETURN ignores R1, so no arg0 initialization is required;
-* the frame relocation audit switches to periodic-entry-in-R4 mode.
+```text
+post-time-engine next_time[0] = now + 1
+```
+
+and changes only the final period-1 timer arm from:
+
+```text
+arm(next_time[0])
+```
+
+to:
+
+```text
+arm(now + 1)
+```
+
+The stored ideal release epoch is unchanged.
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6aj and R6ak in the same revision.
-2. Require the R6ak R4 frame-relocation audit green.
-3. Require the R6aj host async-return regression, portability, sanitizers,
-   historical controls, and physical controls green.
-4. Compare complete resident bytes and
-   `arghtos_task_start_trampoline`.
-5. Accept R6ak only for a strict physical reduction below the correct 1340 B
-   R6aj control.
+1. Let PR #5 CI build host R6al and physical R6ak/R6al in the same revision.
+2. Require timer regressions, R6ak frame audit, R6aj async-return regression,
+   sanitizers, portability, historical controls, and physical controls green.
+3. Compare complete resident bytes and `arghtos_timer_interrupt`.
+4. Accept R6al only for a strict physical reduction below 1328 B.
+5. If neutral/regressive, preserve the result and keep R6ak as control.
 6. Do not merge PR #5 without explicit user permission.
