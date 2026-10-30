@@ -109,7 +109,13 @@ uint16_t arghtos_static_schedule16[ARGHTOS_MAX_TASKS] = {
 #endif
 #if ARGHTOS_R5I_SCHEDULE8
 __attribute__((section(".arghtos_cfg")))
-#if ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
+#if ARGHTOS_R6AS_TWO_BIT_PERIOD_DELTAS
+uint8_t arghtos_static_schedule8[(ARGHTOS_R5P_PERIODIC_COUNT - 1u + 3u) / 4u] = {
+    0x55u, 0x55u, 0x55u, 0x55u, 0x55u, 0x05u
+};
+_Static_assert(sizeof(arghtos_static_schedule8) == 6u,
+               "R6as physical schedule8 must contain 22 packed two-bit deltas");
+#elif ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
 uint8_t arghtos_static_schedule8[(ARGHTOS_R5P_PERIODIC_COUNT - 1u + 1u) / 2u] = {
     0x11u, 0x11u, 0x11u, 0x11u, 0x11u, 0x11u,
     0x11u, 0x11u, 0x11u, 0x11u, 0x11u
