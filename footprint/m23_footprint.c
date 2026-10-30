@@ -176,6 +176,9 @@ arghtos_crash_record_t arghtos_static_crash_record = {
 #if ARGHTOS_R5W_TRUSTED_CRASH_PORT || ARGHTOS_R6Z_TRUSTED_CRASH_PAYLOAD
     ,.flags = ARGHTOS_CRASH_F_PORT_STATE_VALID
 #endif
+#if ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT
+    ,.port_format = (uint16_t)ARGHTOS_R6AC_PORT_FORMAT_VALUE
+#endif
 };
 #else
 arghtos_crash_record_t arghtos_static_crash_record;
