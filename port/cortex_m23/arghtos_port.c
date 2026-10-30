@@ -20,6 +20,10 @@
 #define ARGHTOS_R6AC_PRESEEDED_PORT_FORMAT 0
 #endif
 
+#ifndef ARGHTOS_R6AM_ALIGNED_FIRST_DISPATCH_MSP
+#define ARGHTOS_R6AM_ALIGNED_FIRST_DISPATCH_MSP 0
+#endif
+
 #if ARGHTOS_R5X_FORCE_CRASH_INLINE
 #define ARGHTOS_R5X_ALWAYS_INLINE __attribute__((always_inline))
 #else
@@ -152,6 +156,7 @@ void arghtos_port_request_dispatch(void)
     *icsr = ARGHTOS_M23_ICSR_PENDSVSET;
 }
 
+#if !ARGHTOS_R6AM_ALIGNED_FIRST_DISPATCH_MSP
 ARGHTOS_NORETURN void arghtos_port_start(void)
 {
     arghtos_port_request_dispatch();
@@ -163,6 +168,7 @@ ARGHTOS_NORETURN void arghtos_port_start(void)
         __asm volatile("wfi" ::: "memory");
     }
 }
+#endif
 
 void arghtos_port_idle_wait(void)
 {
