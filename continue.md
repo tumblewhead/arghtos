@@ -137,9 +137,10 @@ physical-board harness
   R6aj accepted semantic ctl   = 1340 B
   R6ak accepted                = 1328 B
   R6al rejected neutral        = 1328 B
-  R6am accepted current ctl    = 1320 B
+  R6am accepted                = 1320 B
   R6an rejected neutral        = 1320 B
-  phase: R6ao periodic-only schedule8 table (wired)
+  R6ao accepted current ctl    = 1319 B
+  phase: R6ap omit task0 unit-period schedule byte
 ```
 
 Correctness repair chain:
@@ -227,32 +228,51 @@ arghtos_fatal:
   both       136 B
 ```
 
-R6ao removes the sole async task's raw schedule8 priority byte.
+R6ao is preserved in
+[implementation/R6ao-periodic-only-schedule8.md](implementation/R6ao-periodic-only-schedule8.md).
 
-Under R5p/R5ab/R6aj:
+R6ao authoritative CI:
 
 ```text
-periodic IDs = [0, P)
-async IDs    = {P}
-N            = P + 1
+run:        40999743039
+conclusion: success
+R6am:      1320 B
+R6ao:      1319 B
+delta:       -1 B
+
+arghtos_static_schedule8:
+  R6am        24 B
+  R6ao        23 B
 ```
 
-The sole async priority has no runtime consumer:
+R6ap removes the remaining redundant schedule byte for generated task 0.
+R6t already proves that task 0 has period exactly one scheduler tick.
 
-* the single-async selector never compares async priorities;
-* R6aj/R6ak discharge class in the generated context;
-* start/time processing indexes schedule8 only in the periodic prefix.
+The target schedule table therefore stores only periods for periodic IDs 1..22,
+for a physical length of 22 bytes. The time engine reconstructs:
 
-The physical generated table is therefore 23 bytes instead of 24. The host
-proof fixture similarly uses one periodic byte instead of two total task bytes.
-Static assertions pin both generated lengths.
+```text
+id == 0  -> period 1
+id > 0   -> schedule8[id - 1]
+```
+
+The host proof fixture has only one periodic task, so it uses one dummy C byte
+because ISO C has no zero-length object; the R6ap kernel path must never read
+that dummy entry. The physical target carries the actual 22-byte object.
+
+Owning refinements:
+
+* [architecture/contracts/C0-static-task-configuration.md](architecture/contracts/C0-static-task-configuration.md)
+* [architecture/contracts/C3-time-timer.md](architecture/contracts/C3-time-timer.md)
+* [proof/P4-time-release-correctness.md](proof/P4-time-release-correctness.md)
 
 ## Exact next action
 
-1. PR #5 now builds host R6ao and physical R6am/R6ao in the same revision.
-2. Require host semantics, generated-frame audits, async-return-fatal repair,
+1. Let PR #5 CI build host R6ap and physical R6ao/R6ap in the same revision.
+2. Require generated-frame audits, async-return-fatal repair, host semantics,
    sanitizer, portability, historical controls, and physical controls green.
-3. Compare complete resident bytes and `arghtos_static_schedule8` symbol size.
-4. Accept R6ao only for a strict physical reduction below 1320 B.
-5. If neutral/regressive, preserve the result and keep R6am as control.
+3. Compare complete resident bytes, `arghtos_static_schedule8`, and
+   `arghtos_timer_interrupt`.
+4. Accept R6ap only for a strict physical reduction below 1319 B.
+5. If neutral/regressive, preserve the result and keep R6ao as control.
 6. Do not merge PR #5 without explicit user permission.
