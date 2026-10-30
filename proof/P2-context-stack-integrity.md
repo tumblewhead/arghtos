@@ -208,3 +208,19 @@ Moving that constant from `arghtos_port_crash_fill()` into the generated
 initial crash record changes only the time at which the same 16-bit value is
 materialized. The payload words, count, context extraction, and commit ordering
 are unchanged.
+
+# R6aj class-specialized initial-frame proof
+
+R6aj changes only two generated words in the sole async initial hardware frame:
+stacked PC and stacked LR. Frame size, alignment, saved R4-R11 area, xPSR,
+stack interval, and saved PSP token are unchanged.
+
+The async frame's stacked PC names the generated immutable application entry.
+Its stacked LR names a non-returning async-return guard. Therefore normal
+function return uses the ordinary Cortex-M23 ABI and cannot escape into
+unowned memory.
+
+Periodic initial frames remain byte-equivalent to the accepted R5l form.
+
+Target evidence must verify the generated async slot uses direct application PC
+plus the async-return guard before this profile is accepted.
