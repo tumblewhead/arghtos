@@ -318,3 +318,21 @@ performs READY -> RUNNING for the winning task.
 
 Thus R6w does not add a new state edge. It only moves an already-legal
 preemption edge earlier within one handler-to-PendSV scheduling transaction.
+
+# R6ab singleton wake-target refinement
+
+R5p partitions generated IDs into a periodic prefix followed by the async
+suffix. R5ab proves that suffix has cardinality one.
+
+Hence the async set is:
+
+```text
+A = { ARGHTOS_R5P_PERIODIC_COUNT }
+```
+
+C1/C2 permit wake only for an asynchronous task in the trusted generated
+profile. Therefore every admitted wake target is the unique member of `A`.
+
+Replacing a runtime wake ID with that compile-time ID selects the same control
+record for every supported execution. No P1 state transition or wake result is
+changed.
