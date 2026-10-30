@@ -357,3 +357,21 @@ the public YIELD call can resume only after a READY -> RUNNING selection.
 
 No P1 edge is added or removed; only the owner of the existing preemption edge
 changes within one SVC-to-PendSV transaction.
+
+# R6af crash task-ID materialization refinement
+
+R5n establishes the generated-profile current-task domain:
+
+```text
+current_task in { INVALID } union configured_task_ids
+```
+
+R6af always copies that value to the crash record.
+
+For INVALID, the resulting record remains unattributed because TASK_VALID is
+clear. For a configured ID, R6af sets TASK_VALID and records exactly the same ID
+as the ordinary conditional path.
+
+No scheduler state is mutated and no P1 transition changes. The refinement
+only changes the branch structure used to serialize already-proved current-task
+state into C5 diagnostics.
