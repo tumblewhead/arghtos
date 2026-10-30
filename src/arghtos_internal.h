@@ -246,6 +246,15 @@
 #define ARGHTOS_R6AS_TWO_BIT_PERIOD_DELTAS 0
 #endif
 
+#ifndef ARGHTOS_R6AT_CACHED_NIBBLE_PERIODS
+#define ARGHTOS_R6AT_CACHED_NIBBLE_PERIODS 0
+#endif
+
+#if ARGHTOS_R6AT_CACHED_NIBBLE_PERIODS && \
+    (!ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS || ARGHTOS_R6AS_TWO_BIT_PERIOD_DELTAS)
+#error "R6at cached nibble decoder requires the accepted R6ar nibble format"
+#endif
+
 #if ARGHTOS_R6AS_TWO_BIT_PERIOD_DELTAS && !ARGHTOS_R6AR_NIBBLE_PERIOD_DELTAS
 #error "R6as two-bit period deltas require the accepted R6ar sequential decoder"
 #endif
