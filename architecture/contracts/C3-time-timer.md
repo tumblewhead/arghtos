@@ -489,3 +489,17 @@ The decoder is bounded, branchless with respect to nibble position, and runs
 once for each periodic ID after task 0.
 
 All scheduler timing semantics remain those proved for R6ar.
+
+# R6at cached nibble-byte decoder
+
+R6at retains the accepted R6ar nibble-packed period representation unchanged.
+
+Because the periodic scan is strictly sequential, one packed byte contains the
+next two deltas. The decoder may therefore:
+
+* on odd task ID i: load table[i >> 1], consume the low nibble;
+* on the following even task ID: consume the cached high nibble without another
+  table load.
+
+The accumulated period sequence is identical to R6ar. This changes only decoder
+work and temporary register state.
