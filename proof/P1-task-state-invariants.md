@@ -439,3 +439,25 @@ the same trampoline lifecycle for every configured task:
 * async entry return remains fatal.
 
 No P1 state transition, return rule, or scheduler-visible task class changes.
+
+# R6aj generated async-entry lifecycle proof
+
+R5p/R5ab prove there is exactly one async task and its ID is the first slot
+after the periodic prefix.
+
+R6aj moves the class choice from runtime trampoline code into the generated
+initial PC/LR pair.
+
+For every periodic task, execution is unchanged.
+
+For the sole async task:
+
+~~~text
+initial dispatch -> application async entry
+application return -> async-return guard
+async-return guard -> fatal(ASYNC_RETURNED)
+~~~
+
+The ordinary class-aware trampoline produces the same externally observable
+lifecycle. No scheduler state edge is added or removed, and async return is
+again terminal as required.
