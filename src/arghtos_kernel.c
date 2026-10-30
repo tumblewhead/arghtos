@@ -657,11 +657,19 @@ _Static_assert(ARGHTOS_ERR_BAD_CONFIG <= ARGHTOS_WAKE_RESULT_MASK,
                "R5c wake encoding must cover all public result codes");
 
 #if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AB_SINGLE_WAKE_TARGET
+static bool wake_locked_compact(void)
+#else
 static bool wake_locked_compact(arghtos_task_id_t id)
+#endif
 #else
 static uint8_t wake_locked_compact(arghtos_task_id_t id)
 #endif
 {
+#if ARGHTOS_R6AB_SINGLE_WAKE_TARGET
+    const arghtos_task_id_t id =
+        (arghtos_task_id_t)ARGHTOS_R5P_PERIODIC_COUNT;
+#endif
 #if ARGHTOS_R6J_PROVEN_WAKE_DOMAIN
     const uint8_t state = ARGHTOS_CTRL_STATE_ID(id);
 
@@ -1095,7 +1103,12 @@ arghtos_result_t arghtos_wake_from_interrupt(arghtos_task_id_t task_id)
 #endif
 
 #if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AB_SINGLE_WAKE_TARGET
+    (void)task_id;
+    dispatch = wake_locked_compact();
+#else
     dispatch = wake_locked_compact(task_id);
+#endif
 #elif ARGHTOS_R5C_COMPACT_WAKE_RESULT || ARGHTOS_R5D_COMPACT_SERVICE_OUTCOME
     wake_result = wake_locked_compact(task_id);
 #else
@@ -1240,7 +1253,11 @@ arghtos_result_t arghtos_kernel_service(uint8_t service_id, uint32_t arg0)
 
     case ARGHTOS_SERVICE_WAKE:
 #if ARGHTOS_R6N_OK_ONLY_SERVICES
+#if ARGHTOS_R6AB_SINGLE_WAKE_TARGET
+        dispatch = wake_locked_compact();
+#else
         dispatch = wake_locked_compact((arghtos_task_id_t)arg0);
+#endif
 #else
         outcome = wake_locked_compact((arghtos_task_id_t)arg0);
 #endif
