@@ -94,8 +94,11 @@ jobs:
       - name: Host R6aa inlined-crash-payload control
         run: make host-test-r6aa
 
-      - name: Host R6ab singleton-wake-target challenger
+      - name: Host R6ab singleton-wake-target control
         run: make host-test-r6ab
+
+      - name: Host R6ac preseeded-port-format challenger
+        run: make host-test-r6ac
 
       - name: Host sanitizers
         run: make host-sanitize
@@ -178,8 +181,11 @@ jobs:
       - name: Cortex-M23 R6aa inlined-crash-payload physical control
         run: make m23-footprint-r6aa
 
-      - name: Cortex-M23 R6ab singleton-wake-target physical challenger
+      - name: Cortex-M23 R6ab singleton-wake-target physical control
         run: make m23-footprint-r6ab
+
+      - name: Cortex-M23 R6ac preseeded-port-format physical challenger
+        run: make m23-footprint-r6ac
 
       - name: Enforce R5ag 1536-byte resident target
         run: |
@@ -307,9 +313,23 @@ jobs:
           print(f"physical R6aa control: {aav} B; R6ab challenger: {abv} B; delta: {abv-aav} B")
           PY
 
+      - name: Evaluate R6ac physical challenger
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("build/footprint-r6ab.json", "r", encoding="utf-8") as f:
+              ab = json.load(f)
+          with open("build/footprint-r6ac.json", "r", encoding="utf-8") as f:
+              ac = json.load(f)
+          abv = ab["arghtos_resident_total"]
+          acv = ac["arghtos_resident_total"]
+          assert acv <= 1536, f"physical R6ac challenger misses target: {acv} B > 1536 B"
+          print(f"physical R6ab control: {abv} B; R6ac challenger: {acv} B; delta: {acv-abv} B")
+          PY
+
       - name: Symbol-size report
         run: |
-          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v r6z r6aa r6ab; do
+          for p in r3c r4y r5ag r6b r6c r6d r6e r6f r6i r6j r6k r6l r6m r6n r6o r6p r6q r6q-physical r6r r6s r6t r6u r6v r6z r6aa r6ab r6ac; do
             nm -S --size-sort --radix=d "build/m23-$p.elf" > "build/m23-$p-symbols.txt" || true
             echo "--- $p footprint ---"
             cat "build/footprint-$p.json"
@@ -348,6 +368,7 @@ jobs:
             build/footprint-r6z.json
             build/footprint-r6aa.json
             build/footprint-r6ab.json
+            build/footprint-r6ac.json
             build/m23-r3c.map
             build/m23-r4y.map
             build/m23-r5ag.map
@@ -374,6 +395,7 @@ jobs:
             build/m23-r6z.map
             build/m23-r6aa.map
             build/m23-r6ab.map
+            build/m23-r6ac.map
             build/m23-r3c-symbols.txt
             build/m23-r4y-symbols.txt
             build/m23-r5ag-symbols.txt
@@ -400,6 +422,7 @@ jobs:
             build/m23-r6z-symbols.txt
             build/m23-r6aa-symbols.txt
             build/m23-r6ab-symbols.txt
+            build/m23-r6ac-symbols.txt
             build/m23-r4y.elf
             build/m23-r5ag.elf
             build/m23-r6b.elf
@@ -425,4 +448,5 @@ jobs:
             build/m23-r6z.elf
             build/m23-r6aa.elf
             build/m23-r6ab.elf
+            build/m23-r6ac.elf
             build/*.su
