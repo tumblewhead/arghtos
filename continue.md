@@ -148,7 +148,7 @@ Owning refinements:
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6v and R6x in the same revision.
+1. PR #5 now builds physical R6v and R6x in the same revision.
 2. Require exact small missed-count and saturation host checks, sanitizers,
    portability, historical reproduction, and physical controls green.
 3. Compare complete resident bytes and `process_time_locked`.
