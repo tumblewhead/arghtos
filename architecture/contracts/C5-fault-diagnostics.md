@@ -505,3 +505,41 @@ as before.
 This removes the need to condition the task-ID store itself. The TASK_VALID
 flag remains authoritative for whether consumers may interpret the task ID as a
 live task attribution.
+
+# R6an reason-owned recursive-fatal guard
+
+The trusted selected minimum profile may use the crash record's \`reason\` field
+as the recursive-fatal capture guard.
+
+This specialization requires all of the following:
+
+* generated startup materializes \`reason = ARGHTOS_FAULT_NONE = 0\`;
+* every admitted call to \`arghtos_fatal()\` in the selected kernel/port build
+  uses one of the defined nonzero fault reasons;
+* fatal handling remains terminal and does not return to normal scheduling;
+* \`commit_magic\` remains zero until the final commit-last write.
+
+The first fatal entry therefore performs:
+
+~~~text
+if crash.reason != ARGHTOS_FAULT_NONE:
+    terminal immediately
+
+crash.reason = actual nonzero reason
+write remaining dynamic crash fields
+fill port payload
+release fence
+crash.commit_magic = ARGHTOS_CRASH_COMMIT_MAGIC
+terminal
+~~~
+
+A recursive fatal during capture sees the first nonzero reason and terminates
+without recapture. A later fatal after commit also sees the nonzero reason and
+terminates.
+
+The record remains invalid throughout in-progress capture because
+\`commit_magic == 0\`; validity still depends only on the ordinary commit-last
+marker.
+
+Generic/debug and unproven port profiles retain the R6m commit-word in-progress
+marker.
