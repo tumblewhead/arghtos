@@ -121,6 +121,9 @@ jobs:
       - name: Host R6ao periodic-only-schedule challenger
         run: make host-test-r6ao
 
+      - name: Host R6ap omit-unit-period-byte challenger
+        run: make host-test-r6ap
+
       - name: Host sanitizers
         run: make host-sanitize
 
@@ -234,6 +237,9 @@ jobs:
 
       - name: Cortex-M23 R6ao periodic-only-schedule physical challenger
         run: make m23-footprint-r6ao
+
+      - name: Cortex-M23 R6ap omit-unit-period-byte physical challenger
+        run: make m23-footprint-r6ap
 
       - name: Enforce R5ag 1536-byte resident target
         run: |
