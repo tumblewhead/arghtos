@@ -198,3 +198,13 @@ before returning to portable fatal capture.
 R6z consumes this invariant to remove redundant portable range/zero checks. It
 does not change fault-context interpretation, stack ownership, register
 extraction, record layout, or commit ordering.
+
+# R6ac crash-format preseed refinement
+
+The selected port's payload decoder contract uses one fixed format identifier
+and no runtime path changes that interpretation.
+
+Moving that constant from `arghtos_port_crash_fill()` into the generated
+initial crash record changes only the time at which the same 16-bit value is
+materialized. The payload words, count, context extraction, and commit ordering
+are unchanged.
