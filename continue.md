@@ -138,7 +138,7 @@ physical-board harness
   R6ak accepted                = 1328 B
   R6al rejected neutral        = 1328 B
   R6am accepted current ctl    = 1320 B
-  phase: R6an reason-owned recursive-fatal guard
+  phase: R6an reason-owned recursive-fatal guard (wired)
 ```
 
 Correctness repair chain:
@@ -233,12 +233,12 @@ real reason is written before any port crash-fill call.
 
 ## Exact next action
 
-1. Add the R6an C5/P2 recursion-guard contract and proof.
-2. Add a profile gate requiring R6m, preseeded crash state, and the selected
-   closed nonzero fatal-reason domain.
-3. Update the recursive-fatal host regression: recursive capture must occur
-   once, leave `commit_magic == 0`, and leave the first nonzero reason visible
-   in the invalid in-progress record.
-4. Build physical R6am and R6an side by side.
+1. PR #5 now builds host R6an plus physical R6am/R6an in the same revision.
+2. Require recursive-fatal regression to prove exactly one crash-fill call,
+   nonzero first reason, and `commit_magic == 0` while capture is interrupted.
+3. Require generated-frame audits, async-return-fatal repair, sanitizers,
+   portability, historical controls, and physical controls green.
+4. Compare complete resident bytes and `arghtos_fatal`.
 5. Accept R6an only for a strict physical reduction below 1320 B.
-6. Do not merge PR #5 without explicit user permission.
+6. If neutral/regressive, preserve the result and keep R6am as control.
+7. Do not merge PR #5 without explicit user permission.
