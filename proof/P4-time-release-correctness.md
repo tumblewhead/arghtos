@@ -329,3 +329,30 @@ for every admitted execution.
 
 The substitution changes neither due testing nor the stored ideal release
 epoch. Arithmetic catch-up and wrap-safe time behavior are unchanged.
+
+# R6ap omitted unit-period byte equivalence
+
+R6t establishes \`period(0) = 1\`. R6ao stores the periodic sequence:
+
+~~~text
+[1, T1, T2, ..., T(P-1)]
+~~~
+
+R6ap stores:
+
+~~~text
+[T1, T2, ..., T(P-1)]
+~~~
+
+and reconstructs task 0 as one tick by contract.
+
+Therefore for every periodic ID the time engine receives exactly the same
+period value as R6ao. The recurrence
+
+~~~text
+releases = 1 + (now - next) / period
+next    += releases * period
+~~~
+
+is unchanged for every task, so release epochs, missed counts, and drift
+properties are identical.
