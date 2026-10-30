@@ -141,7 +141,7 @@ physical-board harness
   R6an rejected neutral        = 1320 B
   R6ao accepted                = 1319 B
   R6ap accepted current ctl    = 1318 B
-  phase: R6aq timer-entry task0-due specialization
+  phase: R6aq timer-entry task0-due specialization (wired)
 ```
 
 Correctness repair chain:
@@ -280,12 +280,12 @@ ordinary due predicate.
 
 ## Exact next action
 
-1. Add the R6aq timer-entry/task0-due contract and P4 proof refinement.
-2. Add a profile gate requiring R6ag timer ownership, R6t unit-period dominance,
-   R6ap schedule reconstruction, and trusted timer-entry semantics.
-3. Specialize task 0 catch-up before the remaining periodic scan.
-4. Add host regression with deliberately late timer service to verify task0
-   catch-up, missed-release count, and next_time = now+1.
-5. Build physical R6ap and R6aq side by side.
-6. Accept R6aq only for a strict physical reduction below 1318 B.
+1. PR #5 now builds host R6aq and physical R6ap/R6aq in the same revision.
+2. Require the late-timer regression to prove task0 next_time=now+1 and exactly
+   nine missed releases at now=10 from the dormant state.
+3. Require generated-frame audits, async-return-fatal repair, sanitizer,
+   portability, historical controls, and physical controls green.
+4. Compare complete resident bytes and `arghtos_timer_interrupt`.
+5. Accept R6aq only for a strict physical reduction below 1318 B.
+6. If neutral/regressive, preserve the result and keep R6ap as control.
 7. Do not merge PR #5 without explicit user permission.
