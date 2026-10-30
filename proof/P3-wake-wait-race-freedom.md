@@ -136,3 +136,19 @@ PRIMASK pair inside `arghtos_kernel_service()`:
 * PendSV is less urgent and cannot preempt either transaction.
 
 Thus the two P3 linearization cases remain complete and unchanged.
+
+# R6ad unconditional wake-dispatch refinement
+
+R6ad does not change the linearized wake transaction.
+
+For every wake state, the same state/latch mutation completes before the
+dispatch request. The extra request for READY/RUNNING/SLEEPING states occurs
+only after that transaction and does not mutate `wake_pending`.
+
+Therefore the two P3 race orderings remain unchanged:
+
+* wake-before-wait still leaves/sets the pending latch for wait to consume;
+* wait-before-wake still performs WAITING -> READY.
+
+A redundant PendSV cannot erase the scheduling indication because only the C1
+wait transaction consumes the latch.
