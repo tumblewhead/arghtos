@@ -129,9 +129,10 @@ physical-board harness
   R6ab accepted                = 1380 B
   R6ac accepted                = 1372 B
   R6ad accepted                = 1360 B
-  R6ae accepted current control= 1348 B
+  R6ae accepted                = 1348 B
   R6af rejected neutral        = 1348 B
-  phase: R6ag timer-owned SLEEP_UNTIL release processing
+  R6ag accepted current control= 1340 B
+  phase: R6ah default-dispatch service control flow
 ```
 
 R6ae is preserved in
@@ -168,30 +169,44 @@ arghtos_fatal:
   both       136 B
 ```
 
-R6ag removes the SVC-side `process_time_locked(now)` call from a successful
-future SLEEP_UNTIL request in the trusted period-1 / single-async profile.
+R6ag is preserved in
+[implementation/R6ag-timer-owned-sleep-release.md](implementation/R6ag-timer-owned-sleep-release.md).
 
-The sleep service still stores the absolute future deadline, marks the sole
-async worker SLEEPING, and requests dispatch. The already-armed period-1 timer
-cannot be later than that sleep deadline.
+R6ag authoritative CI:
 
-If a periodic release is already ideally due while timer delivery is delayed,
-R6ag no longer notices it opportunistically from SVC. It remains owned by the
-scheduler timer interrupt and therefore remains bounded by the existing C3/P6
-timer-jitter contract.
+```text
+run:        40989065832
+conclusion: success
+R6ae:      1348 B
+R6ag:      1340 B
+delta:       -8 B
 
-The host challenger deliberately simulates this late-timer case and verifies:
+arghtos_kernel_service:
+  R6ae       132 B
+  R6ag       128 B
+```
 
-* SVC does not advance overdue periodic state or rearm the timer;
-* the timer interrupt performs periodic arithmetic catch-up;
-* a later timer interrupt still expires the async absolute sleep deadline.
+R6ah inverts the trusted service dispatch control flow. Under the accepted
+R6ad/R6ae/R6ag profile, every legal service requires dispatch except exactly:
+
+* WAIT when a pending wake is consumed;
+* SLEEP_UNTIL when the requested absolute deadline is already due.
+
+R6ah will early-return OK for those two cases and make
+`arghtos_port_request_dispatch()` the common service epilogue. This removes
+the per-call dispatch boolean without changing any admitted state transition or
+return value.
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6ae and R6ag in the same revision.
-2. Require the timer-owned sleep regression, sanitizer, portability,
-   historical reproduction, and all physical controls green.
-3. Compare complete resident bytes and `arghtos_kernel_service`.
-4. Accept R6ag only for a strict physical reduction below 1348 B.
-5. If neutral/regressive, preserve the result and keep R6ae as control.
-6. Do not merge PR #5 without explicit user permission.
+1. Add the R6ah service-control-flow contract and P1 proof refinement.
+2. Add a profile gate requiring the trusted R6ad/R6ae/R6ag OK-only service
+   domain.
+3. Change the service dispatcher to early-return for the two no-dispatch cases
+   and dispatch unconditionally otherwise.
+4. Strengthen host regressions for WAIT-with-pending and already-due sleep to
+   assert zero dispatch; retain one-dispatch checks for all other service paths.
+5. Build physical R6ag and R6ah side by side and compare resident bytes plus
+   `arghtos_kernel_service`.
+6. Accept R6ah only for a strict physical reduction below 1340 B.
+7. Do not merge PR #5 without explicit user permission.
