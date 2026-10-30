@@ -409,3 +409,24 @@ instead of reloading \`next_time[0]\` and arming that value.
 The absolute 32-bit deadline bit pattern is identical, including across
 scheduler-time wrap. No release, catch-up, sleep, or timer-jitter semantics
 change.
+
+# R6ap unit-period schedule reconstruction
+
+Under R6t, generated task 0 has invariant period:
+
+~~~text
+T_0 = 1 tick
+~~~
+
+R6ap removes only the redundant stored byte for that period.
+
+During the periodic time scan, the period used for task ID \`id\` is:
+
+~~~text
+id == 0  -> 1
+id > 0   -> arghtos_static_schedule8[id - 1]
+~~~
+
+This reconstructs exactly the same period sequence as the accepted R6ao table.
+All due tests, arithmetic catch-up, missed-release accounting, and timer-arm
+semantics are unchanged.
