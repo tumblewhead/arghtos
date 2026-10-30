@@ -306,11 +306,31 @@ static void test_static_dispatch_and_async_wake(void)
     assert(arghtos_test_kernel()->current_task == 0u);
 
     arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+    arghtos_host_clear_dispatch_requests();
+#endif
     assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
     assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_READY);
     assert(ARGHTOS_CTRL_AGE(&c[1]) == 0u);
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+    assert(arghtos_host_dispatch_request_count() == 1u);
+
+    /* Repeated READY wake changes no state but still requests reevaluation. */
+    arghtos_host_clear_dispatch_requests();
+    assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_READY);
+    assert(!ARGHTOS_CTRL_WAKE_PENDING(&c[1]));
+    assert(arghtos_host_dispatch_request_count() == 1u);
+#endif
 
     arghtos_host_set_mode(ARGHTOS_HOST_TASK);
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+    /* Task-context WAKE uses the same unconditional dispatch policy. */
+    arghtos_host_clear_dispatch_requests();
+    assert(arghtos_port_service_call(ARGHTOS_SERVICE_WAKE, 1u) == ARGHTOS_OK);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_READY);
+    assert(arghtos_host_dispatch_request_count() == 1u);
+#endif
     assert(arghtos_port_service_call(
         ARGHTOS_SERVICE_TASK_RETURN, 0u) == ARGHTOS_OK);
     assert(ARGHTOS_CTRL_STATE(&c[0]) == ARGHTOS_TASK_DORMANT);
@@ -340,6 +360,35 @@ static void test_static_dispatch_and_async_wake(void)
     assert(arghtos_sleep_for(0u) == ARGHTOS_OK);
     assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_RUNNING);
     assert(arghtos_host_dispatch_request_count() == 0u);
+
+#if ARGHTOS_R6AD_ALWAYS_DISPATCH_WAKE
+    /* RUNNING wake preserves RUNNING, latches wake, and requests dispatch. */
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    arghtos_host_clear_dispatch_requests();
+    assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_RUNNING);
+    assert(ARGHTOS_CTRL_WAKE_PENDING(&c[1]));
+    assert(arghtos_host_dispatch_request_count() == 1u);
+
+    /* Consume the latch without blocking, then enter a real timed sleep. */
+    arghtos_host_set_mode(ARGHTOS_HOST_TASK);
+    arghtos_host_clear_dispatch_requests();
+    assert(arghtos_port_service_call(ARGHTOS_SERVICE_WAIT, 0u) == ARGHTOS_OK);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_RUNNING);
+    assert(!ARGHTOS_CTRL_WAKE_PENDING(&c[1]));
+
+    arghtos_host_set_time(10u);
+    assert(arghtos_sleep_until(20u) == ARGHTOS_OK);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_SLEEPING);
+
+    /* SLEEPING wake does not end sleep; it only latches + dispatches. */
+    arghtos_host_set_mode(ARGHTOS_HOST_HANDLER);
+    arghtos_host_clear_dispatch_requests();
+    assert(arghtos_wake_from_interrupt(1u) == ARGHTOS_OK);
+    assert(ARGHTOS_CTRL_STATE(&c[1]) == ARGHTOS_TASK_SLEEPING);
+    assert(ARGHTOS_CTRL_WAKE_PENDING(&c[1]));
+    assert(arghtos_host_dispatch_request_count() == 1u);
+#endif
 }
 
 static void test_static_crash_record_symbol_is_used(void)
