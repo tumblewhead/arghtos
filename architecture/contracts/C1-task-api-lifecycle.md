@@ -418,3 +418,25 @@ No runtime task-class branch is needed in the shared trampoline.
 
 Generic/runtime-built contexts continue to begin in the ordinary class-aware
 trampoline.
+
+# R6ak generated R4 periodic trampoline
+
+R6ak is a Cortex-M23 target specialization layered on the accepted R6aj
+generated-context lifecycle.
+
+For each generated periodic task, the prebuilt context places the immutable
+application entry pointer in saved R4. The target periodic trampoline then
+executes:
+
+~~~text
+loop:
+    call application entry through R4
+    invoke TASK_RETURN service
+    repeat after the task is released and dispatched again
+~~~
+
+The sole async task remains on R6aj's direct-entry path and never enters this
+trampoline.
+
+TASK_RETURN still marks the current periodic task DORMANT and requests
+dispatch. Application-visible periodic lifecycle semantics are unchanged.
