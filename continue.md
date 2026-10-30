@@ -128,7 +128,8 @@ physical-board harness
   R6w rejected regressive      = 1400 B
   R6x rejected regressive      = 1400 B
   R6y rejected neutral         = 1396 B
-  phase: R6z trusted selected crash payload
+  R6z rejected regressive      = 1400 B
+  phase: R6aa inline trusted crash payload
 ```
 
 Recent rejected checkpoints:
@@ -136,45 +137,39 @@ Recent rejected checkpoints:
 * [implementation/R6w-early-periodic-ready.md](implementation/R6w-early-periodic-ready.md)
 * [implementation/R6x-bounded-missed-loop.md](implementation/R6x-bounded-missed-loop.md)
 * [implementation/R6y-packed-missed-add.md](implementation/R6y-packed-missed-add.md)
+* [implementation/R6z-trusted-crash-payload.md](implementation/R6z-trusted-crash-payload.md)
 
-R6y authoritative CI:
+R6z authoritative CI:
 
 ```text
-run:        40983178221
+run:        40983706583
 conclusion: success
 R6v:       1396 B
-R6y:       1396 B
-delta:        0 B
+R6z:       1400 B
+delta:       +4 B
+
+R6v:
+  arghtos_fatal            156 B
+  crash_fill               inlined
+
+R6z:
+  arghtos_fatal             68 B
+  arghtos_port_crash_fill   92 B
+  combined                 160 B
 ```
 
-R6z targets the 156-byte fatal path. The selected Cortex-M23 crash filler is
-proved to emit exactly 2, 3, or 10 payload words; the host verification port
-emits exactly 1. Thus every selected-port crash fill satisfies:
+R6aa keeps the valid R6z selected-port payload proof but forces the Cortex-M23
+crash filler inline. This tests whether the redundant clamp/zero-payload
+branches can be removed without triggering the four-byte LTO outlining penalty.
 
-```text
-1 <= port_words <= 10
-```
-
-R6z composes this with R6m rather than re-enabling the old R5w experiment:
-
-* generated crash flags preseed PORT_STATE_VALID;
-* TASK_VALID is ORed into that preseed;
-* the post-fill >10 clamp is removed;
-* the post-fill zero-payload test and PORT_STATE_VALID write are removed;
-* R6m commit-word recursion protection and commit-last ordering remain intact.
-
-Owning refinements:
-
-* [architecture/contracts/C4-context-switch-port.md](architecture/contracts/C4-context-switch-port.md)
-* [architecture/contracts/C5-fault-diagnostics.md](architecture/contracts/C5-fault-diagnostics.md)
-* [proof/P2-context-stack-integrity.md](proof/P2-context-stack-integrity.md)
+No semantic contract changes beyond R6z are introduced.
 
 ## Exact next action
 
-1. Let PR #5 CI build physical R6v and R6z in the same revision.
+1. Let PR #5 CI build R6v, R6z, and R6aa in the same revision.
 2. Require crash-record, recursive-fatal, sanitizer, portability, historical
    reproduction, and physical-control gates green.
-3. Compare complete resident bytes and `arghtos_fatal`.
-4. Accept R6z only for a strict physical reduction.
-5. If neutral/regressive, preserve the result and keep R6v = 1396 B as control.
+3. Compare R6aa resident bytes and fatal/crash-fill symbol shape against R6v.
+4. Accept R6aa only for a strict physical reduction below 1396 B.
+5. If neutral/regressive, preserve the result and return to R6v as control.
 6. Do not merge PR #5 without explicit user permission.
