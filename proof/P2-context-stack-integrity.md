@@ -173,3 +173,28 @@ non-returning and restores the normal interrupt state before first dispatch.
 Therefore there is no additional context-switch interleaving, no changed
 MSP/PSP ownership, and no window in which PendSV can observe partially
 initialized scheduler state. The first-dispatch context proof is unchanged.
+
+# R6z crash-payload range refinement
+
+The Cortex-M23 crash filler has three bounded control-flow outcomes:
+
+```text
+NULL context             -> port_words = 2
+context, no basic frame  -> port_words = 3
+context + basic frame    -> port_words = 10
+```
+
+Each count names only words that the same branch writes, and every count lies
+within the public ten-word payload.
+
+Thus the selected port establishes the invariant:
+
+```text
+1 <= port_words <= 10
+```
+
+before returning to portable fatal capture.
+
+R6z consumes this invariant to remove redundant portable range/zero checks. It
+does not change fault-context interpretation, stack ownership, register
+extraction, record layout, or commit ordering.
