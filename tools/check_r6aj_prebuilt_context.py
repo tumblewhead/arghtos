@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
+import argparse
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 
@@ -40,10 +40,16 @@ def relocations(path: Path) -> dict[int, str]:
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        fail("usage: check_r6aj_prebuilt_context.py <object>")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("object", type=Path)
+    parser.add_argument(
+        "--periodic-entry-register",
+        choices=("r0", "r4"),
+        default="r0",
+    )
+    args = parser.parse_args()
 
-    path = Path(sys.argv[1])
+    path = args.object
     rel = relocations(path)
 
     guard_offsets = {
@@ -56,6 +62,10 @@ def main() -> None:
     }
     periodic_r0_offsets = {
         task_id * SLOT_BYTES + HW_R0_OFFSET
+        for task_id in range(PERIODIC_COUNT)
+    }
+    periodic_r4_offsets = {
+        task_id * SLOT_BYTES + 64
         for task_id in range(PERIODIC_COUNT)
     }
     async_r0 = ASYNC_ID * SLOT_BYTES + HW_R0_OFFSET
@@ -76,12 +86,30 @@ def main() -> None:
                 f"{rel.get(offset)!r}, expected arghtos_task_start_trampoline"
             )
 
-    for offset in sorted(periodic_r0_offsets):
-        if rel.get(offset) != "task_stub":
-            fail(
-                f"periodic R0 relocation at 0x{offset:x} is "
-                f"{rel.get(offset)!r}, expected task_stub"
-            )
+    if args.periodic_entry_register == "r0":
+        for offset in sorted(periodic_r0_offsets):
+            if rel.get(offset) != "task_stub":
+                fail(
+                    f"periodic R0 relocation at 0x{offset:x} is "
+                    f"{rel.get(offset)!r}, expected task_stub"
+                )
+        for offset in sorted(periodic_r4_offsets):
+            if offset in rel:
+                fail(
+                    f"periodic R4 at 0x{offset:x} unexpectedly has a relocation"
+                )
+    else:
+        for offset in sorted(periodic_r4_offsets):
+            if rel.get(offset) != "task_stub":
+                fail(
+                    f"periodic R4 relocation at 0x{offset:x} is "
+                    f"{rel.get(offset)!r}, expected task_stub"
+                )
+        for offset in sorted(periodic_r0_offsets):
+            if offset in rel:
+                fail(
+                    f"periodic R0 at 0x{offset:x} unexpectedly has a relocation"
+                )
 
     if async_r0 in rel:
         fail(f"async R0 at 0x{async_r0:x} unexpectedly has a relocation")
@@ -123,8 +151,9 @@ def main() -> None:
         )
 
     print(
-        "R6aj prebuilt-context relocation check: PASS "
-        f"({PERIODIC_COUNT} periodic frames + 1 direct async frame)"
+        "R6aj/R6ak prebuilt-context relocation check: PASS "
+        f"({PERIODIC_COUNT} periodic frames via {args.periodic_entry_register} "
+        "+ 1 direct async frame)"
     )
 
 
